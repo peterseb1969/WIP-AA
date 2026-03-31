@@ -1,13 +1,339 @@
-import { Clock } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Link } from 'react-router-dom'
+import { useDocuments } from '@wip/react'
+import {
+  Clock,
+  MapPin,
+  Filter,
+  ZoomIn,
+  ZoomOut,
+} from 'lucide-react'
+import { TEMPLATES } from '../lib/constants'
+import StatusBadge from '../components/StatusBadge'
+
+// ── Data interfaces ──────────────────────────────────────
+
+interface EventData {
+  title: string
+  event_type?: string
+  chapter_number?: number
+  scene_order?: number
+  story_time_raw?: string
+  story_time_sort?: number
+  location?: string
+  characters?: string[]
+  summary?: string
+  emotional_beat?: string
+}
+
+interface ChapterData {
+  number: number
+  title?: string
+  status?: string
+}
+
+// ── Constants ────────────────────────────────────────────
+
+const EVENT_TYPE_COLORS: Record<string, string> = {
+  SCENE: 'bg-blue-100 text-blue-800',
+  BACKSTORY: 'bg-purple-100 text-purple-800',
+  FLASHBACK: 'bg-indigo-100 text-indigo-800',
+  FLASH_FORWARD: 'bg-pink-100 text-pink-800',
+  DREAM: 'bg-violet-100 text-violet-800',
+  PROLOGUE: 'bg-teal-100 text-teal-800',
+  EPILOGUE: 'bg-teal-100 text-teal-800',
+  INTERLUDE: 'bg-amber-100 text-amber-800',
+}
+
+// ── Timeline Event Card ──────────────────────────────────
+
+function TimelineEvent({ event }: { event: { document_id: string; data: EventData } }) {
+  return (
+    <Link
+      to={`/scenes?id=${event.document_id}`}
+      className="block bg-white rounded-lg border border-gray-200 p-3 hover:border-primary/30 hover:shadow-sm transition-all"
+    >
+      <div className="flex items-start justify-between gap-2 mb-1">
+        <h4 className="text-sm font-semibold text-text line-clamp-1">{event.data.title}</h4>
+        {event.data.event_type ? (
+          <StatusBadge
+            label={event.data.event_type}
+            colorClass={EVENT_TYPE_COLORS[event.data.event_type] ?? 'bg-gray-100 text-gray-700'}
+          />
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-text-muted mb-1.5">
+        {event.data.location ? (
+          <span className="flex items-center gap-1">
+            <MapPin className="w-3 h-3" />
+            {event.data.location}
+          </span>
+        ) : null}
+        {event.data.story_time_raw ? (
+          <span className="flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {event.data.story_time_raw}
+          </span>
+        ) : null}
+      </div>
+
+      {event.data.emotional_beat ? (
+        <p className="text-xs text-text-muted italic line-clamp-1">{event.data.emotional_beat}</p>
+      ) : null}
+
+      {event.data.characters?.length ? (
+        <div className="flex items-center gap-1 mt-2">
+          {event.data.characters.slice(0, 4).map((c, i) => (
+            <span
+              key={i}
+              className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-medium text-primary"
+              title={String(c)}
+            >
+              {String(c).charAt(0)}
+            </span>
+          ))}
+          {event.data.characters.length > 4 ? (
+            <span className="text-[10px] text-text-light ml-0.5">
+              +{event.data.characters.length - 4}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+    </Link>
+  )
+}
+
+// ── Main Timeline ────────────────────────────────────────
 
 export default function TimelinePage() {
+  const [filterCharacter, setFilterCharacter] = useState<string | null>(null)
+  const [filterLocation, setFilterLocation] = useState<string | null>(null)
+  const [zoomLevel, setZoomLevel] = useState<'story' | 'chapter'>('story')
+
+  const { data: events, isLoading } = useDocuments({
+    template_id: TEMPLATES.EVENT,
+    status: 'active',
+    page_size: 200,
+  })
+  const { data: chapters } = useDocuments({
+    template_id: TEMPLATES.CHAPTER,
+    status: 'active',
+    page_size: 50,
+  })
+
+  const allEvents = useMemo(
+    () =>
+      (events?.items ?? []).map((e) => ({
+        document_id: e.document_id,
+        data: e.data as unknown as EventData,
+      })),
+    [events]
+  )
+  const allChapters = useMemo(
+    () =>
+      (chapters?.items ?? []).map((c) => ({
+        document_id: c.document_id,
+        data: c.data as unknown as ChapterData,
+      })),
+    [chapters]
+  )
+
+  // Collect unique characters and locations for filters
+  const allCharacters = useMemo(() => {
+    const set = new Set<string>()
+    allEvents.forEach((e) => e.data.characters?.forEach((c) => set.add(String(c))))
+    return [...set].sort()
+  }, [allEvents])
+
+  const allLocations = useMemo(() => {
+    const set = new Set<string>()
+    allEvents.forEach((e) => {
+      if (e.data.location) set.add(e.data.location)
+    })
+    return [...set].sort()
+  }, [allEvents])
+
+  // Filter
+  const filtered = useMemo(() => {
+    let items = allEvents
+    if (filterCharacter) {
+      items = items.filter((e) =>
+        e.data.characters?.some((c) => String(c) === filterCharacter)
+      )
+    }
+    if (filterLocation) {
+      items = items.filter((e) => e.data.location === filterLocation)
+    }
+    return items
+  }, [allEvents, filterCharacter, filterLocation])
+
+  // Sort by story_time_sort, then chapter, then scene_order
+  const sorted = useMemo(
+    () =>
+      [...filtered].sort((a, b) => {
+        const ta = a.data.story_time_sort ?? 0
+        const tb = b.data.story_time_sort ?? 0
+        if (ta !== tb) return ta - tb
+        const ca = a.data.chapter_number ?? 0
+        const cb = b.data.chapter_number ?? 0
+        if (ca !== cb) return ca - cb
+        return (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0)
+      }),
+    [filtered]
+  )
+
+  // Group by chapter for chapter zoom level
+  const chapterMap = useMemo(() => {
+    const m = new Map<number, ChapterData>()
+    allChapters.forEach((c) => m.set(c.data.number, c.data))
+    return m
+  }, [allChapters])
+
+  const grouped = useMemo(() => {
+    if (zoomLevel === 'story') {
+      // Group by story_time_sort to show parallel events
+      const byTime = new Map<number, typeof sorted>()
+      sorted.forEach((e) => {
+        const t = e.data.story_time_sort ?? 0
+        if (!byTime.has(t)) byTime.set(t, [])
+        byTime.get(t)!.push(e)
+      })
+      return [...byTime.entries()].sort(([a], [b]) => a - b)
+    }
+
+    // chapter zoom — group by chapter_number
+    const byCh = new Map<number, typeof sorted>()
+    sorted.forEach((e) => {
+      const ch = e.data.chapter_number ?? 0
+      if (!byCh.has(ch)) byCh.set(ch, [])
+      byCh.get(ch)!.push(e)
+    })
+    return [...byCh.entries()].sort(([a], [b]) => a - b)
+  }, [sorted, zoomLevel])
+
+  if (isLoading) {
+    return (
+      <div className="p-6 flex items-center justify-center h-64">
+        <div className="text-text-muted">Loading timeline...</div>
+      </div>
+    )
+  }
+
   return (
-    <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
+    <div className="p-6 max-w-5xl">
+      {/* Header */}
+      <div className="flex items-center gap-3 mb-4">
         <Clock className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Timeline</h1>
+        <span className="text-sm text-text-muted">({allEvents.length} events)</span>
       </div>
-      <p className="text-text-muted">Chronological event visualization</p>
+
+      {/* Controls */}
+      <div className="flex flex-wrap items-center gap-4 mb-6">
+        {/* Zoom */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-text-muted">View:</span>
+          <button
+            onClick={() => setZoomLevel('story')}
+            className={`flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors ${
+              zoomLevel === 'story'
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 text-text-muted hover:bg-gray-200'
+            }`}
+          >
+            <ZoomOut className="w-3 h-3" />
+            By Time
+          </button>
+          <button
+            onClick={() => setZoomLevel('chapter')}
+            className={`flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors ${
+              zoomLevel === 'chapter'
+                ? 'bg-primary text-white'
+                : 'bg-gray-100 text-text-muted hover:bg-gray-200'
+            }`}
+          >
+            <ZoomIn className="w-3 h-3" />
+            By Chapter
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-3.5 h-3.5 text-text-muted" />
+          <select
+            value={filterCharacter ?? ''}
+            onChange={(e) => setFilterCharacter(e.target.value || null)}
+            className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-text"
+          >
+            <option value="">All characters</option>
+            {allCharacters.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          <select
+            value={filterLocation ?? ''}
+            onChange={(e) => setFilterLocation(e.target.value || null)}
+            className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-text"
+          >
+            <option value="">All locations</option>
+            {allLocations.map((l) => (
+              <option key={l} value={l}>{l}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      {grouped.length > 0 ? (
+        <div className="relative">
+          {/* Vertical timeline line */}
+          <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-200" />
+
+          <div className="space-y-6">
+            {grouped.map(([key, groupEvents]) => (
+              <div key={key} className="relative">
+                {/* Time/chapter marker */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-9 h-9 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center z-10 relative">
+                    <span className="text-xs font-bold text-primary">
+                      {zoomLevel === 'chapter'
+                        ? key
+                        : key === 0 ? '?' : key}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-sm font-semibold text-text">
+                      {zoomLevel === 'chapter'
+                        ? `Chapter ${key}${chapterMap.get(key)?.title ? `: ${chapterMap.get(key)!.title}` : ''}`
+                        : groupEvents[0]?.data.story_time_raw ?? `Time point ${key}`
+                      }
+                    </span>
+                    {groupEvents.length > 1 ? (
+                      <span className="text-xs text-text-muted ml-2">
+                        ({groupEvents.length} events — parallel)
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Events at this point */}
+                <div className="ml-12 grid gap-2 sm:grid-cols-2">
+                  {groupEvents.map((event) => (
+                    <TimelineEvent key={event.document_id} event={event} />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p className="text-text-muted">
+          {filterCharacter || filterLocation
+            ? 'No events match the current filters.'
+            : 'No events yet. Use the AskBar to create chapters and scenes.'}
+        </p>
+      )}
     </div>
   )
 }
