@@ -364,6 +364,43 @@ if (e instanceof WipResolutionError) showTermError(e.field, e.value);
 
 The full specification — including all service methods, the error hierarchy, the BulkResult type, the type generation pipeline, and the React hooks — is documented in the companion design specification: @wip/client TypeScript Client Library.
 
+## Known Gotchas
+
+### 1. `baseUrl` must be a full URL (not a relative path)
+
+`@wip/client`'s `FetchTransport.buildUrl` uses `new URL(path, baseUrl)`. The JavaScript `URL` constructor requires `baseUrl` to include protocol and host — a relative path like `'/wip'` throws `TypeError: Invalid URL`.
+
+**Wrong:**
+```typescript
+const client = createWipClient({ baseUrl: '/wip' })
+// → new URL('/api/document-store/documents', '/wip') → THROWS
+```
+
+**Right:**
+```typescript
+const client = createWipClient({ baseUrl: window.location.origin + '/wip' })
+// → new URL('/api/document-store/documents', 'http://localhost:5173/wip') → OK
+```
+
+If mounting `@wip/proxy` at a sub-path (e.g. `app.use('/wip', wipProxy(...))`), the client must use a full URL including the mount path. If mounting at root (`app.use(wipProxy(...))`), use `baseUrl: window.location.origin` or `baseUrl: ''` (empty string works if the browser resolves it to the current origin).
+
+**Why this is silent:** TanStack Query catches the error after `retry` attempts, then sets `error` on the query. If no component checks the `error` field, the UI shows "Loading..." forever with zero network requests visible in DevTools.
+
+### 2. Self-signed TLS in local development
+
+The local WIP instance serves on `https://localhost:8443` with a self-signed certificate. Node.js `fetch()` (used by `@wip/proxy`) rejects self-signed certs by default.
+
+**Fix:** Set `NODE_TLS_REJECT_UNAUTHORIZED=0` in the server start script:
+```json
+"dev:server": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx watch server/index.ts"
+```
+
+**Symptom:** All proxy requests return `{"error":"Upstream request failed"}` with no further detail. The browser sees 502s from the proxy.
+
+### 3. Port conflicts between constellation apps
+
+Each app's Express server defaults to a port (usually 3001). When running multiple apps simultaneously, the second app fails to bind. Choose unique ports per app and update both `server/index.ts` (default port) and `vite.config.ts` (proxy target).
+
 # Guide 5: Data Entry Patterns
 
 > **Priority: Medium — needed before user-facing data entry**
