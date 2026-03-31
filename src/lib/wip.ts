@@ -2,7 +2,7 @@ import { createWipClient } from '@wip/client'
 import { QueryClient } from '@tanstack/react-query'
 
 export const wipClient = createWipClient({
-  baseUrl: '/wip',
+  baseUrl: window.location.origin + '/wip',
   // No auth needed — the Express proxy injects the API key
 })
 
