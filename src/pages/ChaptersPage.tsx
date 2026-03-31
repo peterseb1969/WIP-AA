@@ -102,7 +102,7 @@ function ChapterRow({
           {scenes.map((scene, i) => (
             <Link
               key={scene.document_id}
-              to="/scenes"
+              to={`/scenes?id=${scene.document_id}`}
               className="flex items-center gap-3 px-4 py-2.5 pl-[4.5rem] hover:bg-surface transition-colors border-b border-gray-50 last:border-b-0"
             >
               <div className="w-6 h-6 rounded bg-primary/10 flex items-center justify-center flex-shrink-0">

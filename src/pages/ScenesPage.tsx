@@ -1,4 +1,5 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -945,8 +946,21 @@ function SceneEditor({
 // ── Page Root ────────────────────────────────────────────
 
 export default function ScenesPage() {
-  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null)
-  const [flowChapter, setFlowChapter] = useState<number | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(
+    searchParams.get('id')
+  )
+  const [flowChapter, setFlowChapter] = useState<number | null>(
+    searchParams.has('flow') ? Number(searchParams.get('flow')) : null
+  )
+
+  // Sync URL params when selection changes
+  useEffect(() => {
+    const params = new URLSearchParams()
+    if (selectedSceneId) params.set('id', selectedSceneId)
+    else if (flowChapter != null) params.set('flow', String(flowChapter))
+    setSearchParams(params, { replace: true })
+  }, [selectedSceneId, flowChapter, setSearchParams])
 
   const { data: events, isLoading: loadingEvents } = useDocuments({
     template_id: TEMPLATES.EVENT,

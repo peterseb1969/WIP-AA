@@ -117,7 +117,7 @@ export default function DashboardPage() {
                 return (
                   <Link
                     key={event.document_id}
-                    to="/scenes"
+                    to={`/scenes?id=${event.document_id}`}
                     className="block p-2 rounded hover:bg-surface transition-colors"
                   >
                     <div className="font-medium text-sm text-text">{String(d.title)}</div>
