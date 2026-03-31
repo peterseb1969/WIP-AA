@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useCreateDocument, useTerms } from '@wip/react'
+import { useCreateDocument, useTerms, useWipClient } from '@wip/react'
 import { X, Plus } from 'lucide-react'
 import { TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 
@@ -15,6 +15,7 @@ interface FieldDef {
   placeholder?: string
   terminologyId?: string   // for select/multi-select — fetches terms as options
   options?: string[]        // static options (alternative to terminology)
+  autoCreateTermIn?: string // for text fields — auto-create term in this terminology before saving
 }
 
 interface EntityConfig {
@@ -30,7 +31,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     templateId: TEMPLATES.CHARACTER,
     label: 'Character',
     fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Character name' },
+      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Character name', autoCreateTermIn: TERMINOLOGIES.CHARACTERS },
       { name: 'role', label: 'Role', type: 'select', required: true, terminologyId: TERMINOLOGIES.CHARACTER_ROLE },
       { name: 'age', label: 'Age', type: 'text', placeholder: 'e.g. Late 20s, 42' },
       { name: 'description', label: 'Description', type: 'textarea', placeholder: 'Physical appearance, distinguishing features' },
@@ -45,7 +46,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     templateId: TEMPLATES.LOCATION,
     label: 'Location',
     fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Location name' },
+      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Location name', autoCreateTermIn: TERMINOLOGIES.LOCATIONS },
       { name: 'type', label: 'Type', type: 'select', terminologyId: TERMINOLOGIES.LOCATION_TYPE },
       { name: 'description', label: 'Description', type: 'textarea', placeholder: 'What does it look like?' },
       { name: 'atmosphere', label: 'Atmosphere', type: 'textarea', placeholder: 'Mood, sounds, smells' },
@@ -87,7 +88,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     templateId: TEMPLATES.PLOT_THREAD,
     label: 'Plot Thread',
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Thread title' },
+      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Thread title', autoCreateTermIn: TERMINOLOGIES.PLOT_THREADS },
       { name: 'status', label: 'Status', type: 'select', required: true, terminologyId: TERMINOLOGIES.PLOT_THREAD_STATUS },
       { name: 'description', label: 'Description', type: 'textarea', placeholder: 'What is this thread about?' },
       { name: 'opened_chapter', label: 'Opened In Chapter', type: 'number', placeholder: '1' },
@@ -290,7 +291,9 @@ export default function CreateEntityModal({
   defaults?: Record<string, unknown>
 }) {
   const config = ENTITY_CONFIGS[entityType]!
+  const wipClient = useWipClient()
   const createDoc = useCreateDocument()
+  const [submitting, setSubmitting] = useState(false)
 
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     if (!config) return {}
@@ -311,33 +314,61 @@ export default function CreateEntityModal({
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const toTermValue = (text: string): string =>
+    text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitting(true)
 
-    // Build data — strip empty strings, convert numbers
-    const data: Record<string, unknown> = {}
-    config.fields.forEach((f) => {
-      const val = formData[f.name]
-      if (f.type === 'number') {
-        const num = Number(val)
-        if (!isNaN(num) && val !== '') data[f.name] = num
-      } else if (f.type === 'multi-select' || f.type === 'tags') {
-        const arr = val as string[]
-        if (arr.length > 0) data[f.name] = arr
-      } else {
-        if (val !== '' && val != null) data[f.name] = val
-      }
-    })
+    try {
+      // Build data — strip empty strings, convert numbers
+      const data: Record<string, unknown> = {}
+      config.fields.forEach((f) => {
+        const val = formData[f.name]
+        if (f.type === 'number') {
+          const num = Number(val)
+          if (!isNaN(num) && val !== '') data[f.name] = num
+        } else if (f.type === 'multi-select' || f.type === 'tags') {
+          const arr = val as string[]
+          if (arr.length > 0) data[f.name] = arr
+        } else {
+          if (val !== '' && val != null) data[f.name] = val
+        }
+      })
 
-    createDoc.mutate(
-      { template_id: config.templateId, namespace: 'aa', data },
-      {
-        onSuccess: () => {
-          onCreated?.()
-          onClose()
-        },
+      // Auto-create terms in index terminologies before creating the document
+      for (const field of config.fields) {
+        if (field.autoCreateTermIn && data[field.name]) {
+          const rawValue = String(data[field.name])
+          const termValue = toTermValue(rawValue)
+          try {
+            await wipClient.defStore.createTerm(field.autoCreateTermIn, {
+              value: termValue,
+              label: rawValue,
+              aliases: rawValue !== termValue ? [rawValue] : [],
+            })
+          } catch {
+            // Term may already exist — that's fine, continue
+          }
+          // Use the UPPER_SNAKE_CASE value in the document data
+          data[field.name] = termValue
+        }
       }
-    )
+
+      createDoc.mutate(
+        { template_id: config.templateId, namespace: 'aa', data },
+        {
+          onSuccess: () => {
+            onCreated?.()
+            onClose()
+          },
+          onSettled: () => setSubmitting(false),
+        }
+      )
+    } catch {
+      setSubmitting(false)
+    }
   }
 
   if (!config) return null
@@ -462,10 +493,10 @@ export default function CreateEntityModal({
           </button>
           <button
             onClick={handleSubmit as any}
-            disabled={createDoc.isPending}
+            disabled={submitting || createDoc.isPending}
             className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
           >
-            {createDoc.isPending ? 'Creating...' : `Create ${config.label}`}
+            {submitting || createDoc.isPending ? 'Creating...' : `Create ${config.label}`}
           </button>
         </div>
       </div>
