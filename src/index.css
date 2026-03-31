@@ -7,3 +7,47 @@
     @apply bg-surface text-text font-sans antialiased;
   }
 }
+
+/* TipTap editor styles */
+.tiptap {
+  outline: none;
+}
+.tiptap p {
+  margin-bottom: 0.75em;
+}
+.tiptap p:last-child {
+  margin-bottom: 0;
+}
+.tiptap p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #9ca3af;
+  pointer-events: none;
+  height: 0;
+  font-style: italic;
+}
+.tiptap strong {
+  font-weight: 700;
+}
+.tiptap em {
+  font-style: italic;
+}
+.tiptap hr {
+  border: none;
+  border-top: 2px solid #e5e7eb;
+  margin: 1.5em 0;
+}
+
+/* Composition mode — dark theme editor */
+.composition-editor .tiptap {
+  color: rgba(255, 255, 255, 0.9);
+  font-family: 'Georgia', 'Times New Roman', serif;
+  font-size: 18px;
+  line-height: 2;
+}
+.composition-editor .tiptap p.is-editor-empty:first-child::before {
+  color: rgba(255, 255, 255, 0.3);
+}
+.composition-editor .tiptap hr {
+  border-top-color: rgba(255, 255, 255, 0.15);
+}
