@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
+import { useDocuments } from '@wip/react'
+import { TEMPLATES } from '../lib/constants'
 import {
   PenTool,
   LayoutGrid,
@@ -30,6 +32,8 @@ const NAV_ITEMS = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active' })
+  const projectTitle = (projects?.items?.[0]?.data as Record<string, unknown> | undefined)?.title as string | undefined
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -83,7 +87,7 @@ export default function Layout() {
             <Menu className="w-5 h-5 text-text" />
           </button>
           <h1 className="text-sm font-medium text-text-muted truncate">
-            {/* Project title will go here via context */}
+            {projectTitle ?? 'AuthorAssist'}
           </h1>
         </header>
 
