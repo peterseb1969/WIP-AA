@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { StickyNote, Filter } from 'lucide-react'
+import { StickyNote, Filter, Plus } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface NoteData {
   title: string
@@ -25,6 +26,7 @@ const NOTE_TYPE_COLORS: Record<string, string> = {
 
 export default function NotesPage() {
   const [filterType, setFilterType] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const { data: notes, isLoading } = useDocuments({
     template_id: TEMPLATES.NOTE,
@@ -52,6 +54,13 @@ export default function NotesPage() {
         <StickyNote className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Notes</h1>
         <span className="text-sm text-text-muted">({notes?.total ?? 0})</span>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Note
+        </button>
       </div>
 
       {/* Type filter */}
@@ -112,9 +121,16 @@ export default function NotesPage() {
         </div>
       ) : (
         <p className="text-text-muted">
-          {filterType ? `No ${filterType.toLowerCase()} notes.` : 'No notes yet. Use the AskBar to create one.'}
+          {filterType ? `No ${filterType.toLowerCase()} notes.` : 'No notes yet. Click "New Note" to create one.'}
         </p>
       )}
+
+      {showCreate ? (
+        <CreateEntityModal
+          entityType="note"
+          onClose={() => setShowCreate(false)}
+        />
+      ) : null}
     </div>
   )
 }

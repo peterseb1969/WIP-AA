@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useDocuments, useTerms } from '@wip/react'
-import { Users, ArrowLeft, Heart } from 'lucide-react'
+import { Users, ArrowLeft, Heart, Plus } from 'lucide-react'
 import { TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface CharacterData {
   name: string
@@ -137,6 +138,7 @@ function CharacterDetail({ data, onBack }: { data: CharacterData; onBack: () => 
 
 export default function CharactersPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const { data: characters, isLoading } = useDocuments({
     template_id: TEMPLATES.CHARACTER,
@@ -165,6 +167,13 @@ export default function CharactersPage() {
             <Users className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-semibold text-text">Characters</h1>
             <span className="text-sm text-text-muted">({characters?.total ?? 0})</span>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Character
+            </button>
           </div>
 
           {characters?.items?.length ? (
@@ -178,8 +187,15 @@ export default function CharactersPage() {
               ))}
             </div>
           ) : (
-            <p className="text-text-muted">No characters yet. Use the AskBar to create one.</p>
+            <p className="text-text-muted">No characters yet. Click "New Character" to create one.</p>
           )}
+
+          {showCreate ? (
+            <CreateEntityModal
+              entityType="character"
+              onClose={() => setShowCreate(false)}
+            />
+          ) : null}
         </>
       )}
     </div>

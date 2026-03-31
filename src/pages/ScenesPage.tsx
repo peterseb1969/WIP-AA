@@ -21,8 +21,10 @@ import {
   Globe,
   StickyNote,
   FileText,
+  Plus,
 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
+import CreateEntityModal from '../components/CreateEntityModal'
 import StatusBadge from '../components/StatusBadge'
 
 // ── Data interfaces ──────────────────────────────────────
@@ -98,11 +100,13 @@ function SceneSelector({
   chapters,
   onSelect,
   onFlowView,
+  onCreateScene,
 }: {
   events: Array<{ document_id: string; data: EventData }>
   chapters: Array<{ document_id: string; data: ChapterData }>
   onSelect: (id: string) => void
   onFlowView: (chapterNum: number) => void
+  onCreateScene: () => void
 }) {
   const byChapter = useMemo(() => {
     const map = new Map<number, Array<{ document_id: string; data: EventData }>>()
@@ -130,6 +134,13 @@ function SceneSelector({
         <PenTool className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Scene Editor</h1>
         <span className="text-sm text-text-muted">({events.length} scenes)</span>
+        <button
+          onClick={onCreateScene}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Scene
+        </button>
       </div>
 
       <p className="text-sm text-text-muted mb-6">
@@ -204,7 +215,7 @@ function SceneSelector({
           })}
         </div>
       ) : (
-        <p className="text-text-muted">No chapters yet. Use the AskBar to create chapters and scenes.</p>
+        <p className="text-text-muted">No chapters yet. Click "New Scene" to create one.</p>
       )}
     </div>
   )
@@ -950,6 +961,7 @@ export default function ScenesPage() {
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(
     searchParams.get('id')
   )
+  const [showCreate, setShowCreate] = useState(false)
   const [flowChapter, setFlowChapter] = useState<number | null>(
     searchParams.has('flow') ? Number(searchParams.get('flow')) : null
   )
@@ -1101,11 +1113,21 @@ export default function ScenesPage() {
 
   // ── Scene Selector (landing) ─────────────────────────
   return (
+    <>
     <SceneSelector
       events={allEvents}
       chapters={allChapters}
       onSelect={(id) => setSelectedSceneId(id)}
       onFlowView={(chNum) => setFlowChapter(chNum)}
+      onCreateScene={() => setShowCreate(true)}
     />
+
+    {showCreate ? (
+      <CreateEntityModal
+        entityType="scene"
+        onClose={() => setShowCreate(false)}
+      />
+    ) : null}
+    </>
   )
 }

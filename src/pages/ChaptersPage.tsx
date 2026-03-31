@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { BookOpen, PenTool, ChevronDown, ChevronRight } from 'lucide-react'
+import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface ChapterData {
   number: number
@@ -137,6 +138,7 @@ function ChapterRow({
 
 export default function ChaptersPage() {
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set())
+  const [showCreate, setShowCreate] = useState<string | null>(null) // 'chapter' or 'scene'
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -194,6 +196,22 @@ export default function ChaptersPage() {
         <BookOpen className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Chapters</h1>
         <span className="text-sm text-text-muted">({chapters?.total ?? 0})</span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setShowCreate('scene')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Scene
+          </button>
+          <button
+            onClick={() => setShowCreate('chapter')}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            New Chapter
+          </button>
+        </div>
       </div>
 
       {sortedChapters.length > 0 ? (
@@ -213,8 +231,15 @@ export default function ChaptersPage() {
           })}
         </div>
       ) : (
-        <p className="text-text-muted">No chapters yet. Use the AskBar to create one.</p>
+        <p className="text-text-muted">No chapters yet. Click "New Chapter" to create one.</p>
       )}
+
+      {showCreate ? (
+        <CreateEntityModal
+          entityType={showCreate}
+          onClose={() => setShowCreate(null)}
+        />
+      ) : null}
     </div>
   )
 }

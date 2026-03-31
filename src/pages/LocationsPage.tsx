@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { MapPin, ArrowLeft } from 'lucide-react'
+import { MapPin, ArrowLeft, Plus } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface LocationData {
   name: string
@@ -74,6 +75,7 @@ function LocationDetail({ data, onBack }: { data: LocationData; onBack: () => vo
 
 export default function LocationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [showCreate, setShowCreate] = useState(false)
 
   const { data: locations, isLoading } = useDocuments({
     template_id: TEMPLATES.LOCATION,
@@ -102,6 +104,13 @@ export default function LocationsPage() {
             <MapPin className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-semibold text-text">Locations</h1>
             <span className="text-sm text-text-muted">({locations?.total ?? 0})</span>
+            <button
+              onClick={() => setShowCreate(true)}
+              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              New Location
+            </button>
           </div>
 
           {locations?.items?.length ? (
@@ -131,8 +140,15 @@ export default function LocationsPage() {
               })}
             </div>
           ) : (
-            <p className="text-text-muted">No locations yet. Use the AskBar to create one.</p>
+            <p className="text-text-muted">No locations yet. Click "New Location" to create one.</p>
           )}
+
+          {showCreate ? (
+            <CreateEntityModal
+              entityType="location"
+              onClose={() => setShowCreate(false)}
+            />
+          ) : null}
         </>
       )}
     </div>

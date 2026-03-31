@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { Globe } from 'lucide-react'
+import { Globe, Plus } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface WorldRuleData {
   name: string
@@ -13,6 +15,7 @@ interface WorldRuleData {
 }
 
 export default function WorldRulesPage() {
+  const [showCreate, setShowCreate] = useState(false)
   const { data: rules, isLoading } = useDocuments({
     template_id: TEMPLATES.WORLD_RULE,
     status: 'active',
@@ -42,6 +45,13 @@ export default function WorldRulesPage() {
         <Globe className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">World Rules</h1>
         <span className="text-sm text-text-muted">({rules?.total ?? 0})</span>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Rule
+        </button>
       </div>
 
       {rules?.items?.length ? (
@@ -92,8 +102,15 @@ export default function WorldRulesPage() {
           ))}
         </div>
       ) : (
-        <p className="text-text-muted">No world rules yet. Use the AskBar to create one.</p>
+        <p className="text-text-muted">No world rules yet. Click "New Rule" to create one.</p>
       )}
+
+      {showCreate ? (
+        <CreateEntityModal
+          entityType="world_rule"
+          onClose={() => setShowCreate(false)}
+        />
+      ) : null}
     </div>
   )
 }

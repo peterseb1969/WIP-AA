@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { GitBranch } from 'lucide-react'
+import { GitBranch, Plus } from 'lucide-react'
 import { TEMPLATES, THREAD_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface PlotThreadData {
   title: string
@@ -14,6 +16,7 @@ interface PlotThreadData {
 }
 
 export default function PlotThreadsPage() {
+  const [showCreate, setShowCreate] = useState(false)
   const { data: threads, isLoading } = useDocuments({
     template_id: TEMPLATES.PLOT_THREAD,
     status: 'active',
@@ -45,6 +48,13 @@ export default function PlotThreadsPage() {
         <GitBranch className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Plot Threads</h1>
         <span className="text-sm text-text-muted">({threads?.total ?? 0})</span>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          New Thread
+        </button>
       </div>
 
       {threads?.items?.length ? (
@@ -87,8 +97,15 @@ export default function PlotThreadsPage() {
           })}
         </div>
       ) : (
-        <p className="text-text-muted">No plot threads yet. Use the AskBar to create one.</p>
+        <p className="text-text-muted">No plot threads yet. Click "New Thread" to create one.</p>
       )}
+
+      {showCreate ? (
+        <CreateEntityModal
+          entityType="plot_thread"
+          onClose={() => setShowCreate(false)}
+        />
+      ) : null}
     </div>
   )
 }
