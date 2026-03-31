@@ -1,0 +1,48 @@
+{
+  "value": "AA_PROJECT",
+  "label": "Project",
+  "description": "Novel project metadata",
+  "identity_fields": [
+    "title"
+  ],
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "author",
+      "label": "Author",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "genre",
+      "label": "Genre",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_GENRE"
+    },
+    {
+      "name": "time_system",
+      "label": "Time System",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_TIME_SYSTEM"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "setting_summary",
+      "label": "Setting Summary",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

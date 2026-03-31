@@ -1,0 +1,55 @@
+{
+  "value": "AA_CHAPTER",
+  "label": "Chapter",
+  "description": "Chapter structure",
+  "identity_fields": [
+    "number"
+  ],
+  "fields": [
+    {
+      "name": "number",
+      "label": "Number",
+      "type": "integer",
+      "mandatory": true
+    },
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "summary",
+      "label": "Summary",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "themes",
+      "label": "Themes",
+      "type": "array",
+      "mandatory": false,
+      "array_item_type": "string"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_CHAPTER_STATUS"
+    },
+    {
+      "name": "pov_character",
+      "label": "POV Character",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

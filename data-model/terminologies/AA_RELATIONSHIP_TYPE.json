@@ -1,0 +1,73 @@
+{
+  "value": "AA_RELATIONSHIP_TYPE",
+  "label": "Relationship Type",
+  "description": "Character relationship types (family and dynamic)",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "CHILD_OF",
+      "label": "Child Of",
+      "aliases": []
+    },
+    {
+      "value": "PARENT_OF",
+      "label": "Parent Of",
+      "aliases": []
+    },
+    {
+      "value": "SIBLING_OF",
+      "label": "Sibling Of",
+      "aliases": []
+    },
+    {
+      "value": "MARRIED_TO",
+      "label": "Married To",
+      "aliases": []
+    },
+    {
+      "value": "ALLY",
+      "label": "Ally",
+      "aliases": []
+    },
+    {
+      "value": "RIVAL",
+      "label": "Rival",
+      "aliases": []
+    },
+    {
+      "value": "ENEMY",
+      "label": "Enemy",
+      "aliases": []
+    },
+    {
+      "value": "FRIEND",
+      "label": "Friend",
+      "aliases": []
+    },
+    {
+      "value": "ROMANTIC",
+      "label": "Romantic",
+      "aliases": []
+    },
+    {
+      "value": "MENTOR",
+      "label": "Mentor",
+      "aliases": []
+    },
+    {
+      "value": "PROTEGE",
+      "label": "Prot\u00e9g\u00e9",
+      "aliases": []
+    },
+    {
+      "value": "COLLEAGUE",
+      "label": "Colleague",
+      "aliases": []
+    },
+    {
+      "value": "MEMBER_OF",
+      "label": "Member Of",
+      "aliases": []
+    }
+  ]
+}

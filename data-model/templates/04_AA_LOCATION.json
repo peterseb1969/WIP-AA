@@ -1,0 +1,48 @@
+{
+  "value": "AA_LOCATION",
+  "label": "Location",
+  "description": "Place or setting in the story",
+  "identity_fields": [
+    "name"
+  ],
+  "fields": [
+    {
+      "name": "name",
+      "label": "Name",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_LOCATIONS"
+    },
+    {
+      "name": "type",
+      "label": "Type",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_LOCATION_TYPE"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "atmosphere",
+      "label": "Atmosphere",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "rules",
+      "label": "Rules",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "significance",
+      "label": "Significance",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

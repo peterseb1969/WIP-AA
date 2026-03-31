@@ -1,0 +1,92 @@
+{
+  "value": "AA_EVENT",
+  "label": "Event/Scene",
+  "description": "Scene or event \u2014 the hub entity linking characters, locations, chapters, and plot threads",
+  "identity_fields": [
+    "title"
+  ],
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "event_type",
+      "label": "Event Type",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_EVENT_TYPE"
+    },
+    {
+      "name": "chapter_number",
+      "label": "Chapter Number",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "scene_order",
+      "label": "Scene Order",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "story_time_raw",
+      "label": "Story Time (display)",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "story_time_sort",
+      "label": "Story Time (sort key)",
+      "type": "integer",
+      "mandatory": true
+    },
+    {
+      "name": "location",
+      "label": "Location",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_LOCATIONS"
+    },
+    {
+      "name": "characters",
+      "label": "Characters",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "summary",
+      "label": "Summary",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "prose",
+      "label": "Prose",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "plot_threads",
+      "label": "Plot Threads",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_PLOT_THREADS"
+    },
+    {
+      "name": "emotional_beat",
+      "label": "Emotional Beat",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "value": "AA_CHARACTER_ROLE",
+  "label": "Character Role",
+  "description": "Character narrative importance level",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "PROTAGONIST",
+      "label": "Protagonist",
+      "aliases": [
+        "hero",
+        "main character"
+      ],
+      "sort_order": 1
+    },
+    {
+      "value": "DEUTERAGONIST",
+      "label": "Deuteragonist",
+      "aliases": [
+        "secondary lead"
+      ],
+      "sort_order": 2
+    },
+    {
+      "value": "ANTAGONIST",
+      "label": "Antagonist",
+      "aliases": [
+        "villain"
+      ],
+      "sort_order": 3
+    },
+    {
+      "value": "SUPPORTING",
+      "label": "Supporting",
+      "aliases": [
+        "supporting character"
+      ],
+      "sort_order": 4
+    },
+    {
+      "value": "MINOR",
+      "label": "Minor",
+      "aliases": [
+        "minor character",
+        "background"
+      ],
+      "sort_order": 5
+    },
+    {
+      "value": "MENTIONED",
+      "label": "Mentioned",
+      "aliases": [
+        "referenced",
+        "off-screen"
+      ],
+      "sort_order": 6
+    }
+  ]
+}

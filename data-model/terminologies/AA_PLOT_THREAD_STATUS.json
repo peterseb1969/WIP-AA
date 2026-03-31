@@ -1,0 +1,38 @@
+{
+  "value": "AA_PLOT_THREAD_STATUS",
+  "label": "Plot Thread Status",
+  "description": "Plot thread lifecycle state",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "OPEN",
+      "label": "Open",
+      "aliases": [],
+      "sort_order": 1
+    },
+    {
+      "value": "DEVELOPING",
+      "label": "Developing",
+      "aliases": [],
+      "sort_order": 2
+    },
+    {
+      "value": "CLIMAX",
+      "label": "Climax",
+      "aliases": [],
+      "sort_order": 3
+    },
+    {
+      "value": "RESOLVED",
+      "label": "Resolved",
+      "aliases": [],
+      "sort_order": 4
+    },
+    {
+      "value": "ABANDONED",
+      "label": "Abandoned",
+      "aliases": [],
+      "sort_order": 5
+    }
+  ]
+}

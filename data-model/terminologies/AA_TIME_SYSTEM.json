@@ -1,0 +1,38 @@
+{
+  "value": "AA_TIME_SYSTEM",
+  "label": "Time System",
+  "description": "How the project measures story time",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "CALENDAR",
+      "label": "Calendar Dates",
+      "aliases": [
+        "real dates"
+      ]
+    },
+    {
+      "value": "RELATIVE",
+      "label": "Relative Days",
+      "aliases": [
+        "day 1",
+        "day 2"
+      ]
+    },
+    {
+      "value": "NAMED",
+      "label": "Named Eras",
+      "aliases": [
+        "age of",
+        "year of"
+      ]
+    },
+    {
+      "value": "ORDINAL",
+      "label": "Sequence Only",
+      "aliases": [
+        "order only"
+      ]
+    }
+  ]
+}

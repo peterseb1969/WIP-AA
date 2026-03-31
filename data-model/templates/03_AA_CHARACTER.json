@@ -1,0 +1,79 @@
+{
+  "value": "AA_CHARACTER",
+  "label": "Character",
+  "description": "Character profile with embedded relationships",
+  "identity_fields": [
+    "name"
+  ],
+  "fields": [
+    {
+      "name": "name",
+      "label": "Name",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "role",
+      "label": "Role",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_CHARACTER_ROLE"
+    },
+    {
+      "name": "age",
+      "label": "Age",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "personality",
+      "label": "Personality",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "backstory",
+      "label": "Backstory",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "goals",
+      "label": "Goals",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "flaws",
+      "label": "Flaws",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "voice_notes",
+      "label": "Voice Notes",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "arc_summary",
+      "label": "Arc Summary",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "relationships",
+      "label": "Relationships",
+      "type": "array",
+      "mandatory": false,
+      "array_template_ref": "AA_CHAR_REL"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "value": "AA_CHAR_REL",
+  "label": "Character Relationship",
+  "description": "Embedded relationship on character (helper template)",
+  "identity_fields": [],
+  "fields": [
+    {
+      "name": "character",
+      "label": "Character",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "relationship_type",
+      "label": "Relationship Type",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_RELATIONSHIP_TYPE"
+    },
+    {
+      "name": "start_time",
+      "label": "Start Time",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "end_time",
+      "label": "End Time",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}
