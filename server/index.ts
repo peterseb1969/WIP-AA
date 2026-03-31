@@ -3,7 +3,7 @@ import cors from 'cors'
 import { wipProxy } from '@wip/proxy'
 import { initAgent, ask } from './agent.js'
 
-const PORT = parseInt(process.env.PORT || '3001')
+const PORT = parseInt(process.env.PORT || '3002')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const WIP_API_KEY = process.env.WIP_API_KEY || 'dev_master_key_for_testing'
 const app = express()
