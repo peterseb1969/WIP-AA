@@ -26,6 +26,7 @@ import {
 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
+import { notifyDraftChange } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 
@@ -890,6 +891,7 @@ function SceneEditor({
       draftKey,
       JSON.stringify({ content: html, title: sceneData?.title ?? '', savedAt: Date.now() })
     )
+    notifyDraftChange()
   }, [draftKey, sceneData?.title])
 
   // Flush current editor content to localStorage immediately
@@ -940,6 +942,7 @@ function SceneEditor({
           setLastSaved(new Date())
           // Clear localStorage draft since we've saved to WIP
           localStorage.removeItem(draftKey)
+          notifyDraftChange()
         },
       }
     )
