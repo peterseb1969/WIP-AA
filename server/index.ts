@@ -3,6 +3,7 @@ import express from 'express'
 import cors from 'cors'
 import { wipProxy } from '@wip/proxy'
 import { initAgent, ask } from './agent.js'
+import { parseText, extractEntities } from './import.js'
 
 const PORT = parseInt(process.env.PORT || '3002')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -17,7 +18,7 @@ app.use('/wip', wipProxy({
   apiKey: WIP_API_KEY,
 }))
 
-app.use(express.json())
+app.use(express.json({ limit: '5mb' }))
 
 // --- Health ---
 app.get('/api/health', (_req, res) => {
@@ -37,6 +38,38 @@ app.post('/api/ask', async (req, res) => {
   } catch (err: any) {
     console.error('Ask error:', err)
     res.status(500).json({ error: err.message || 'Internal error' })
+  }
+})
+
+// --- Import: parse text into chapters/scenes ---
+app.post('/api/import/parse', (req, res) => {
+  const { text } = req.body
+  if (!text) {
+    res.status(400).json({ error: 'text is required' })
+    return
+  }
+  try {
+    const chapters = parseText(text)
+    res.json({ chapters })
+  } catch (err: any) {
+    console.error('Parse error:', err)
+    res.status(500).json({ error: err.message || 'Parse failed' })
+  }
+})
+
+// --- Import: extract entities from a chapter ---
+app.post('/api/import/extract', async (req, res) => {
+  const { text, title } = req.body
+  if (!text) {
+    res.status(400).json({ error: 'text is required' })
+    return
+  }
+  try {
+    const entities = await extractEntities(text, title || 'Untitled')
+    res.json(entities)
+  } catch (err: any) {
+    console.error('Extract error:', err)
+    res.status(500).json({ error: err.message || 'Extraction failed' })
   }
 })
 

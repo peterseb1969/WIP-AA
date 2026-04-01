@@ -14,6 +14,7 @@ import LocationsPage from './pages/LocationsPage'
 import PlotThreadsPage from './pages/PlotThreadsPage'
 import NotesPage from './pages/NotesPage'
 import WorldRulesPage from './pages/WorldRulesPage'
+import ImportPage from './pages/ImportPage'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="/plot-threads" element={<PlotThreadsPage />} />
               <Route path="/notes" element={<NotesPage />} />
               <Route path="/world-rules" element={<WorldRulesPage />} />
+              <Route path="/import" element={<ImportPage />} />
             </Route>
           </Routes>
           <AskBar />

@@ -14,6 +14,7 @@ import {
   GitBranch,
   StickyNote,
   Globe,
+  Upload,
   Menu,
   X,
 } from 'lucide-react'
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { to: '/plot-threads', label: 'Plot Threads', icon: GitBranch },
   { to: '/notes', label: 'Notes', icon: StickyNote },
   { to: '/world-rules', label: 'World Rules', icon: Globe },
+  { to: '/import', label: 'Import Book', icon: Upload },
 ] as const
 
 export default function Layout() {

@@ -1,0 +1,939 @@
+import { useState, useCallback } from 'react'
+import { useCreateDocument } from '@wip/react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Upload,
+  BookOpen,
+  Users,
+  MapPin,
+  GitBranch,
+  ChevronRight,
+  ChevronLeft,
+  Check,
+  Loader2,
+  AlertTriangle,
+  Trash2,
+  FileText,
+} from 'lucide-react'
+import { TEMPLATES } from '../lib/constants'
+import BackLink from '../components/BackLink'
+
+const BASE_PATH = import.meta.env.BASE_URL || '/'
+
+// ── Types ────────────────────────────────────────────────
+
+interface ParsedScene {
+  sceneOrder: number
+  title: string
+  prose: string
+  included: boolean
+}
+
+interface ParsedChapter {
+  number: number
+  title: string
+  scenes: ParsedScene[]
+  included: boolean
+}
+
+interface ExtractedCharacter {
+  name: string
+  role: string
+  description: string
+  included: boolean
+}
+
+interface ExtractedLocation {
+  name: string
+  type: string
+  atmosphere: string
+  included: boolean
+}
+
+interface ExtractedPlotThread {
+  title: string
+  description: string
+  included: boolean
+}
+
+type Step = 'upload' | 'structure' | 'entities' | 'confirm' | 'importing' | 'done'
+
+// ── Step 1: Upload ───────────────────────────────────────
+
+function UploadStep({
+  onParsed,
+}: {
+  onParsed: (chapters: ParsedChapter[], rawText: string) => void
+}) {
+  const [text, setText] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const handleParse = async () => {
+    if (!text.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch(`${BASE_PATH}api/import/parse`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const chapters: ParsedChapter[] = data.chapters.map((ch: any) => ({
+        ...ch,
+        included: true,
+        scenes: ch.scenes.map((s: any) => ({ ...s, included: true })),
+      }))
+      onParsed(chapters, text)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const content = await file.text()
+    setText(content)
+  }
+
+  const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-text mb-2">
+          Paste your manuscript or upload a .txt file
+        </label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={16}
+          placeholder={"Chapter 1: The Beginning\n\nIt was a dark and stormy night...\n\n***\n\nThe next morning dawned clear and bright.\n\nChapter 2: The Journey\n\n..."}
+          className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+        />
+        <div className="flex items-center justify-between mt-2">
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary hover:text-primary-dark cursor-pointer transition-colors">
+              <Upload className="w-4 h-4" />
+              Upload .txt
+              <input
+                type="file"
+                accept=".txt,.md"
+                onChange={handleFile}
+                className="hidden"
+              />
+            </label>
+            {wordCount > 0 ? (
+              <span className="text-xs text-text-muted">{wordCount.toLocaleString()} words</span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+
+      {error ? (
+        <div className="flex items-center gap-2 text-sm text-red-600">
+          <AlertTriangle className="w-4 h-4" />
+          {error}
+        </div>
+      ) : null}
+
+      <button
+        onClick={handleParse}
+        disabled={!text.trim() || loading}
+        className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
+      >
+        {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
+        {loading ? 'Parsing...' : 'Parse Structure'}
+      </button>
+    </div>
+  )
+}
+
+// ── Step 2: Structure Review ─────────────────────────────
+
+function StructureStep({
+  chapters,
+  setChapters,
+  onBack,
+  onNext,
+}: {
+  chapters: ParsedChapter[]
+  setChapters: (ch: ParsedChapter[]) => void
+  onBack: () => void
+  onNext: () => void
+}) {
+  const [expandedChapter, setExpandedChapter] = useState<number | null>(0)
+
+  const toggleChapter = (idx: number) => {
+    const updated = [...chapters]
+    updated[idx] = { ...updated[idx]!, included: !updated[idx]!.included }
+    setChapters(updated)
+  }
+
+  const toggleScene = (chIdx: number, sIdx: number) => {
+    const updated = [...chapters]
+    const scenes = [...updated[chIdx]!.scenes]
+    scenes[sIdx] = { ...scenes[sIdx]!, included: !scenes[sIdx]!.included }
+    updated[chIdx] = { ...updated[chIdx]!, scenes }
+    setChapters(updated)
+  }
+
+  const updateChapterTitle = (idx: number, title: string) => {
+    const updated = [...chapters]
+    updated[idx] = { ...updated[idx]!, title }
+    setChapters(updated)
+  }
+
+  const updateSceneTitle = (chIdx: number, sIdx: number, title: string) => {
+    const updated = [...chapters]
+    const scenes = [...updated[chIdx]!.scenes]
+    scenes[sIdx] = { ...scenes[sIdx]!, title }
+    updated[chIdx] = { ...updated[chIdx]!, scenes }
+    setChapters(updated)
+  }
+
+  const totalScenes = chapters.reduce((sum, ch) => sum + ch.scenes.filter(s => s.included).length, 0)
+  const totalChapters = chapters.filter(ch => ch.included).length
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-text-muted">
+          Detected <strong>{totalChapters}</strong> chapters with <strong>{totalScenes}</strong> scenes.
+          Uncheck items to exclude them. Edit titles inline.
+        </p>
+      </div>
+
+      <div className="space-y-2 max-h-[500px] overflow-y-auto">
+        {chapters.map((ch, chIdx) => (
+          <div
+            key={chIdx}
+            className={`border rounded-lg overflow-hidden ${ch.included ? 'border-gray-200' : 'border-gray-100 opacity-50'}`}
+          >
+            <div className="flex items-center gap-3 px-4 py-3 bg-white">
+              <input
+                type="checkbox"
+                checked={ch.included}
+                onChange={() => toggleChapter(chIdx)}
+                className="rounded border-gray-300"
+              />
+              <BookOpen className="w-4 h-4 text-primary flex-shrink-0" />
+              <span className="text-sm text-text-muted w-16 flex-shrink-0">Ch. {ch.number}</span>
+              <input
+                type="text"
+                value={ch.title}
+                onChange={(e) => updateChapterTitle(chIdx, e.target.value)}
+                className="flex-1 text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 py-0.5"
+              />
+              <button
+                onClick={() => setExpandedChapter(expandedChapter === chIdx ? null : chIdx)}
+                className="text-xs text-text-muted hover:text-primary"
+              >
+                {ch.scenes.length} scene{ch.scenes.length !== 1 ? 's' : ''}
+              </button>
+            </div>
+
+            {expandedChapter === chIdx ? (
+              <div className="border-t border-gray-100 bg-surface/50">
+                {ch.scenes.map((scene, sIdx) => (
+                  <div
+                    key={sIdx}
+                    className={`flex items-center gap-3 px-4 py-2 pl-12 ${scene.included ? '' : 'opacity-50'}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={scene.included}
+                      onChange={() => toggleScene(chIdx, sIdx)}
+                      className="rounded border-gray-300"
+                    />
+                    <span className="text-xs text-text-muted w-6">{scene.sceneOrder}</span>
+                    <input
+                      type="text"
+                      value={scene.title}
+                      onChange={(e) => updateSceneTitle(chIdx, sIdx, e.target.value)}
+                      className="flex-1 text-sm text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 py-0.5"
+                    />
+                    <span className="text-xs text-text-muted">
+                      {scene.prose.split(/\s+/).length} words
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back
+        </button>
+        <button
+          onClick={onNext}
+          disabled={totalChapters === 0}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
+        >
+          <ChevronRight className="w-4 h-4" />
+          Extract Entities
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Step 3: Entity Review ────────────────────────────────
+
+function EntitiesStep({
+  characters,
+  locations,
+  plotThreads,
+  setCharacters,
+  setLocations,
+  setPlotThreads,
+  extracting,
+  extractProgress,
+  extractTotal,
+  onBack,
+  onNext,
+}: {
+  characters: ExtractedCharacter[]
+  locations: ExtractedLocation[]
+  plotThreads: ExtractedPlotThread[]
+  setCharacters: (c: ExtractedCharacter[]) => void
+  setLocations: (l: ExtractedLocation[]) => void
+  setPlotThreads: (p: ExtractedPlotThread[]) => void
+  extracting: boolean
+  extractProgress: number
+  extractTotal: number
+  onBack: () => void
+  onNext: () => void
+}) {
+  const [tab, setTab] = useState<'characters' | 'locations' | 'threads'>('characters')
+
+  if (extracting) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-4">
+        <Loader2 className="w-8 h-8 text-primary animate-spin" />
+        <p className="text-sm text-text-muted">
+          Analysing chapter {extractProgress} of {extractTotal}...
+        </p>
+        <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-primary rounded-full transition-all"
+            style={{ width: `${(extractProgress / extractTotal) * 100}%` }}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  const tabs = [
+    { key: 'characters' as const, label: 'Characters', icon: Users, count: characters.filter(c => c.included).length },
+    { key: 'locations' as const, label: 'Locations', icon: MapPin, count: locations.filter(l => l.included).length },
+    { key: 'threads' as const, label: 'Plot Threads', icon: GitBranch, count: plotThreads.filter(p => p.included).length },
+  ]
+
+  const removeCharacter = (idx: number) => {
+    setCharacters(characters.filter((_, i) => i !== idx))
+  }
+
+  const removeLocation = (idx: number) => {
+    setLocations(locations.filter((_, i) => i !== idx))
+  }
+
+  const removeThread = (idx: number) => {
+    setPlotThreads(plotThreads.filter((_, i) => i !== idx))
+  }
+
+  const updateCharacter = (idx: number, field: string, value: string) => {
+    const updated = [...characters]
+    updated[idx] = { ...updated[idx]!, [field]: value }
+    setCharacters(updated)
+  }
+
+  const updateLocation = (idx: number, field: string, value: string) => {
+    const updated = [...locations]
+    updated[idx] = { ...updated[idx]!, [field]: value }
+    setLocations(updated)
+  }
+
+  const updateThread = (idx: number, field: string, value: string) => {
+    const updated = [...plotThreads]
+    updated[idx] = { ...updated[idx]!, [field]: value }
+    setPlotThreads(updated)
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-text-muted">
+        AI detected the following entities. Edit, remove, or uncheck items before importing.
+      </p>
+
+      {/* Tab bar */}
+      <div className="flex border-b border-gray-200">
+        {tabs.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              tab === t.key
+                ? 'border-primary text-primary'
+                : 'border-transparent text-text-muted hover:text-text'
+            }`}
+          >
+            <t.icon className="w-4 h-4" />
+            {t.label}
+            <span className="text-xs opacity-60">({t.count})</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="max-h-[400px] overflow-y-auto space-y-2">
+        {tab === 'characters' ? (
+          characters.length > 0 ? characters.map((c, i) => (
+            <div key={i} className={`flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg ${c.included ? '' : 'opacity-40'}`}>
+              <input
+                type="checkbox"
+                checked={c.included}
+                onChange={() => {
+                  const updated = [...characters]
+                  updated[i] = { ...updated[i]!, included: !updated[i]!.included }
+                  setCharacters(updated)
+                }}
+                className="rounded border-gray-300 mt-1"
+              />
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={c.name}
+                    onChange={(e) => updateCharacter(i, 'name', e.target.value)}
+                    className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                  />
+                  <select
+                    value={c.role}
+                    onChange={(e) => updateCharacter(i, 'role', e.target.value)}
+                    className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted"
+                  >
+                    {['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED'].map(r => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  value={c.description}
+                  onChange={(e) => updateCharacter(i, 'description', e.target.value)}
+                  className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                />
+              </div>
+              <button onClick={() => removeCharacter(i)} className="text-text-muted hover:text-red-500 p-1">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )) : <p className="text-sm text-text-muted py-4">No characters detected.</p>
+        ) : null}
+
+        {tab === 'locations' ? (
+          locations.length > 0 ? locations.map((l, i) => (
+            <div key={i} className={`flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg ${l.included ? '' : 'opacity-40'}`}>
+              <input
+                type="checkbox"
+                checked={l.included}
+                onChange={() => {
+                  const updated = [...locations]
+                  updated[i] = { ...updated[i]!, included: !updated[i]!.included }
+                  setLocations(updated)
+                }}
+                className="rounded border-gray-300 mt-1"
+              />
+              <div className="flex-1 space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={l.name}
+                    onChange={(e) => updateLocation(i, 'name', e.target.value)}
+                    className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                  />
+                  <select
+                    value={l.type}
+                    onChange={(e) => updateLocation(i, 'type', e.target.value)}
+                    className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted"
+                  >
+                    {['CITY', 'TOWN', 'BUILDING', 'WILDERNESS', 'ROOM', 'REALM', 'OTHER'].map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+                <input
+                  type="text"
+                  value={l.atmosphere}
+                  onChange={(e) => updateLocation(i, 'atmosphere', e.target.value)}
+                  className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                />
+              </div>
+              <button onClick={() => removeLocation(i)} className="text-text-muted hover:text-red-500 p-1">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )) : <p className="text-sm text-text-muted py-4">No locations detected.</p>
+        ) : null}
+
+        {tab === 'threads' ? (
+          plotThreads.length > 0 ? plotThreads.map((p, i) => (
+            <div key={i} className={`flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg ${p.included ? '' : 'opacity-40'}`}>
+              <input
+                type="checkbox"
+                checked={p.included}
+                onChange={() => {
+                  const updated = [...plotThreads]
+                  updated[i] = { ...updated[i]!, included: !updated[i]!.included }
+                  setPlotThreads(updated)
+                }}
+                className="rounded border-gray-300 mt-1"
+              />
+              <div className="flex-1 space-y-1.5">
+                <input
+                  type="text"
+                  value={p.title}
+                  onChange={(e) => updateThread(i, 'title', e.target.value)}
+                  className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                />
+                <input
+                  type="text"
+                  value={p.description}
+                  onChange={(e) => updateThread(i, 'description', e.target.value)}
+                  className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                />
+              </div>
+              <button onClick={() => removeThread(i)} className="text-text-muted hover:text-red-500 p-1">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )) : <p className="text-sm text-text-muted py-4">No plot threads detected.</p>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back
+        </button>
+        <button
+          onClick={onNext}
+          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        >
+          <Check className="w-4 h-4" />
+          Review & Import
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Step 4: Confirm ──────────────────────────────────────
+
+function ConfirmStep({
+  chapters,
+  characters,
+  locations,
+  plotThreads,
+  onBack,
+  onImport,
+}: {
+  chapters: ParsedChapter[]
+  characters: ExtractedCharacter[]
+  locations: ExtractedLocation[]
+  plotThreads: ExtractedPlotThread[]
+  onBack: () => void
+  onImport: () => void
+}) {
+  const includedChapters = chapters.filter(ch => ch.included)
+  const includedScenes = includedChapters.reduce((sum, ch) => sum + ch.scenes.filter(s => s.included).length, 0)
+  const includedCharacters = characters.filter(c => c.included)
+  const includedLocations = locations.filter(l => l.included)
+  const includedThreads = plotThreads.filter(p => p.included)
+
+  const total = includedChapters.length + includedScenes + includedCharacters.length + includedLocations.length + includedThreads.length
+
+  return (
+    <div className="space-y-6">
+      <p className="text-sm text-text-muted">
+        Ready to create <strong>{total}</strong> documents in WIP:
+      </p>
+
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+          <BookOpen className="w-6 h-6 text-primary mx-auto mb-2" />
+          <div className="text-2xl font-bold text-text">{includedChapters.length}</div>
+          <div className="text-xs text-text-muted">Chapters</div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+          <FileText className="w-6 h-6 text-primary mx-auto mb-2" />
+          <div className="text-2xl font-bold text-text">{includedScenes}</div>
+          <div className="text-xs text-text-muted">Scenes</div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+          <Users className="w-6 h-6 text-primary mx-auto mb-2" />
+          <div className="text-2xl font-bold text-text">{includedCharacters.length}</div>
+          <div className="text-xs text-text-muted">Characters</div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+          <MapPin className="w-6 h-6 text-primary mx-auto mb-2" />
+          <div className="text-2xl font-bold text-text">{includedLocations.length}</div>
+          <div className="text-xs text-text-muted">Locations</div>
+        </div>
+        <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
+          <GitBranch className="w-6 h-6 text-primary mx-auto mb-2" />
+          <div className="text-2xl font-bold text-text">{includedThreads.length}</div>
+          <div className="text-xs text-text-muted">Plot Threads</div>
+        </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
+        <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+        <p className="text-sm text-amber-700">
+          This will create new documents in WIP. If entities with the same identity fields already exist, new versions will be created.
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1.5 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
+        >
+          <ChevronLeft className="w-4 h-4" />
+          Back
+        </button>
+        <button
+          onClick={onImport}
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark font-medium transition-colors"
+        >
+          <Upload className="w-4 h-4" />
+          Import to WIP
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Page Root ────────────────────────────────────────────
+
+export default function ImportPage() {
+  const navigate = useNavigate()
+  const createDocument = useCreateDocument()
+
+  const [step, setStep] = useState<Step>('upload')
+  const [chapters, setChapters] = useState<ParsedChapter[]>([])
+  const [_rawText, setRawText] = useState('')
+  const [characters, setCharacters] = useState<ExtractedCharacter[]>([])
+  const [locations, setLocations] = useState<ExtractedLocation[]>([])
+  const [plotThreads, setPlotThreads] = useState<ExtractedPlotThread[]>([])
+  const [chapterSummaries, setChapterSummaries] = useState<Map<number, string>>(new Map())
+  const [extracting, setExtracting] = useState(false)
+  const [extractProgress, setExtractProgress] = useState(0)
+  const [extractTotal, setExtractTotal] = useState(0)
+  const [importProgress, setImportProgress] = useState(0)
+  const [importTotal, setImportTotal] = useState(0)
+  const [importError, setImportError] = useState('')
+  const [importedCount, setImportedCount] = useState(0)
+
+  const handleParsed = (chs: ParsedChapter[], text: string) => {
+    setChapters(chs)
+    setRawText(text)
+    setStep('structure')
+  }
+
+  const handleExtract = useCallback(async () => {
+    const included = chapters.filter(ch => ch.included)
+    setExtractTotal(included.length)
+    setExtractProgress(0)
+    setExtracting(true)
+    setStep('entities')
+
+    const allCharacters: ExtractedCharacter[] = []
+    const allLocations: ExtractedLocation[] = []
+    const allThreads: ExtractedPlotThread[] = []
+    const summaries = new Map<number, string>()
+
+    // Process chapters sequentially to avoid rate limits
+    for (let i = 0; i < included.length; i++) {
+      const ch = included[i]!
+      const chapterText = ch.scenes.map(s => s.prose).join('\n\n***\n\n')
+      setExtractProgress(i + 1)
+
+      try {
+        const res = await fetch(`${BASE_PATH}api/import/extract`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: chapterText, title: ch.title }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          // Deduplicate by name (case-insensitive)
+          for (const c of data.characters || []) {
+            if (!allCharacters.some(existing => existing.name.toLowerCase() === c.name.toLowerCase())) {
+              allCharacters.push({ ...c, included: true })
+            }
+          }
+          for (const l of data.locations || []) {
+            if (!allLocations.some(existing => existing.name.toLowerCase() === l.name.toLowerCase())) {
+              allLocations.push({ ...l, included: true })
+            }
+          }
+          for (const p of data.plotThreads || []) {
+            if (!allThreads.some(existing => existing.title.toLowerCase() === p.title.toLowerCase())) {
+              allThreads.push({ ...p, included: true })
+            }
+          }
+          if (data.summary) {
+            summaries.set(ch.number, data.summary)
+          }
+        }
+      } catch (err) {
+        console.error(`Extract failed for chapter ${ch.number}:`, err)
+      }
+    }
+
+    setCharacters(allCharacters)
+    setLocations(allLocations)
+    setPlotThreads(allThreads)
+    setChapterSummaries(summaries)
+    setExtracting(false)
+  }, [chapters])
+
+  const handleImport = useCallback(async () => {
+    setStep('importing')
+    setImportError('')
+
+    const includedChapters = chapters.filter(ch => ch.included)
+    const includedScenes = includedChapters.flatMap(ch =>
+      ch.scenes.filter(s => s.included).map(s => ({ ...s, chapterNumber: ch.number }))
+    )
+    const includedCharacters = characters.filter(c => c.included)
+    const includedLocations = locations.filter(l => l.included)
+    const includedThreads = plotThreads.filter(p => p.included)
+
+    const total = includedChapters.length + includedScenes.length +
+      includedCharacters.length + includedLocations.length + includedThreads.length
+    setImportTotal(total)
+    setImportProgress(0)
+
+    let created = 0
+
+    const createOne = (templateId: string, data: Record<string, unknown>): Promise<void> => {
+      return new Promise((resolve, reject) => {
+        createDocument.mutate(
+          { template_id: templateId, namespace: 'aa', data },
+          {
+            onSuccess: () => { created++; setImportProgress(created); resolve() },
+            onError: (err) => { created++; setImportProgress(created); reject(err) },
+          }
+        )
+      })
+    }
+
+    try {
+      // Create chapters
+      for (const ch of includedChapters) {
+        await createOne(TEMPLATES.CHAPTER, {
+          number: ch.number,
+          title: ch.title,
+          status: 'DRAFT',
+        })
+      }
+
+      // Create scenes
+      for (const scene of includedScenes) {
+        await createOne(TEMPLATES.EVENT, {
+          title: scene.title,
+          event_type: 'SCENE',
+          chapter_number: scene.chapterNumber,
+          scene_order: scene.sceneOrder,
+          prose: scene.prose,
+          summary: chapterSummaries.get(scene.chapterNumber) || '',
+        })
+      }
+
+      // Create characters
+      for (const c of includedCharacters) {
+        await createOne(TEMPLATES.CHARACTER, {
+          name: c.name,
+          role: c.role,
+          description: c.description,
+        })
+      }
+
+      // Create locations
+      for (const l of includedLocations) {
+        await createOne(TEMPLATES.LOCATION, {
+          name: l.name,
+          type: l.type,
+          atmosphere: l.atmosphere,
+        })
+      }
+
+      // Create plot threads
+      for (const p of includedThreads) {
+        await createOne(TEMPLATES.PLOT_THREAD, {
+          title: p.title,
+          status: 'OPEN',
+          description: p.description,
+        })
+      }
+
+      setImportedCount(created)
+      setStep('done')
+    } catch (err: any) {
+      setImportError(err.message || 'Import failed')
+      setImportedCount(created)
+      setStep('done')
+    }
+  }, [chapters, characters, locations, plotThreads, chapterSummaries, createDocument])
+
+  const stepLabels: Array<{ key: Step; label: string }> = [
+    { key: 'upload', label: 'Upload' },
+    { key: 'structure', label: 'Structure' },
+    { key: 'entities', label: 'Entities' },
+    { key: 'confirm', label: 'Import' },
+  ]
+
+  const stepIndex = stepLabels.findIndex(s => s.key === step)
+
+  return (
+    <div className="p-6 max-w-3xl">
+      <BackLink />
+      <div className="flex items-center gap-3 mb-6">
+        <Upload className="w-6 h-6 text-primary" />
+        <h1 className="text-2xl font-semibold text-text">Import Book</h1>
+      </div>
+
+      {/* Step indicator */}
+      {step !== 'importing' && step !== 'done' ? (
+        <div className="flex items-center gap-2 mb-8">
+          {stepLabels.map((s, i) => (
+            <div key={s.key} className="flex items-center gap-2">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium ${
+                  i <= stepIndex
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-text-muted'
+                }`}
+              >
+                {i < stepIndex ? <Check className="w-3.5 h-3.5" /> : i + 1}
+              </div>
+              <span className={`text-sm ${i <= stepIndex ? 'text-text font-medium' : 'text-text-muted'}`}>
+                {s.label}
+              </span>
+              {i < stepLabels.length - 1 ? (
+                <div className={`w-8 h-px ${i < stepIndex ? 'bg-primary' : 'bg-gray-200'}`} />
+              ) : null}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {/* Steps */}
+      {step === 'upload' ? (
+        <UploadStep onParsed={handleParsed} />
+      ) : null}
+
+      {step === 'structure' ? (
+        <StructureStep
+          chapters={chapters}
+          setChapters={setChapters}
+          onBack={() => setStep('upload')}
+          onNext={handleExtract}
+        />
+      ) : null}
+
+      {step === 'entities' ? (
+        <EntitiesStep
+          characters={characters}
+          locations={locations}
+          plotThreads={plotThreads}
+          setCharacters={setCharacters}
+          setLocations={setLocations}
+          setPlotThreads={setPlotThreads}
+          extracting={extracting}
+          extractProgress={extractProgress}
+          extractTotal={extractTotal}
+          onBack={() => setStep('structure')}
+          onNext={() => setStep('confirm')}
+        />
+      ) : null}
+
+      {step === 'confirm' ? (
+        <ConfirmStep
+          chapters={chapters}
+          characters={characters}
+          locations={locations}
+          plotThreads={plotThreads}
+          onBack={() => setStep('entities')}
+          onImport={handleImport}
+        />
+      ) : null}
+
+      {step === 'importing' ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          <p className="text-sm text-text-muted">
+            Creating document {importProgress} of {importTotal}...
+          </p>
+          <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-primary rounded-full transition-all"
+              style={{ width: `${importTotal ? (importProgress / importTotal) * 100 : 0}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {step === 'done' ? (
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          {importError ? (
+            <>
+              <AlertTriangle className="w-10 h-10 text-amber-500" />
+              <p className="text-text font-medium">Import completed with errors</p>
+              <p className="text-sm text-text-muted">{importedCount} documents created. Error: {importError}</p>
+            </>
+          ) : (
+            <>
+              <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+                <Check className="w-6 h-6 text-green-600" />
+              </div>
+              <p className="text-text font-medium">Import complete!</p>
+              <p className="text-sm text-text-muted">{importedCount} documents created in WIP.</p>
+            </>
+          )}
+          <div className="flex items-center gap-3 mt-4">
+            <button
+              onClick={() => navigate('/scenes')}
+              className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+            >
+              Go to Scene Editor
+            </button>
+            <button
+              onClick={() => navigate('/')}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
+            >
+              Dashboard
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
