@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { GitBranch, Plus } from 'lucide-react'
+import { GitBranch, Plus, Pencil } from 'lucide-react'
 import { TEMPLATES, THREAD_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import BackLink from '../components/BackLink'
 
 interface PlotThreadData {
   title: string
@@ -17,6 +18,7 @@ interface PlotThreadData {
 
 export default function PlotThreadsPage() {
   const [showCreate, setShowCreate] = useState(false)
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const { data: threads, isLoading } = useDocuments({
     template_id: TEMPLATES.PLOT_THREAD,
     status: 'active',
@@ -44,6 +46,7 @@ export default function PlotThreadsPage() {
 
   return (
     <div className="p-6 max-w-4xl">
+      <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <GitBranch className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Plot Threads</h1>
@@ -74,7 +77,16 @@ export default function PlotThreadsPage() {
                       key={thread.id}
                       className="bg-white rounded-lg border border-gray-200 p-4"
                     >
-                      <h3 className="font-semibold text-text mb-1">{thread.data.title}</h3>
+                      <div className="flex items-start justify-between mb-1">
+                        <h3 className="font-semibold text-text">{thread.data.title}</h3>
+                        <button
+                          onClick={() => setEditData(thread.data as unknown as Record<string, unknown>)}
+                          className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit
+                        </button>
+                      </div>
                       {thread.data.description ? (
                         <p className="text-sm text-text-muted mb-2">{thread.data.description}</p>
                       ) : null}
@@ -104,6 +116,16 @@ export default function PlotThreadsPage() {
         <CreateEntityModal
           entityType="plot_thread"
           onClose={() => setShowCreate(false)}
+        />
+      ) : null}
+
+      {editData ? (
+        <CreateEntityModal
+          entityType="plot_thread"
+          mode="edit"
+          existingData={editData}
+          onClose={() => setEditData(null)}
+          onCreated={() => setEditData(null)}
         />
       ) : null}
     </div>

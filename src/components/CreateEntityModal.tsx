@@ -76,10 +76,10 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       { name: 'chapter_number', label: 'Chapter', type: 'number', placeholder: '1' },
       { name: 'scene_order', label: 'Scene Order', type: 'number', placeholder: '1' },
       { name: 'story_time_raw', label: 'Story Time', type: 'text', placeholder: 'e.g. Day 1, Morning after the battle' },
-      { name: 'story_time_sort', label: 'Sort Order (numeric)', type: 'number', placeholder: '10' },
+      { name: 'story_time_sort', label: 'Sort Order (numeric)', type: 'number', required: true, placeholder: '10' },
       { name: 'location', label: 'Location', type: 'select', terminologyId: TERMINOLOGIES.LOCATIONS },
       { name: 'characters', label: 'Characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
-      { name: 'summary', label: 'Summary', type: 'textarea', placeholder: 'What happens in this scene?' },
+      { name: 'summary', label: 'Summary', type: 'textarea', required: true, placeholder: 'What happens in this scene?' },
       { name: 'plot_threads', label: 'Plot Threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
       { name: 'emotional_beat', label: 'Emotional Beat', type: 'text', placeholder: 'The emotional tone' },
     ],
@@ -106,6 +106,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'Add tag...' },
       { name: 'linked_characters', label: 'Linked Characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
       { name: 'linked_locations', label: 'Linked Locations', type: 'multi-select', terminologyId: TERMINOLOGIES.LOCATIONS },
+      { name: 'linked_plot_threads', label: 'Linked Plot Threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
     ],
   },
   world_rule: {
@@ -284,27 +285,35 @@ export default function CreateEntityModal({
   onClose,
   onCreated,
   defaults,
+  mode = 'create',
+  existingData,
 }: {
   entityType: string
   onClose: () => void
   onCreated?: () => void
   defaults?: Record<string, unknown>
+  mode?: 'create' | 'edit'
+  existingData?: Record<string, unknown>
 }) {
   const config = ENTITY_CONFIGS[entityType]!
   const wipClient = useWipClient()
   const createDoc = useCreateDocument()
   const [submitting, setSubmitting] = useState(false)
 
+  // For edit mode, merge existingData as the initial values
+  const initialData = mode === 'edit' && existingData ? existingData : defaults
+
   const [formData, setFormData] = useState<Record<string, unknown>>(() => {
     if (!config) return {}
     const initial: Record<string, unknown> = {}
     config.fields.forEach((f) => {
       if (f.type === 'multi-select' || f.type === 'tags') {
-        initial[f.name] = defaults?.[f.name] ?? []
+        initial[f.name] = initialData?.[f.name] ?? []
       } else if (f.type === 'number') {
-        initial[f.name] = defaults?.[f.name] ?? ''
+        const val = initialData?.[f.name]
+        initial[f.name] = val != null ? String(val) : ''
       } else {
-        initial[f.name] = defaults?.[f.name] ?? ''
+        initial[f.name] = initialData?.[f.name] ?? ''
       }
     })
     return initial
@@ -338,9 +347,15 @@ export default function CreateEntityModal({
       })
 
       // Auto-create terms in index terminologies before creating the document
+      // In edit mode, skip auto-term-creation for fields whose value hasn't changed
       for (const field of config.fields) {
         if (field.autoCreateTermIn && data[field.name]) {
           const rawValue = String(data[field.name])
+          const existingValue = existingData?.[field.name]
+          // If editing and the value hasn't changed, keep it as-is (already a term value)
+          if (mode === 'edit' && rawValue === String(existingValue ?? '')) {
+            continue
+          }
           const termValue = toTermValue(rawValue)
           try {
             await wipClient.defStore.createTerm(field.autoCreateTermIn, {
@@ -379,7 +394,7 @@ export default function CreateEntityModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-text">
-            New {config.label}
+            {mode === 'edit' ? `Edit ${config.label}` : `New ${config.label}`}
           </h2>
           <button
             onClick={onClose}
@@ -496,7 +511,9 @@ export default function CreateEntityModal({
             disabled={submitting || createDoc.isPending}
             className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
           >
-            {submitting || createDoc.isPending ? 'Creating...' : `Create ${config.label}`}
+            {submitting || createDoc.isPending
+              ? (mode === 'edit' ? 'Saving...' : 'Creating...')
+              : (mode === 'edit' ? 'Save Changes' : `Create ${config.label}`)}
           </button>
         </div>
       </div>

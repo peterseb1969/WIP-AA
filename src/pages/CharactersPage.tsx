@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDocuments, useTerms } from '@wip/react'
-import { Users, ArrowLeft, Heart, Plus } from 'lucide-react'
+import { Users, ArrowLeft, Heart, Plus, Pencil } from 'lucide-react'
 import { TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import BackLink from '../components/BackLink'
 
 interface CharacterData {
   name: string
@@ -49,7 +50,7 @@ function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => 
   )
 }
 
-function CharacterDetail({ data, onBack }: { data: CharacterData; onBack: () => void }) {
+function CharacterDetail({ data, onBack, onEdit }: { data: CharacterData; onBack: () => void; onEdit: () => void }) {
   // Resolve character names from terms
   const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50 })
   const termLookup = new Map(charTerms?.items?.map((t) => [t.value, t.label]) ?? [])
@@ -77,8 +78,17 @@ function CharacterDetail({ data, onBack }: { data: CharacterData; onBack: () => 
         <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
           {data.name.charAt(0)}
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-text">{data.name}</h2>
+        <div className="flex-1">
+          <div className="flex items-start justify-between">
+            <h2 className="text-xl font-bold text-text">{data.name}</h2>
+            <button
+              onClick={onEdit}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+          </div>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge label={data.role} colorClass={ROLE_COLORS[data.role]} />
             {data.age ? <span className="text-sm text-text-muted">Age: {data.age}</span> : null}
@@ -139,6 +149,7 @@ function CharacterDetail({ data, onBack }: { data: CharacterData; onBack: () => 
 export default function CharactersPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
 
   const { data: characters, isLoading } = useDocuments({
     template_id: TEMPLATES.CHARACTER,
@@ -159,8 +170,24 @@ export default function CharactersPage() {
 
   return (
     <div className="p-6 max-w-5xl">
+      <BackLink />
       {selectedData ? (
-        <CharacterDetail data={selectedData} onBack={() => setSelectedId(null)} />
+        <>
+          <CharacterDetail
+            data={selectedData}
+            onBack={() => setSelectedId(null)}
+            onEdit={() => setEditData(selectedData as unknown as Record<string, unknown>)}
+          />
+          {editData ? (
+            <CreateEntityModal
+              entityType="character"
+              mode="edit"
+              existingData={editData}
+              onClose={() => setEditData(null)}
+              onCreated={() => setEditData(null)}
+            />
+          ) : null}
+        </>
       ) : (
         <>
           <div className="flex items-center gap-3 mb-6">

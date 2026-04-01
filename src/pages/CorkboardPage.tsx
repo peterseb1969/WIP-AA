@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import BackLink from '../components/BackLink'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -287,6 +288,7 @@ export default function CorkboardPage() {
 
   return (
     <div className="p-6">
+      <BackLink />
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <LayoutGrid className="w-6 h-6 text-primary" />

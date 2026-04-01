@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus } from 'lucide-react'
+import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import BackLink from '../components/BackLink'
 
 interface ChapterData {
   number: number
@@ -32,11 +33,13 @@ function ChapterRow({
   scenes,
   expanded,
   onToggle,
+  onEdit,
 }: {
   data: ChapterData
   scenes: Array<{ document_id: string; data: EventData }>
   expanded: boolean
   onToggle: () => void
+  onEdit: () => void
 }) {
   const status = data.status || 'OUTLINE'
 
@@ -76,6 +79,13 @@ function ChapterRow({
 
         <div className="flex items-center gap-4 text-sm text-text-muted flex-shrink-0">
           <span>{scenes.length} scene{scenes.length !== 1 ? 's' : ''}</span>
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
+          >
+            <Pencil className="w-3 h-3" />
+            Edit
+          </button>
         </div>
       </button>
 
@@ -139,6 +149,7 @@ function ChapterRow({
 export default function ChaptersPage() {
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set())
   const [showCreate, setShowCreate] = useState<string | null>(null) // 'chapter' or 'scene'
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -192,6 +203,7 @@ export default function ChaptersPage() {
 
   return (
     <div className="p-6 max-w-4xl">
+      <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <BookOpen className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Chapters</h1>
@@ -226,6 +238,7 @@ export default function ChaptersPage() {
                 scenes={scenes}
                 expanded={expandedChapters.has(data.number)}
                 onToggle={() => toggleChapter(data.number)}
+                onEdit={() => setEditData(data as unknown as Record<string, unknown>)}
               />
             )
           })}
@@ -238,6 +251,16 @@ export default function ChaptersPage() {
         <CreateEntityModal
           entityType={showCreate}
           onClose={() => setShowCreate(null)}
+        />
+      ) : null}
+
+      {editData ? (
+        <CreateEntityModal
+          entityType="chapter"
+          mode="edit"
+          existingData={editData}
+          onClose={() => setEditData(null)}
+          onCreated={() => setEditData(null)}
         />
       ) : null}
     </div>

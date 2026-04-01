@@ -26,6 +26,7 @@ import {
 import { TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
 import StatusBadge from '../components/StatusBadge'
+import BackLink from '../components/BackLink'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -108,19 +109,22 @@ function SceneSelector({
   onFlowView: (chapterNum: number) => void
   onCreateScene: () => void
 }) {
-  const byChapter = useMemo(() => {
+  const { byChapter, unassigned } = useMemo(() => {
     const map = new Map<number, Array<{ document_id: string; data: EventData }>>()
+    const noChapter: Array<{ document_id: string; data: EventData }> = []
     events.forEach((e) => {
       const ch = e.data.chapter_number
       if (ch != null) {
         if (!map.has(ch)) map.set(ch, [])
         map.get(ch)!.push(e)
+      } else {
+        noChapter.push(e)
       }
     })
     map.forEach((scenes) =>
       scenes.sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0))
     )
-    return map
+    return { byChapter: map, unassigned: noChapter }
   }, [events])
 
   const sortedChapters = useMemo(
@@ -130,6 +134,7 @@ function SceneSelector({
 
   return (
     <div className="p-6 max-w-4xl">
+      <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <PenTool className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Scene Editor</h1>
@@ -214,9 +219,49 @@ function SceneSelector({
             )
           })}
         </div>
-      ) : (
-        <p className="text-text-muted">No chapters yet. Click "New Scene" to create one.</p>
-      )}
+      ) : null}
+
+      {/* Scenes not assigned to any chapter */}
+      {unassigned.length > 0 ? (
+        <div className="bg-white rounded-lg border border-gray-200 border-dashed overflow-hidden mt-4">
+          <div className="flex items-center gap-3 p-4 border-b border-gray-100">
+            <span className="font-semibold text-text-muted">Unassigned Scenes</span>
+            <span className="text-xs text-text-muted">{unassigned.length} scene{unassigned.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div>
+            {unassigned.map((scene) => (
+              <button
+                key={scene.document_id}
+                onClick={() => onSelect(scene.document_id)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface transition-colors border-b border-gray-50 last:border-b-0"
+              >
+                <div className="w-7 h-7 rounded bg-gray-100 flex items-center justify-center flex-shrink-0 text-xs font-medium text-text-muted">
+                  ?
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-text truncate">{scene.data.title}</div>
+                  <div className="text-xs text-text-muted mt-0.5">
+                    {scene.data.location ? scene.data.location : ''}
+                    {scene.data.characters?.length
+                      ? `${scene.data.location ? ' — ' : ''}${scene.data.characters.map(String).join(', ')}`
+                      : ''}
+                  </div>
+                </div>
+                {scene.data.event_type ? (
+                  <StatusBadge
+                    label={scene.data.event_type}
+                    colorClass={EVENT_TYPE_COLORS[scene.data.event_type] ?? 'bg-gray-100 text-gray-700'}
+                  />
+                ) : null}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {sortedChapters.length === 0 && unassigned.length === 0 ? (
+        <p className="text-text-muted">No scenes yet. Click "New Scene" to create one.</p>
+      ) : null}
     </div>
   )
 }

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
+import BackLink from '../components/BackLink'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -222,6 +223,7 @@ export default function TimelinePage() {
 
   return (
     <div className="p-6 max-w-5xl">
+      <BackLink />
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <Clock className="w-6 h-6 text-primary" />

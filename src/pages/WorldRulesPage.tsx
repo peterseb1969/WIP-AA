@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { Globe, Plus } from 'lucide-react'
+import { Globe, Plus, Pencil } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
+import BackLink from '../components/BackLink'
 
 interface WorldRuleData {
   name: string
@@ -16,6 +17,7 @@ interface WorldRuleData {
 
 export default function WorldRulesPage() {
   const [showCreate, setShowCreate] = useState(false)
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const { data: rules, isLoading } = useDocuments({
     template_id: TEMPLATES.WORLD_RULE,
     status: 'active',
@@ -41,6 +43,7 @@ export default function WorldRulesPage() {
 
   return (
     <div className="p-6 max-w-4xl">
+      <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <Globe className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">World Rules</h1>
@@ -64,7 +67,16 @@ export default function WorldRulesPage() {
               <div className="space-y-3">
                 {items.map((rule) => (
                   <div key={rule.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                    <h3 className="font-semibold text-text mb-2">{rule.data.name}</h3>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-text">{rule.data.name}</h3>
+                      <button
+                        onClick={() => setEditData(rule.data as unknown as Record<string, unknown>)}
+                        className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
+                      >
+                        <Pencil className="w-3 h-3" />
+                        Edit
+                      </button>
+                    </div>
                     <p className="text-sm text-text mb-3">{rule.data.rule}</p>
 
                     {rule.data.implications ? (
@@ -109,6 +121,16 @@ export default function WorldRulesPage() {
         <CreateEntityModal
           entityType="world_rule"
           onClose={() => setShowCreate(false)}
+        />
+      ) : null}
+
+      {editData ? (
+        <CreateEntityModal
+          entityType="world_rule"
+          mode="edit"
+          existingData={editData}
+          onClose={() => setEditData(null)}
+          onCreated={() => setEditData(null)}
         />
       ) : null}
     </div>

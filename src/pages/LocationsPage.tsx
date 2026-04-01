@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDocuments } from '@wip/react'
-import { MapPin, ArrowLeft, Plus } from 'lucide-react'
+import { MapPin, ArrowLeft, Plus, Pencil } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import BackLink from '../components/BackLink'
 
 interface LocationData {
   name: string
@@ -26,7 +27,7 @@ const TYPE_COLORS: Record<string, string> = {
   OTHER: 'bg-gray-200 text-gray-700',
 }
 
-function LocationDetail({ data, onBack }: { data: LocationData; onBack: () => void }) {
+function LocationDetail({ data, onBack, onEdit }: { data: LocationData; onBack: () => void; onEdit: () => void }) {
   const sections = [
     { label: 'Atmosphere', value: data.atmosphere },
     { label: 'Rules', value: data.rules },
@@ -47,8 +48,17 @@ function LocationDetail({ data, onBack }: { data: LocationData; onBack: () => vo
         <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
           <MapPin className="w-6 h-6 text-primary" />
         </div>
-        <div>
-          <h2 className="text-xl font-bold text-text">{data.name}</h2>
+        <div className="flex-1">
+          <div className="flex items-start justify-between">
+            <h2 className="text-xl font-bold text-text">{data.name}</h2>
+            <button
+              onClick={onEdit}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              Edit
+            </button>
+          </div>
           {data.type ? (
             <StatusBadge label={data.type} colorClass={TYPE_COLORS[data.type]} />
           ) : null}
@@ -76,6 +86,7 @@ function LocationDetail({ data, onBack }: { data: LocationData; onBack: () => vo
 export default function LocationsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
+  const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
 
   const { data: locations, isLoading } = useDocuments({
     template_id: TEMPLATES.LOCATION,
@@ -96,8 +107,24 @@ export default function LocationsPage() {
 
   return (
     <div className="p-6 max-w-5xl">
+      <BackLink />
       {selectedData ? (
-        <LocationDetail data={selectedData} onBack={() => setSelectedId(null)} />
+        <>
+          <LocationDetail
+            data={selectedData}
+            onBack={() => setSelectedId(null)}
+            onEdit={() => setEditData(selectedData as unknown as Record<string, unknown>)}
+          />
+          {editData ? (
+            <CreateEntityModal
+              entityType="location"
+              mode="edit"
+              existingData={editData}
+              onClose={() => setEditData(null)}
+              onCreated={() => setEditData(null)}
+            />
+          ) : null}
+        </>
       ) : (
         <>
           <div className="flex items-center gap-3 mb-6">
