@@ -35,7 +35,7 @@ export interface ExtractedEntities {
 // ── Parse: split text into chapters and scenes ───────────
 
 const CHAPTER_RE =
-  /^(?:chapter\s+(\d+|[ivxlcdm]+)(?:\s*[:\-–—.]\s*(.*))?|#{1,2}\s+(?:chapter\s+)?(\d+|[ivxlcdm]+)(?:\s*[:\-–—.]\s*(.*))?)$/im
+  /^(?:(?:chapter|kapitel)\s+(\d+|[ivxlcdm]+)(?:\s*[:\-–—.]\s*(.*))?|#{1,2}\s+(?:(?:chapter|kapitel)\s+)?(\d+|[ivxlcdm]+)(?:\s*[:\-–—.]\s*(.*))?)$/im
 
 const SCENE_BREAK_RE = /^(?:\s*(?:\*\s*){3,}\s*|\s*(?:-\s*){3,}\s*|\s*~{3,}\s*|\s*#\s*$)/m
 

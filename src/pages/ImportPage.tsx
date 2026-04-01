@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useCreateDocument } from '@wip/react'
+import { useCreateDocument, useWipClient } from '@wip/react'
 import { useNavigate } from 'react-router-dom'
 import {
   Upload,
@@ -14,9 +14,13 @@ import {
   AlertTriangle,
   Trash2,
   FileText,
+  Merge,
 } from 'lucide-react'
-import { TEMPLATES } from '../lib/constants'
+import { TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import BackLink from '../components/BackLink'
+
+const toTermValue = (text: string): string =>
+  text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
 
 const BASE_PATH = import.meta.env.BASE_URL || '/'
 
@@ -292,6 +296,8 @@ function StructureStep({
 
 // ── Step 3: Entity Review ────────────────────────────────
 
+type TabKey = 'characters' | 'locations' | 'threads'
+
 function EntitiesStep({
   characters,
   locations,
@@ -317,7 +323,57 @@ function EntitiesStep({
   onBack: () => void
   onNext: () => void
 }) {
-  const [tab, setTab] = useState<'characters' | 'locations' | 'threads'>('characters')
+  const [tab, setTab] = useState<TabKey>('characters')
+  const [mergeSelection, setMergeSelection] = useState<Set<number>>(new Set())
+  const [merging, setMerging] = useState(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  const toggleExpand = (key: string) => {
+    setExpanded(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key); else next.add(key)
+      return next
+    })
+  }
+
+  const toggleMergeSelect = (idx: number) => {
+    setMergeSelection(prev => {
+      const next = new Set(prev)
+      if (next.has(idx)) next.delete(idx); else next.add(idx)
+      return next
+    })
+  }
+
+  const startMerge = () => { setMerging(true); setMergeSelection(new Set()) }
+  const cancelMerge = () => { setMerging(false); setMergeSelection(new Set()) }
+
+  const handleMerge = () => {
+    if (mergeSelection.size < 2) return
+    const indices = Array.from(mergeSelection).sort((a, b) => a - b)
+
+    if (tab === 'characters') {
+      const selected = indices.map(i => characters[i]!)
+      const rolePriority = ['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED']
+      const bestRole = selected.map(c => c.role).sort((a, b) => rolePriority.indexOf(a) - rolePriority.indexOf(b))[0] || selected[0]!.role
+      const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
+      const descriptions = [...new Set(selected.map(c => c.description).filter(Boolean))]
+      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. '), included: true }
+      setCharacters([merged, ...characters.filter((_, i) => !mergeSelection.has(i))])
+    } else if (tab === 'locations') {
+      const selected = indices.map(i => locations[i]!)
+      const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
+      const atmospheres = [...new Set(selected.map(l => l.atmosphere).filter(Boolean))]
+      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: atmospheres.join('. '), included: true }
+      setLocations([merged, ...locations.filter((_, i) => !mergeSelection.has(i))])
+    } else if (tab === 'threads') {
+      const selected = indices.map(i => plotThreads[i]!)
+      const canonicalTitle = [...selected].sort((a, b) => b.title.length - a.title.length)[0]!.title
+      const descriptions = [...new Set(selected.map(p => p.description).filter(Boolean))]
+      const merged: ExtractedPlotThread = { title: canonicalTitle, description: descriptions.join('. '), included: true }
+      setPlotThreads([merged, ...plotThreads.filter((_, i) => !mergeSelection.has(i))])
+    }
+    cancelMerge()
+  }
 
   if (extracting) {
     return (
@@ -383,7 +439,7 @@ function EntitiesStep({
         {tabs.map((t) => (
           <button
             key={t.key}
-            onClick={() => setTab(t.key)}
+            onClick={() => { setTab(t.key); cancelMerge() }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
               tab === t.key
                 ? 'border-primary text-primary'
@@ -397,129 +453,180 @@ function EntitiesStep({
         ))}
       </div>
 
+      {/* Merge toolbar — shown for all tabs when >1 item */}
+      {((tab === 'characters' && characters.length > 1) ||
+        (tab === 'locations' && locations.length > 1) ||
+        (tab === 'threads' && plotThreads.length > 1)) ? (
+        <div className="flex items-center gap-2">
+          {merging ? (
+            <>
+              <span className="text-xs text-text-muted">Click cards to select for merge ({mergeSelection.size} selected)</span>
+              <button
+                onClick={handleMerge}
+                disabled={mergeSelection.size < 2}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
+              >
+                <Merge className="w-3.5 h-3.5" />
+                Merge {mergeSelection.size > 1 ? `(${mergeSelection.size})` : ''}
+              </button>
+              <button onClick={cancelMerge} className="text-xs text-text-muted hover:text-text">
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={startMerge}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
+            >
+              <Merge className="w-3.5 h-3.5" />
+              Merge Aliases
+            </button>
+          )}
+        </div>
+      ) : null}
+
       <div className="max-h-[400px] overflow-y-auto space-y-2">
         {tab === 'characters' ? (
-          characters.length > 0 ? characters.map((c, i) => (
-            <div key={i} className={`flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg ${c.included ? '' : 'opacity-40'}`}>
-              <input
-                type="checkbox"
-                checked={c.included}
-                onChange={() => {
-                  const updated = [...characters]
-                  updated[i] = { ...updated[i]!, included: !updated[i]!.included }
-                  setCharacters(updated)
-                }}
-                className="rounded border-gray-300 mt-1"
-              />
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={c.name}
-                    onChange={(e) => updateCharacter(i, 'name', e.target.value)}
-                    className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
-                  />
-                  <select
-                    value={c.role}
-                    onChange={(e) => updateCharacter(i, 'role', e.target.value)}
-                    className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted"
-                  >
-                    {['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED'].map(r => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
-                </div>
+          characters.length > 0 ? characters.map((c, i) => {
+            const key = `c-${i}`
+            const isExpanded = expanded.has(key)
+            const isMergeSel = merging && mergeSelection.has(i)
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-3 p-3 bg-white border rounded-lg transition-colors ${
+                  isMergeSel ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-200'
+                } ${c.included ? '' : 'opacity-40'} ${merging ? 'cursor-pointer' : ''}`}
+                onClick={merging ? () => toggleMergeSelect(i) : undefined}
+              >
                 <input
-                  type="text"
-                  value={c.description}
-                  onChange={(e) => updateCharacter(i, 'description', e.target.value)}
-                  className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                  type="checkbox"
+                  checked={c.included}
+                  onChange={(e) => { e.stopPropagation(); const u = [...characters]; u[i] = { ...u[i]!, included: !u[i]!.included }; setCharacters(u) }}
+                  className="rounded border-gray-300 mt-1"
+                  onClick={(e) => e.stopPropagation()}
                 />
+                <div className="flex-1 space-y-1.5" onClick={(e) => { if (!merging) { e.stopPropagation(); toggleExpand(key) } }}>
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
+                    <input type="text" value={c.name} onChange={(e) => updateCharacter(i, 'name', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1" />
+                    <select value={c.role} onChange={(e) => updateCharacter(i, 'role', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted">
+                      {['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED'].map(r => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {isExpanded && (
+                    <input type="text" value={c.description} onChange={(e) => updateCharacter(i, 'description', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
+                  )}
+                </div>
+                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
+                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
+                <button onClick={(e) => { e.stopPropagation(); removeCharacter(i) }} className="text-text-muted hover:text-red-500 p-1">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button onClick={() => removeCharacter(i)} className="text-text-muted hover:text-red-500 p-1">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )) : <p className="text-sm text-text-muted py-4">No characters detected.</p>
+            )
+          }) : <p className="text-sm text-text-muted py-4">No characters detected.</p>
         ) : null}
 
         {tab === 'locations' ? (
-          locations.length > 0 ? locations.map((l, i) => (
-            <div key={i} className={`flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg ${l.included ? '' : 'opacity-40'}`}>
-              <input
-                type="checkbox"
-                checked={l.included}
-                onChange={() => {
-                  const updated = [...locations]
-                  updated[i] = { ...updated[i]!, included: !updated[i]!.included }
-                  setLocations(updated)
-                }}
-                className="rounded border-gray-300 mt-1"
-              />
-              <div className="flex-1 space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={l.name}
-                    onChange={(e) => updateLocation(i, 'name', e.target.value)}
-                    className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
-                  />
-                  <select
-                    value={l.type}
-                    onChange={(e) => updateLocation(i, 'type', e.target.value)}
-                    className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted"
-                  >
-                    {['CITY', 'TOWN', 'BUILDING', 'WILDERNESS', 'ROOM', 'REALM', 'OTHER'].map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-                </div>
+          locations.length > 0 ? locations.map((l, i) => {
+            const key = `l-${i}`
+            const isExpanded = expanded.has(key)
+            const isMergeSel = merging && mergeSelection.has(i)
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-3 p-3 bg-white border rounded-lg transition-colors ${
+                  isMergeSel ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-200'
+                } ${l.included ? '' : 'opacity-40'} ${merging ? 'cursor-pointer' : ''}`}
+                onClick={merging ? () => toggleMergeSelect(i) : undefined}
+              >
                 <input
-                  type="text"
-                  value={l.atmosphere}
-                  onChange={(e) => updateLocation(i, 'atmosphere', e.target.value)}
-                  className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                  type="checkbox"
+                  checked={l.included}
+                  onChange={(e) => { e.stopPropagation(); const u = [...locations]; u[i] = { ...u[i]!, included: !u[i]!.included }; setLocations(u) }}
+                  className="rounded border-gray-300 mt-1"
+                  onClick={(e) => e.stopPropagation()}
                 />
+                <div className="flex-1 space-y-1.5" onClick={(e) => { if (!merging) { e.stopPropagation(); toggleExpand(key) } }}>
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
+                    <input type="text" value={l.name} onChange={(e) => updateLocation(i, 'name', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1" />
+                    <select value={l.type} onChange={(e) => updateLocation(i, 'type', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted">
+                      {['CITY', 'TOWN', 'BUILDING', 'WILDERNESS', 'ROOM', 'REALM', 'OTHER'].map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {isExpanded && (
+                    <input type="text" value={l.atmosphere} onChange={(e) => updateLocation(i, 'atmosphere', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
+                  )}
+                </div>
+                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
+                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
+                <button onClick={(e) => { e.stopPropagation(); removeLocation(i) }} className="text-text-muted hover:text-red-500 p-1">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button onClick={() => removeLocation(i)} className="text-text-muted hover:text-red-500 p-1">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )) : <p className="text-sm text-text-muted py-4">No locations detected.</p>
+            )
+          }) : <p className="text-sm text-text-muted py-4">No locations detected.</p>
         ) : null}
 
         {tab === 'threads' ? (
-          plotThreads.length > 0 ? plotThreads.map((p, i) => (
-            <div key={i} className={`flex items-start gap-3 p-3 bg-white border border-gray-200 rounded-lg ${p.included ? '' : 'opacity-40'}`}>
-              <input
-                type="checkbox"
-                checked={p.included}
-                onChange={() => {
-                  const updated = [...plotThreads]
-                  updated[i] = { ...updated[i]!, included: !updated[i]!.included }
-                  setPlotThreads(updated)
-                }}
-                className="rounded border-gray-300 mt-1"
-              />
-              <div className="flex-1 space-y-1.5">
+          plotThreads.length > 0 ? plotThreads.map((p, i) => {
+            const key = `t-${i}`
+            const isExpanded = expanded.has(key)
+            const isMergeSel = merging && mergeSelection.has(i)
+            return (
+              <div
+                key={i}
+                className={`flex items-start gap-3 p-3 bg-white border rounded-lg transition-colors ${
+                  isMergeSel ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-200'
+                } ${p.included ? '' : 'opacity-40'} ${merging ? 'cursor-pointer' : ''}`}
+                onClick={merging ? () => toggleMergeSelect(i) : undefined}
+              >
                 <input
-                  type="text"
-                  value={p.title}
-                  onChange={(e) => updateThread(i, 'title', e.target.value)}
-                  className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
+                  type="checkbox"
+                  checked={p.included}
+                  onChange={(e) => { e.stopPropagation(); const u = [...plotThreads]; u[i] = { ...u[i]!, included: !u[i]!.included }; setPlotThreads(u) }}
+                  className="rounded border-gray-300 mt-1"
+                  onClick={(e) => e.stopPropagation()}
                 />
-                <input
-                  type="text"
-                  value={p.description}
-                  onChange={(e) => updateThread(i, 'description', e.target.value)}
-                  className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1"
-                />
+                <div className="flex-1 space-y-1.5" onClick={(e) => { if (!merging) { e.stopPropagation(); toggleExpand(key) } }}>
+                  <div className="flex items-center gap-2">
+                    <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
+                    <input type="text" value={p.title} onChange={(e) => updateThread(i, 'title', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1" />
+                  </div>
+                  {isExpanded && (
+                    <input type="text" value={p.description} onChange={(e) => updateThread(i, 'description', e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
+                  )}
+                </div>
+                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
+                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
+                <button onClick={(e) => { e.stopPropagation(); removeThread(i) }} className="text-text-muted hover:text-red-500 p-1">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button onClick={() => removeThread(i)} className="text-text-muted hover:text-red-500 p-1">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )) : <p className="text-sm text-text-muted py-4">No plot threads detected.</p>
+            )
+          }) : <p className="text-sm text-text-muted py-4">No plot threads detected.</p>
         ) : null}
       </div>
 
@@ -634,6 +741,7 @@ function ConfirmStep({
 export default function ImportPage() {
   const navigate = useNavigate()
   const createDocument = useCreateDocument()
+  const wipClient = useWipClient()
 
   const [step, setStep] = useState<Step>('upload')
   const [chapters, setChapters] = useState<ParsedChapter[]>([])
@@ -746,6 +854,20 @@ export default function ImportPage() {
     }
 
     try {
+      // Auto-create terms in index terminologies before creating documents
+      for (const c of includedCharacters) {
+        const tv = toTermValue(c.name)
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.CHARACTERS, { value: tv, label: c.name, aliases: c.name !== tv ? [c.name] : [] }) } catch { /* may exist */ }
+      }
+      for (const l of includedLocations) {
+        const tv = toTermValue(l.name)
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.LOCATIONS, { value: tv, label: l.name, aliases: l.name !== tv ? [l.name] : [] }) } catch { /* may exist */ }
+      }
+      for (const p of includedThreads) {
+        const tv = toTermValue(p.title)
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }) } catch { /* may exist */ }
+      }
+
       // Create chapters
       for (const ch of includedChapters) {
         await createOne(TEMPLATES.CHAPTER, {
@@ -762,33 +884,34 @@ export default function ImportPage() {
           event_type: 'SCENE',
           chapter_number: scene.chapterNumber,
           scene_order: scene.sceneOrder,
+          story_time_sort: scene.chapterNumber * 1000 + scene.sceneOrder,
           prose: scene.prose,
           summary: chapterSummaries.get(scene.chapterNumber) || '',
         })
       }
 
-      // Create characters
+      // Create characters (use term values for name)
       for (const c of includedCharacters) {
         await createOne(TEMPLATES.CHARACTER, {
-          name: c.name,
+          name: toTermValue(c.name),
           role: c.role,
           description: c.description,
         })
       }
 
-      // Create locations
+      // Create locations (use term values for name)
       for (const l of includedLocations) {
         await createOne(TEMPLATES.LOCATION, {
-          name: l.name,
+          name: toTermValue(l.name),
           type: l.type,
           atmosphere: l.atmosphere,
         })
       }
 
-      // Create plot threads
+      // Create plot threads (use term values for title)
       for (const p of includedThreads) {
         await createOne(TEMPLATES.PLOT_THREAD, {
-          title: p.title,
+          title: toTermValue(p.title),
           status: 'OPEN',
           description: p.description,
         })
@@ -801,7 +924,7 @@ export default function ImportPage() {
       setImportedCount(created)
       setStep('done')
     }
-  }, [chapters, characters, locations, plotThreads, chapterSummaries, createDocument])
+  }, [chapters, characters, locations, plotThreads, chapterSummaries, createDocument, wipClient])
 
   const stepLabels: Array<{ key: Step; label: string }> = [
     { key: 'upload', label: 'Upload' },
