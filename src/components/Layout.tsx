@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
 import { TEMPLATES } from '../lib/constants'
+import UnsavedDraftBanner from './UnsavedDraftBanner'
 import {
   PenTool,
   LayoutGrid,
@@ -90,6 +91,9 @@ export default function Layout() {
             {projectTitle ?? 'AuthorAssist'}
           </h1>
         </header>
+
+        {/* Unsaved scene drafts — global reminder */}
+        <UnsavedDraftBanner />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">

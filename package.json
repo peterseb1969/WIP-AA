@@ -22,6 +22,7 @@
     "@wip/proxy": "file:libs/wip-proxy-0.1.0.tgz",
     "@wip/react": "file:libs/wip-react-0.2.0.tgz",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
     "express": "^5.1.0",
     "lucide-react": "^1.7.0",
     "react": "^19.1.0",

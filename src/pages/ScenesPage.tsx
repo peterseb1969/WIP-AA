@@ -1,9 +1,9 @@
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useDocuments } from '@wip/react'
+import { useDocuments, useCreateDocument } from '@wip/react'
 import {
   PenTool,
   ChevronLeft,
@@ -22,6 +22,7 @@ import {
   StickyNote,
   FileText,
   Plus,
+  Save,
 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -793,12 +794,19 @@ function SceneEditor({
   const [mode, setMode] = useState<EditorMode>('full')
   const [metadataExpanded, setMetadataExpanded] = useState(false)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
+  const [isDirty, setIsDirty] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const createDocument = useCreateDocument()
 
   const scene = useMemo(
     () => events.find((e) => e.document_id === sceneId),
     [events, sceneId]
   )
   const sceneData = scene?.data
+
+  // localStorage key for auto-backup
+  const draftKey = `aa-scene-draft-${sceneId}`
 
   // Order scenes within same chapter for prev/next
   const chapterScenes = useMemo(() => {
@@ -817,6 +825,23 @@ function SceneEditor({
     [chapters, sceneData?.chapter_number]
   )
 
+  // Resolve initial content: localStorage draft if newer, else WIP prose
+  const initialContent = useMemo(() => {
+    const wipProse = sceneData?.prose ?? ''
+    try {
+      const raw = localStorage.getItem(draftKey)
+      if (raw) {
+        const draft = JSON.parse(raw) as { content: string; savedAt: number }
+        // Only use draft if it differs from WIP and is recent (< 24h)
+        const ageMs = Date.now() - draft.savedAt
+        if (ageMs < 24 * 60 * 60 * 1000 && draft.content !== wipProse) {
+          return draft.content
+        }
+      }
+    } catch { /* ignore corrupt localStorage */ }
+    return wipProse
+  }, [sceneId]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // TipTap editor
   const editor = useEditor(
     {
@@ -834,7 +859,7 @@ function SceneEditor({
           placeholder: 'Begin writing your scene...',
         }),
       ],
-      content: sceneData?.prose ?? '',
+      content: initialContent,
       editorProps: {
         attributes: {
           class:
@@ -842,24 +867,106 @@ function SceneEditor({
           style: "font-family: 'Georgia', 'Times New Roman', serif; font-size: 16px; line-height: 1.8;",
         },
       },
+      onUpdate: () => {
+        setIsDirty(true)
+      },
     },
     [sceneId]
   )
+
+  // Mark dirty on mount if we loaded a localStorage draft that differs from WIP
+  useEffect(() => {
+    if (initialContent !== (sceneData?.prose ?? '')) {
+      setIsDirty(true)
+    } else {
+      setIsDirty(false)
+    }
+    setLastSaved(null)
+  }, [sceneId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Write draft to localStorage with title for the global banner
+  const writeDraft = useCallback((html: string) => {
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({ content: html, title: sceneData?.title ?? '', savedAt: Date.now() })
+    )
+  }, [draftKey, sceneData?.title])
+
+  // Flush current editor content to localStorage immediately
+  const flushDraft = useCallback(() => {
+    if (!editor) return
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+    if (editor.getText().trim()) {
+      writeDraft(editor.getHTML())
+    }
+  }, [editor, writeDraft])
+
+  // Auto-backup to localStorage every 3 seconds on change
+  useEffect(() => {
+    if (!editor) return
+    const handler = () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+      autoSaveTimerRef.current = setTimeout(() => {
+        if (editor.getText().trim()) {
+          writeDraft(editor.getHTML())
+        }
+      }, 3000)
+    }
+    editor.on('update', handler)
+    // Flush draft on unmount (navigating away)
+    return () => {
+      editor.off('update', handler)
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
+      // Sync flush — editor is still alive during cleanup
+      if (editor.getText().trim()) {
+        writeDraft(editor.getHTML())
+      }
+    }
+  }, [editor, draftKey, writeDraft])
+
+  // Save prose to WIP — creates a new version with all existing data + updated prose
+  const handleSave = useCallback(() => {
+    if (!editor || !sceneData) return
+    const prose = editor.getHTML()
+    createDocument.mutate(
+      {
+        template_id: TEMPLATES.EVENT,
+        namespace: 'aa',
+        data: { ...sceneData, prose },
+      },
+      {
+        onSuccess: () => {
+          setIsDirty(false)
+          setLastSaved(new Date())
+          // Clear localStorage draft since we've saved to WIP
+          localStorage.removeItem(draftKey)
+        },
+      }
+    )
+  }, [editor, sceneData, createDocument, draftKey])
 
   const currentWordCount = editor ? wordCount(editor.getText()) : 0
 
   const handleNavigate = useCallback(
     (direction: 'prev' | 'next') => {
       const target = direction === 'prev' ? prevScene : nextScene
-      if (target) onNavigate(target.document_id)
+      if (target) {
+        flushDraft()
+        onNavigate(target.document_id)
+      }
     },
-    [prevScene, nextScene, onNavigate]
+    [prevScene, nextScene, onNavigate, flushDraft]
   )
+
+  const handleBack = useCallback(() => {
+    flushDraft()
+    onBack()
+  }, [onBack, flushDraft])
 
   if (!sceneData) {
     return (
       <div className="p-6">
-        <button onClick={onBack} className="flex items-center gap-1 text-sm text-text-muted hover:text-primary mb-4">
+        <button onClick={handleBack} className="flex items-center gap-1 text-sm text-text-muted hover:text-primary mb-4">
           <ChevronLeft className="w-4 h-4" />
           Back to scenes
         </button>
@@ -874,9 +981,20 @@ function SceneEditor({
       <div className="fixed inset-0 bg-[#1a1a2e] z-50 flex flex-col">
         {/* Minimal top bar */}
         <div className="flex items-center justify-between px-6 py-3 text-white/60">
-          <div className="text-sm">{sceneData.title}</div>
+          <div className="text-sm">
+            {sceneData.title}
+            {isDirty ? <span className="text-amber-400 ml-1">*</span> : null}
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-xs">{currentWordCount} words</span>
+            <button
+              onClick={handleSave}
+              disabled={!isDirty || createDocument.isPending}
+              className="flex items-center gap-1.5 text-sm hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default"
+            >
+              <Save className="w-4 h-4" />
+              {createDocument.isPending ? 'Saving...' : 'Save'}
+            </button>
             <button
               onClick={() => setMode('full')}
               className="flex items-center gap-1.5 text-sm hover:text-white transition-colors"
@@ -906,7 +1024,7 @@ function SceneEditor({
       {/* Toolbar */}
       <div className="bg-white border-b border-gray-200 flex items-center gap-2 px-4 py-2">
         <button
-          onClick={onBack}
+          onClick={handleBack}
           className="flex items-center gap-1 text-sm text-text-muted hover:text-primary transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -914,8 +1032,25 @@ function SceneEditor({
         </button>
 
         <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-text truncate">{sceneData.title}</h2>
+          <h2 className="text-sm font-semibold text-text truncate">
+            {sceneData.title}
+            {isDirty ? <span className="text-amber-500 ml-1">*</span> : null}
+          </h2>
         </div>
+
+        {/* Save button */}
+        <button
+          onClick={handleSave}
+          disabled={!isDirty || createDocument.isPending}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            isDirty
+              ? 'bg-primary text-white hover:bg-primary-dark'
+              : 'bg-gray-100 text-text-muted cursor-default'
+          } disabled:opacity-50`}
+        >
+          <Save className="w-3.5 h-3.5" />
+          {createDocument.isPending ? 'Saving...' : 'Save'}
+        </button>
 
         {/* Mode toggles */}
         <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5">
@@ -969,6 +1104,11 @@ function SceneEditor({
           <div className="bg-surface border-t border-gray-100 px-4 py-1.5 flex items-center justify-between text-xs text-text-muted">
             <span>{currentWordCount} words</span>
             <span>
+              {lastSaved ? (
+                <span className="text-green-600 mr-2">Saved</span>
+              ) : isDirty ? (
+                <span className="text-amber-500 mr-2">Unsaved changes</span>
+              ) : null}
               Ch. {sceneData.chapter_number ?? '?'} · Scene {sceneData.scene_order ?? '?'}
             </span>
           </div>
