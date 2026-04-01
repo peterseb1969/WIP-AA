@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useDocuments } from '@wip/react'
-import { GitBranch, Plus, Pencil } from 'lucide-react'
+import { useDocuments, useDeleteDocument } from '@wip/react'
+import { GitBranch, Plus, Pencil, Trash2 } from 'lucide-react'
 import { TEMPLATES, THREAD_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -19,6 +19,8 @@ interface PlotThreadData {
 export default function PlotThreadsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const deleteDoc = useDeleteDocument()
   const { data: threads, isLoading } = useDocuments({
     template_id: TEMPLATES.PLOT_THREAD,
     status: 'active',
@@ -79,13 +81,41 @@ export default function PlotThreadsPage() {
                     >
                       <div className="flex items-start justify-between mb-1">
                         <h3 className="font-semibold text-text">{thread.data.title}</h3>
-                        <button
-                          onClick={() => setEditData(thread.data as unknown as Record<string, unknown>)}
-                          className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
-                        >
-                          <Pencil className="w-3 h-3" />
-                          Edit
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => setEditData(thread.data as unknown as Record<string, unknown>)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
+                          >
+                            <Pencil className="w-3 h-3" />
+                            Edit
+                          </button>
+                          {confirmDelete === thread.id ? (
+                            <span className="inline-flex items-center gap-1">
+                              <span className="text-xs text-red-600">Delete?</span>
+                              <button
+                                onClick={() => deleteDoc.mutate({ id: thread.id }, { onSuccess: () => setConfirmDelete(null) })}
+                                disabled={deleteDoc.isPending}
+                                className="px-1.5 py-0.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                              >
+                                Yes
+                              </button>
+                              <button
+                                onClick={() => setConfirmDelete(null)}
+                                className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
+                              >
+                                No
+                              </button>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => setConfirmDelete(thread.id)}
+                              className="text-text-muted hover:text-red-600 p-1 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
                       </div>
                       {thread.data.description ? (
                         <p className="text-sm text-text-muted mb-2">{thread.data.description}</p>

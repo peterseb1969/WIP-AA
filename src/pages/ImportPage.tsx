@@ -12,9 +12,12 @@ import {
   Check,
   Loader2,
   AlertTriangle,
-  Trash2,
+  X,
   FileText,
   Merge,
+  RotateCcw,
+  CheckSquare,
+  Square,
 } from 'lucide-react'
 import { TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import BackLink from '../components/BackLink'
@@ -44,20 +47,17 @@ interface ExtractedCharacter {
   name: string
   role: string
   description: string
-  included: boolean
 }
 
 interface ExtractedLocation {
   name: string
   type: string
   atmosphere: string
-  included: boolean
 }
 
 interface ExtractedPlotThread {
   title: string
   description: string
-  included: boolean
 }
 
 type Step = 'upload' | 'structure' | 'entities' | 'confirm' | 'importing' | 'done'
@@ -305,6 +305,7 @@ function EntitiesStep({
   setCharacters,
   setLocations,
   setPlotThreads,
+  onReset,
   extracting,
   extractProgress,
   extractTotal,
@@ -317,6 +318,7 @@ function EntitiesStep({
   setCharacters: (c: ExtractedCharacter[]) => void
   setLocations: (l: ExtractedLocation[]) => void
   setPlotThreads: (p: ExtractedPlotThread[]) => void
+  onReset: () => void
   extracting: boolean
   extractProgress: number
   extractTotal: number
@@ -344,6 +346,15 @@ function EntitiesStep({
     })
   }
 
+  const currentItems = tab === 'characters' ? characters : tab === 'locations' ? locations : plotThreads
+
+  const selectAllMerge = () => {
+    setMergeSelection(new Set(currentItems.map((_, i) => i)))
+  }
+  const deselectAllMerge = () => {
+    setMergeSelection(new Set())
+  }
+
   const startMerge = () => { setMerging(true); setMergeSelection(new Set()) }
   const cancelMerge = () => { setMerging(false); setMergeSelection(new Set()) }
 
@@ -357,19 +368,19 @@ function EntitiesStep({
       const bestRole = selected.map(c => c.role).sort((a, b) => rolePriority.indexOf(a) - rolePriority.indexOf(b))[0] || selected[0]!.role
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const descriptions = [...new Set(selected.map(c => c.description).filter(Boolean))]
-      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. '), included: true }
+      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. ') }
       setCharacters([merged, ...characters.filter((_, i) => !mergeSelection.has(i))])
     } else if (tab === 'locations') {
       const selected = indices.map(i => locations[i]!)
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const atmospheres = [...new Set(selected.map(l => l.atmosphere).filter(Boolean))]
-      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: atmospheres.join('. '), included: true }
+      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: atmospheres.join('. ') }
       setLocations([merged, ...locations.filter((_, i) => !mergeSelection.has(i))])
     } else if (tab === 'threads') {
       const selected = indices.map(i => plotThreads[i]!)
       const canonicalTitle = [...selected].sort((a, b) => b.title.length - a.title.length)[0]!.title
       const descriptions = [...new Set(selected.map(p => p.description).filter(Boolean))]
-      const merged: ExtractedPlotThread = { title: canonicalTitle, description: descriptions.join('. '), included: true }
+      const merged: ExtractedPlotThread = { title: canonicalTitle, description: descriptions.join('. ') }
       setPlotThreads([merged, ...plotThreads.filter((_, i) => !mergeSelection.has(i))])
     }
     cancelMerge()
@@ -393,9 +404,9 @@ function EntitiesStep({
   }
 
   const tabs = [
-    { key: 'characters' as const, label: 'Characters', icon: Users, count: characters.filter(c => c.included).length },
-    { key: 'locations' as const, label: 'Locations', icon: MapPin, count: locations.filter(l => l.included).length },
-    { key: 'threads' as const, label: 'Plot Threads', icon: GitBranch, count: plotThreads.filter(p => p.included).length },
+    { key: 'characters' as const, label: 'Characters', icon: Users, count: characters.length },
+    { key: 'locations' as const, label: 'Locations', icon: MapPin, count: locations.length },
+    { key: 'threads' as const, label: 'Plot Threads', icon: GitBranch, count: plotThreads.length },
   ]
 
   const removeCharacter = (idx: number) => {
@@ -431,7 +442,7 @@ function EntitiesStep({
   return (
     <div className="space-y-4">
       <p className="text-sm text-text-muted">
-        AI detected the following entities. Edit, remove, or uncheck items before importing.
+        Everything on this list will be imported. Remove what you don't need, merge duplicates, then continue.
       </p>
 
       {/* Tab bar */}
@@ -453,37 +464,58 @@ function EntitiesStep({
         ))}
       </div>
 
-      {/* Merge toolbar — shown for all tabs when >1 item */}
-      {((tab === 'characters' && characters.length > 1) ||
-        (tab === 'locations' && locations.length > 1) ||
-        (tab === 'threads' && plotThreads.length > 1)) ? (
-        <div className="flex items-center gap-2">
-          {merging ? (
-            <>
-              <span className="text-xs text-text-muted">Click cards to select for merge ({mergeSelection.size} selected)</span>
-              <button
-                onClick={handleMerge}
-                disabled={mergeSelection.size < 2}
-                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
-              >
-                <Merge className="w-3.5 h-3.5" />
-                Merge {mergeSelection.size > 1 ? `(${mergeSelection.size})` : ''}
-              </button>
-              <button onClick={cancelMerge} className="text-xs text-text-muted hover:text-text">
-                Cancel
-              </button>
-            </>
-          ) : (
+      {/* Toolbar: merge + reset */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {merging ? (
+          <>
+            <span className="text-xs text-text-muted">Select items to merge ({mergeSelection.size} selected)</span>
             <button
-              onClick={startMerge}
-              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
+              onClick={selectAllMerge}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary transition-colors"
+            >
+              <CheckSquare className="w-3 h-3" />
+              All
+            </button>
+            <button
+              onClick={deselectAllMerge}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary transition-colors"
+            >
+              <Square className="w-3 h-3" />
+              None
+            </button>
+            <button
+              onClick={handleMerge}
+              disabled={mergeSelection.size < 2}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
             >
               <Merge className="w-3.5 h-3.5" />
-              Merge Aliases
+              Merge {mergeSelection.size > 1 ? `(${mergeSelection.size})` : ''}
             </button>
-          )}
-        </div>
-      ) : null}
+            <button onClick={cancelMerge} className="text-xs text-text-muted hover:text-text">
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            {currentItems.length > 1 ? (
+              <button
+                onClick={startMerge}
+                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
+              >
+                <Merge className="w-3.5 h-3.5" />
+                Merge Aliases
+              </button>
+            ) : null}
+            <button
+              onClick={onReset}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-gray-100 rounded-lg transition-colors ml-auto"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset
+            </button>
+          </>
+        )}
+      </div>
 
       <div className="max-h-[400px] overflow-y-auto space-y-2">
         {tab === 'characters' ? (
@@ -496,16 +528,11 @@ function EntitiesStep({
                 key={i}
                 className={`flex items-start gap-3 p-3 bg-white border rounded-lg transition-colors ${
                   isMergeSel ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-200'
-                } ${c.included ? '' : 'opacity-40'} ${merging ? 'cursor-pointer' : ''}`}
+                } ${merging ? 'cursor-pointer' : ''}`}
                 onClick={merging ? () => toggleMergeSelect(i) : undefined}
               >
-                <input
-                  type="checkbox"
-                  checked={c.included}
-                  onChange={(e) => { e.stopPropagation(); const u = [...characters]; u[i] = { ...u[i]!, included: !u[i]!.included }; setCharacters(u) }}
-                  className="rounded border-gray-300 mt-1"
-                  onClick={(e) => e.stopPropagation()}
-                />
+                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
+                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
                 <div className="flex-1 space-y-1.5" onClick={(e) => { if (!merging) { e.stopPropagation(); toggleExpand(key) } }}>
                   <div className="flex items-center gap-2">
                     <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
@@ -526,11 +553,11 @@ function EntitiesStep({
                       className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
                   )}
                 </div>
-                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
-                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
-                <button onClick={(e) => { e.stopPropagation(); removeCharacter(i) }} className="text-text-muted hover:text-red-500 p-1">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!merging && (
+                  <button onClick={(e) => { e.stopPropagation(); removeCharacter(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )
           }) : <p className="text-sm text-text-muted py-4">No characters detected.</p>
@@ -546,16 +573,11 @@ function EntitiesStep({
                 key={i}
                 className={`flex items-start gap-3 p-3 bg-white border rounded-lg transition-colors ${
                   isMergeSel ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-200'
-                } ${l.included ? '' : 'opacity-40'} ${merging ? 'cursor-pointer' : ''}`}
+                } ${merging ? 'cursor-pointer' : ''}`}
                 onClick={merging ? () => toggleMergeSelect(i) : undefined}
               >
-                <input
-                  type="checkbox"
-                  checked={l.included}
-                  onChange={(e) => { e.stopPropagation(); const u = [...locations]; u[i] = { ...u[i]!, included: !u[i]!.included }; setLocations(u) }}
-                  className="rounded border-gray-300 mt-1"
-                  onClick={(e) => e.stopPropagation()}
-                />
+                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
+                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
                 <div className="flex-1 space-y-1.5" onClick={(e) => { if (!merging) { e.stopPropagation(); toggleExpand(key) } }}>
                   <div className="flex items-center gap-2">
                     <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
@@ -576,11 +598,11 @@ function EntitiesStep({
                       className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
                   )}
                 </div>
-                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
-                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
-                <button onClick={(e) => { e.stopPropagation(); removeLocation(i) }} className="text-text-muted hover:text-red-500 p-1">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!merging && (
+                  <button onClick={(e) => { e.stopPropagation(); removeLocation(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )
           }) : <p className="text-sm text-text-muted py-4">No locations detected.</p>
@@ -596,16 +618,11 @@ function EntitiesStep({
                 key={i}
                 className={`flex items-start gap-3 p-3 bg-white border rounded-lg transition-colors ${
                   isMergeSel ? 'border-primary ring-2 ring-primary/20 bg-primary/5' : 'border-gray-200'
-                } ${p.included ? '' : 'opacity-40'} ${merging ? 'cursor-pointer' : ''}`}
+                } ${merging ? 'cursor-pointer' : ''}`}
                 onClick={merging ? () => toggleMergeSelect(i) : undefined}
               >
-                <input
-                  type="checkbox"
-                  checked={p.included}
-                  onChange={(e) => { e.stopPropagation(); const u = [...plotThreads]; u[i] = { ...u[i]!, included: !u[i]!.included }; setPlotThreads(u) }}
-                  className="rounded border-gray-300 mt-1"
-                  onClick={(e) => e.stopPropagation()}
-                />
+                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
+                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
                 <div className="flex-1 space-y-1.5" onClick={(e) => { if (!merging) { e.stopPropagation(); toggleExpand(key) } }}>
                   <div className="flex items-center gap-2">
                     <ChevronRight className={`w-3.5 h-3.5 text-text-muted transition-transform flex-shrink-0 ${isExpanded ? 'rotate-90' : ''}`} />
@@ -619,11 +636,11 @@ function EntitiesStep({
                       className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
                   )}
                 </div>
-                {merging && <input type="checkbox" checked={isMergeSel} onChange={() => toggleMergeSelect(i)}
-                  onClick={(e) => e.stopPropagation()} className="rounded border-primary mt-1 accent-primary" />}
-                <button onClick={(e) => { e.stopPropagation(); removeThread(i) }} className="text-text-muted hover:text-red-500 p-1">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!merging && (
+                  <button onClick={(e) => { e.stopPropagation(); removeThread(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             )
           }) : <p className="text-sm text-text-muted py-4">No plot threads detected.</p>
@@ -669,11 +686,8 @@ function ConfirmStep({
 }) {
   const includedChapters = chapters.filter(ch => ch.included)
   const includedScenes = includedChapters.reduce((sum, ch) => sum + ch.scenes.filter(s => s.included).length, 0)
-  const includedCharacters = characters.filter(c => c.included)
-  const includedLocations = locations.filter(l => l.included)
-  const includedThreads = plotThreads.filter(p => p.included)
 
-  const total = includedChapters.length + includedScenes + includedCharacters.length + includedLocations.length + includedThreads.length
+  const total = includedChapters.length + includedScenes + characters.length + locations.length + plotThreads.length
 
   return (
     <div className="space-y-6">
@@ -694,17 +708,17 @@ function ConfirmStep({
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <Users className="w-6 h-6 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text">{includedCharacters.length}</div>
+          <div className="text-2xl font-bold text-text">{characters.length}</div>
           <div className="text-xs text-text-muted">Characters</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <MapPin className="w-6 h-6 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text">{includedLocations.length}</div>
+          <div className="text-2xl font-bold text-text">{locations.length}</div>
           <div className="text-xs text-text-muted">Locations</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <GitBranch className="w-6 h-6 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold text-text">{includedThreads.length}</div>
+          <div className="text-2xl font-bold text-text">{plotThreads.length}</div>
           <div className="text-xs text-text-muted">Plot Threads</div>
         </div>
       </div>
@@ -749,6 +763,10 @@ export default function ImportPage() {
   const [characters, setCharacters] = useState<ExtractedCharacter[]>([])
   const [locations, setLocations] = useState<ExtractedLocation[]>([])
   const [plotThreads, setPlotThreads] = useState<ExtractedPlotThread[]>([])
+  // Snapshots of AI extraction results for Reset
+  const [originalCharacters, setOriginalCharacters] = useState<ExtractedCharacter[]>([])
+  const [originalLocations, setOriginalLocations] = useState<ExtractedLocation[]>([])
+  const [originalPlotThreads, setOriginalPlotThreads] = useState<ExtractedPlotThread[]>([])
   const [chapterSummaries, setChapterSummaries] = useState<Map<number, string>>(new Map())
   const [extracting, setExtracting] = useState(false)
   const [extractProgress, setExtractProgress] = useState(0)
@@ -793,17 +811,17 @@ export default function ImportPage() {
           // Deduplicate by name (case-insensitive)
           for (const c of data.characters || []) {
             if (!allCharacters.some(existing => existing.name.toLowerCase() === c.name.toLowerCase())) {
-              allCharacters.push({ ...c, included: true })
+              allCharacters.push({ name: c.name, role: c.role, description: c.description })
             }
           }
           for (const l of data.locations || []) {
             if (!allLocations.some(existing => existing.name.toLowerCase() === l.name.toLowerCase())) {
-              allLocations.push({ ...l, included: true })
+              allLocations.push({ name: l.name, type: l.type, atmosphere: l.atmosphere })
             }
           }
           for (const p of data.plotThreads || []) {
             if (!allThreads.some(existing => existing.title.toLowerCase() === p.title.toLowerCase())) {
-              allThreads.push({ ...p, included: true })
+              allThreads.push({ title: p.title, description: p.description })
             }
           }
           if (data.summary) {
@@ -818,6 +836,10 @@ export default function ImportPage() {
     setCharacters(allCharacters)
     setLocations(allLocations)
     setPlotThreads(allThreads)
+    // Save snapshots for Reset
+    setOriginalCharacters(allCharacters.map(c => ({ ...c })))
+    setOriginalLocations(allLocations.map(l => ({ ...l })))
+    setOriginalPlotThreads(allThreads.map(p => ({ ...p })))
     setChapterSummaries(summaries)
     setExtracting(false)
   }, [chapters])
@@ -830,12 +852,9 @@ export default function ImportPage() {
     const includedScenes = includedChapters.flatMap(ch =>
       ch.scenes.filter(s => s.included).map(s => ({ ...s, chapterNumber: ch.number }))
     )
-    const includedCharacters = characters.filter(c => c.included)
-    const includedLocations = locations.filter(l => l.included)
-    const includedThreads = plotThreads.filter(p => p.included)
 
     const total = includedChapters.length + includedScenes.length +
-      includedCharacters.length + includedLocations.length + includedThreads.length
+      characters.length + locations.length + plotThreads.length
     setImportTotal(total)
     setImportProgress(0)
 
@@ -855,15 +874,15 @@ export default function ImportPage() {
 
     try {
       // Auto-create terms in index terminologies before creating documents
-      for (const c of includedCharacters) {
+      for (const c of characters) {
         const tv = toTermValue(c.name)
         try { await wipClient.defStore.createTerm(TERMINOLOGIES.CHARACTERS, { value: tv, label: c.name, aliases: c.name !== tv ? [c.name] : [] }) } catch { /* may exist */ }
       }
-      for (const l of includedLocations) {
+      for (const l of locations) {
         const tv = toTermValue(l.name)
         try { await wipClient.defStore.createTerm(TERMINOLOGIES.LOCATIONS, { value: tv, label: l.name, aliases: l.name !== tv ? [l.name] : [] }) } catch { /* may exist */ }
       }
-      for (const p of includedThreads) {
+      for (const p of plotThreads) {
         const tv = toTermValue(p.title)
         try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }) } catch { /* may exist */ }
       }
@@ -891,7 +910,7 @@ export default function ImportPage() {
       }
 
       // Create characters (use term values for name)
-      for (const c of includedCharacters) {
+      for (const c of characters) {
         await createOne(TEMPLATES.CHARACTER, {
           name: toTermValue(c.name),
           role: c.role,
@@ -900,7 +919,7 @@ export default function ImportPage() {
       }
 
       // Create locations (use term values for name)
-      for (const l of includedLocations) {
+      for (const l of locations) {
         await createOne(TEMPLATES.LOCATION, {
           name: toTermValue(l.name),
           type: l.type,
@@ -909,7 +928,7 @@ export default function ImportPage() {
       }
 
       // Create plot threads (use term values for title)
-      for (const p of includedThreads) {
+      for (const p of plotThreads) {
         await createOne(TEMPLATES.PLOT_THREAD, {
           title: toTermValue(p.title),
           status: 'OPEN',
@@ -925,6 +944,12 @@ export default function ImportPage() {
       setStep('done')
     }
   }, [chapters, characters, locations, plotThreads, chapterSummaries, createDocument, wipClient])
+
+  const handleResetEntities = useCallback(() => {
+    setCharacters(originalCharacters.map(c => ({ ...c })))
+    setLocations(originalLocations.map(l => ({ ...l })))
+    setPlotThreads(originalPlotThreads.map(p => ({ ...p })))
+  }, [originalCharacters, originalLocations, originalPlotThreads])
 
   const stepLabels: Array<{ key: Step; label: string }> = [
     { key: 'upload', label: 'Upload' },
@@ -990,6 +1015,7 @@ export default function ImportPage() {
           setCharacters={setCharacters}
           setLocations={setLocations}
           setPlotThreads={setPlotThreads}
+          onReset={handleResetEntities}
           extracting={extracting}
           extractProgress={extractProgress}
           extractTotal={extractTotal}

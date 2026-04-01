@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useDocuments } from '@wip/react'
-import { StickyNote, Filter, Plus, Pencil } from 'lucide-react'
+import { useDocuments, useDeleteDocument } from '@wip/react'
+import { StickyNote, Filter, Plus, Pencil, Trash2 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -30,6 +30,8 @@ export default function NotesPage() {
   const [filterType, setFilterType] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const deleteDoc = useDeleteDocument()
 
   const { data: notes, isLoading } = useDocuments({
     template_id: TEMPLATES.NOTE,
@@ -107,6 +109,32 @@ export default function NotesPage() {
                       <Pencil className="w-3 h-3" />
                       Edit
                     </button>
+                    {confirmDelete === note.document_id ? (
+                      <span className="inline-flex items-center gap-1">
+                        <span className="text-xs text-red-600">Delete?</span>
+                        <button
+                          onClick={() => deleteDoc.mutate({ id: note.document_id }, { onSuccess: () => setConfirmDelete(null) })}
+                          disabled={deleteDoc.isPending}
+                          className="px-1.5 py-0.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={() => setConfirmDelete(null)}
+                          className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
+                        >
+                          No
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmDelete(note.document_id)}
+                        className="text-text-muted hover:text-red-600 p-1 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                     <StatusBadge label={d.note_type} colorClass={NOTE_TYPE_COLORS[d.note_type]} />
                   </div>
                 </div>

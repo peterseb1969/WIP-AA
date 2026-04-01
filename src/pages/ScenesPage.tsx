@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useDocuments, useCreateDocument } from '@wip/react'
+import { useDocuments, useCreateDocument, useDeleteDocument } from '@wip/react'
 import {
   PenTool,
   ChevronLeft,
@@ -23,6 +23,7 @@ import {
   FileText,
   Plus,
   Save,
+  Trash2,
 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -797,8 +798,10 @@ function SceneEditor({
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [isDirty, setIsDirty] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const createDocument = useCreateDocument()
+  const deleteDocument = useDeleteDocument()
 
   const scene = useMemo(
     () => events.find((e) => e.document_id === sceneId),
@@ -966,6 +969,19 @@ function SceneEditor({
     onBack()
   }, [onBack, flushDraft])
 
+  const handleDelete = useCallback(() => {
+    deleteDocument.mutate(
+      { id: sceneId },
+      {
+        onSuccess: () => {
+          localStorage.removeItem(draftKey)
+          notifyDraftChange()
+          onBack()
+        },
+      }
+    )
+  }, [deleteDocument, sceneId, draftKey, onBack])
+
   if (!sceneData) {
     return (
       <div className="p-6">
@@ -1054,6 +1070,34 @@ function SceneEditor({
           <Save className="w-3.5 h-3.5" />
           {createDocument.isPending ? 'Saving...' : 'Save'}
         </button>
+
+        {/* Delete */}
+        {confirmDelete ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="text-xs text-red-600">Delete scene?</span>
+            <button
+              onClick={handleDelete}
+              disabled={deleteDocument.isPending}
+              className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+            >
+              {deleteDocument.isPending ? '...' : 'Yes'}
+            </button>
+            <button
+              onClick={() => setConfirmDelete(false)}
+              className="px-2 py-1 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
+            >
+              No
+            </button>
+          </span>
+        ) : (
+          <button
+            onClick={() => setConfirmDelete(true)}
+            className="text-text-muted hover:text-red-600 p-1 transition-colors"
+            title="Delete scene"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        )}
 
         {/* Mode toggles */}
         <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5">

@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useDocuments, useTerms } from '@wip/react'
-import { Users, ArrowLeft, Heart, Plus, Pencil } from 'lucide-react'
+import { useDocuments, useTerms, useDeleteDocument } from '@wip/react'
+import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2 } from 'lucide-react'
 import { TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -50,7 +50,7 @@ function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => 
   )
 }
 
-function CharacterDetail({ data, onBack, onEdit }: { data: CharacterData; onBack: () => void; onEdit: () => void }) {
+function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   // Resolve character names from terms
   const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50 })
   const termLookup = new Map(charTerms?.items?.map((t) => [t.value, t.label]) ?? [])
@@ -81,13 +81,22 @@ function CharacterDetail({ data, onBack, onEdit }: { data: CharacterData; onBack
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <h2 className="text-xl font-bold text-text">{data.name}</h2>
-            <button
-              onClick={onEdit}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
-            >
-              <Pencil className="w-3.5 h-3.5" />
-              Edit
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onEdit}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </button>
+              <button
+                onClick={onDelete}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-red-300 hover:text-red-600 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge label={data.role} colorClass={ROLE_COLORS[data.role]} />
@@ -150,6 +159,8 @@ export default function CharactersPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const deleteDoc = useDeleteDocument()
 
   const { data: characters, isLoading } = useDocuments({
     template_id: TEMPLATES.CHARACTER,
@@ -177,7 +188,33 @@ export default function CharactersPage() {
             data={selectedData}
             onBack={() => setSelectedId(null)}
             onEdit={() => setEditData(selectedData as unknown as Record<string, unknown>)}
+            onDelete={() => setConfirmDelete(true)}
           />
+          {confirmDelete ? (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
+                <h3 className="text-lg font-semibold text-text mb-2">Delete character?</h3>
+                <p className="text-sm text-text-muted mb-4">
+                  This will permanently delete <strong>{selectedData.name}</strong>. This cannot be undone.
+                </p>
+                <div className="flex justify-end gap-2">
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => deleteDoc.mutate({ id: selectedId! }, { onSuccess: () => { setConfirmDelete(false); setSelectedId(null) } })}
+                    disabled={deleteDoc.isPending}
+                    className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                  >
+                    {deleteDoc.isPending ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {editData ? (
             <CreateEntityModal
               entityType="character"

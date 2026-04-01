@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useDocuments } from '@wip/react'
-import { Globe, Plus, Pencil } from 'lucide-react'
+import { useDocuments, useDeleteDocument } from '@wip/react'
+import { Globe, Plus, Pencil, Trash2 } from 'lucide-react'
 import { TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -18,6 +18,8 @@ interface WorldRuleData {
 export default function WorldRulesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const deleteDoc = useDeleteDocument()
   const { data: rules, isLoading } = useDocuments({
     template_id: TEMPLATES.WORLD_RULE,
     status: 'active',
@@ -69,13 +71,41 @@ export default function WorldRulesPage() {
                   <div key={rule.id} className="bg-white rounded-lg border border-gray-200 p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-text">{rule.data.name}</h3>
-                      <button
-                        onClick={() => setEditData(rule.data as unknown as Record<string, unknown>)}
-                        className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
-                      >
-                        <Pencil className="w-3 h-3" />
-                        Edit
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => setEditData(rule.data as unknown as Record<string, unknown>)}
+                          className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
+                        >
+                          <Pencil className="w-3 h-3" />
+                          Edit
+                        </button>
+                        {confirmDelete === rule.id ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-xs text-red-600">Delete?</span>
+                            <button
+                              onClick={() => deleteDoc.mutate({ id: rule.id }, { onSuccess: () => setConfirmDelete(null) })}
+                              disabled={deleteDoc.isPending}
+                              className="px-1.5 py-0.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
+                            >
+                              Yes
+                            </button>
+                            <button
+                              onClick={() => setConfirmDelete(null)}
+                              className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
+                            >
+                              No
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmDelete(rule.id)}
+                            className="text-text-muted hover:text-red-600 p-1 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-text mb-3">{rule.data.rule}</p>
 

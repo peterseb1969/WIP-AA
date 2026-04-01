@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { useDocuments } from '@wip/react'
-import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil } from 'lucide-react'
+import { useDocuments, useDeleteDocument } from '@wip/react'
+import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
@@ -34,12 +34,14 @@ function ChapterRow({
   expanded,
   onToggle,
   onEdit,
+  onDelete,
 }: {
   data: ChapterData
   scenes: Array<{ document_id: string; data: EventData }>
   expanded: boolean
   onToggle: () => void
   onEdit: () => void
+  onDelete: () => void
 }) {
   const status = data.status || 'OUTLINE'
 
@@ -85,6 +87,13 @@ function ChapterRow({
           >
             <Pencil className="w-3 h-3" />
             Edit
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            className="text-text-muted hover:text-red-600 p-1 transition-colors"
+            title="Delete chapter"
+          >
+            <Trash2 className="w-3 h-3" />
           </button>
         </div>
       </button>
@@ -150,6 +159,8 @@ export default function ChaptersPage() {
   const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set())
   const [showCreate, setShowCreate] = useState<string | null>(null) // 'chapter' or 'scene'
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const deleteDoc = useDeleteDocument()
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -239,6 +250,7 @@ export default function ChaptersPage() {
                 expanded={expandedChapters.has(data.number)}
                 onToggle={() => toggleChapter(data.number)}
                 onEdit={() => setEditData(data as unknown as Record<string, unknown>)}
+                onDelete={() => setConfirmDelete(ch.document_id)}
               />
             )
           })}
@@ -246,6 +258,32 @@ export default function ChaptersPage() {
       ) : (
         <p className="text-text-muted">No chapters yet. Click "New Chapter" to create one.</p>
       )}
+
+      {confirmDelete ? (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-text mb-2">Delete chapter?</h3>
+            <p className="text-sm text-text-muted mb-4">
+              This will permanently delete this chapter. Scenes will remain but become unassigned.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteDoc.mutate({ id: confirmDelete }, { onSuccess: () => setConfirmDelete(null) })}
+                disabled={deleteDoc.isPending}
+                className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleteDoc.isPending ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {showCreate ? (
         <CreateEntityModal
