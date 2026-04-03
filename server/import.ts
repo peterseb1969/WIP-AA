@@ -130,15 +130,16 @@ export function parseText(text: string): ParsedChapter[] {
 
 // ── Extract: AI entity detection from chapter text ───────
 
-const EXTRACT_PROMPT = `You are analysing a chapter from a novel. Extract all characters, locations, and plot threads mentioned.
+function buildExtractPrompt(roles: string[], locationTypes: string[]): string {
+  return `You are analysing a chapter from a novel. Extract all characters, locations, and plot threads mentioned.
 
 Return ONLY a JSON object with this exact structure (no markdown, no explanation):
 {
   "characters": [
-    { "name": "Full Name", "role": "PROTAGONIST|ANTAGONIST|SUPPORTING|MINOR|MENTIONED", "description": "One sentence" }
+    { "name": "Full Name", "role": "${roles.join('|')}", "description": "One sentence" }
   ],
   "locations": [
-    { "name": "Location Name", "type": "CITY|TOWN|BUILDING|WILDERNESS|ROOM|REALM|OTHER", "atmosphere": "One sentence" }
+    { "name": "Location Name", "type": "${locationTypes.join('|')}", "atmosphere": "One sentence" }
   ],
   "plotThreads": [
     { "title": "Short Thread Title", "description": "One sentence" }
@@ -153,10 +154,12 @@ Rules:
 - Only include entities that actually appear or are meaningfully referenced
 - Deduplicate: if a character appears by first name and full name, use the full name once
 - summary should capture the key events and emotional arc`
+}
 
 export async function extractEntities(
   chapterText: string,
   chapterTitle: string,
+  termEnums?: { roles?: string[], locationTypes?: string[] },
 ): Promise<ExtractedEntities> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) throw new Error('ANTHROPIC_API_KEY not set')
@@ -167,7 +170,10 @@ export async function extractEntities(
   const response = await anthropic.messages.create({
     model,
     max_tokens: 2048,
-    system: EXTRACT_PROMPT,
+    system: buildExtractPrompt(
+      termEnums?.roles || ['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED'],
+      termEnums?.locationTypes || ['CITY', 'TOWN', 'BUILDING', 'ROOM', 'OUTDOOR', 'VEHICLE', 'REALM', 'VIRTUAL', 'OTHER'],
+    ),
     messages: [
       {
         role: 'user',

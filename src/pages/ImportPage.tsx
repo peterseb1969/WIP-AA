@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { useCreateDocument, useWipClient } from '@wip/react'
+import { useCreateDocument, useWipClient, useTerms } from '@wip/react'
 import { useNavigate } from 'react-router-dom'
 import {
   Upload,
@@ -19,7 +19,7 @@ import {
   CheckSquare,
   Square,
 } from 'lucide-react'
-import { TEMPLATES, TERMINOLOGIES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import BackLink from '../components/BackLink'
 
 const toTermValue = (text: string): string =>
@@ -325,6 +325,11 @@ function EntitiesStep({
   onBack: () => void
   onNext: () => void
 }) {
+  const { data: roleTerms } = useTerms(TERMINOLOGIES.CHARACTER_ROLE, { page_size: 50 })
+  const { data: locationTypeTerms } = useTerms(TERMINOLOGIES.LOCATION_TYPE, { page_size: 50 })
+  const roleValues = (roleTerms?.items || []).map(t => t.value)
+  const locationTypeValues = (locationTypeTerms?.items || []).map(t => t.value)
+
   const [tab, setTab] = useState<TabKey>('characters')
   const [mergeSelection, setMergeSelection] = useState<Set<number>>(new Set())
   const [merging, setMerging] = useState(false)
@@ -364,8 +369,7 @@ function EntitiesStep({
 
     if (tab === 'characters') {
       const selected = indices.map(i => characters[i]!)
-      const rolePriority = ['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED']
-      const bestRole = selected.map(c => c.role).sort((a, b) => rolePriority.indexOf(a) - rolePriority.indexOf(b))[0] || selected[0]!.role
+      const bestRole = selected.map(c => c.role).sort((a, b) => roleValues.indexOf(a) - roleValues.indexOf(b))[0] || selected[0]!.role
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const descriptions = [...new Set(selected.map(c => c.description).filter(Boolean))]
       const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. ') }
@@ -542,7 +546,7 @@ function EntitiesStep({
                     <select value={c.role} onChange={(e) => updateCharacter(i, 'role', e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted">
-                      {['PROTAGONIST', 'ANTAGONIST', 'SUPPORTING', 'MINOR', 'MENTIONED'].map(r => (
+                      {roleValues.map(r => (
                         <option key={r} value={r}>{r}</option>
                       ))}
                     </select>
@@ -587,7 +591,7 @@ function EntitiesStep({
                     <select value={l.type} onChange={(e) => updateLocation(i, 'type', e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                       className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted">
-                      {['CITY', 'TOWN', 'BUILDING', 'WILDERNESS', 'ROOM', 'REALM', 'OTHER'].map(t => (
+                      {locationTypeValues.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
                     </select>
@@ -876,15 +880,15 @@ export default function ImportPage() {
       // Auto-create terms in index terminologies before creating documents
       for (const c of characters) {
         const tv = toTermValue(c.name)
-        try { await wipClient.defStore.createTerm(TERMINOLOGIES.CHARACTERS, { value: tv, label: c.name, aliases: c.name !== tv ? [c.name] : [] }) } catch { /* may exist */ }
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.CHARACTERS, { value: tv, label: c.name, aliases: c.name !== tv ? [c.name] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
       for (const l of locations) {
         const tv = toTermValue(l.name)
-        try { await wipClient.defStore.createTerm(TERMINOLOGIES.LOCATIONS, { value: tv, label: l.name, aliases: l.name !== tv ? [l.name] : [] }) } catch { /* may exist */ }
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.LOCATIONS, { value: tv, label: l.name, aliases: l.name !== tv ? [l.name] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
       for (const p of plotThreads) {
         const tv = toTermValue(p.title)
-        try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }) } catch { /* may exist */ }
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
 
       // Create chapters

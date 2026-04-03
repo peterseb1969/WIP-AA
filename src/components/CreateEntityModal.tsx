@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useCreateDocument, useTerms, useWipClient } from '@wip/react'
 import { X, Plus } from 'lucide-react'
-import { TEMPLATES, TERMINOLOGIES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 
 // ── Field Definition Types ───────────────────────────────
 
@@ -362,7 +362,7 @@ export default function CreateEntityModal({
               value: termValue,
               label: rawValue,
               aliases: rawValue !== termValue ? [rawValue] : [],
-            })
+            }, { namespace: NAMESPACE })
           } catch {
             // Term may already exist — that's fine, continue
           }

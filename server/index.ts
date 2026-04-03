@@ -2,12 +2,17 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { wipProxy } from '@wip/proxy'
+import { createWipClient } from '@wip/client'
 import { initAgent, ask } from './agent.js'
 import { parseText, extractEntities } from './import.js'
 
 const PORT = parseInt(process.env.PORT || '3002')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const WIP_API_KEY = process.env.WIP_API_KEY || 'dev_master_key_for_testing'
+const WIP_NAMESPACE = process.env.WIP_NAMESPACE || 'aa'
+
+// Cached term enums for AI extraction prompt
+let termEnums: { roles: string[], locationTypes: string[] } | undefined
 const app = express()
 
 app.use(cors())
@@ -65,7 +70,7 @@ app.post('/api/import/extract', async (req, res) => {
     return
   }
   try {
-    const entities = await extractEntities(text, title || 'Untitled')
+    const entities = await extractEntities(text, title || 'Untitled', termEnums)
     res.json(entities)
   } catch (err: any) {
     console.error('Extract error:', err)
@@ -73,9 +78,31 @@ app.post('/api/import/extract', async (req, res) => {
   }
 })
 
+// --- Load term enums from WIP ---
+async function loadTermEnums() {
+  try {
+    const wip = createWipClient({
+      baseUrl: WIP_BASE_URL,
+      auth: { type: 'api-key', key: WIP_API_KEY },
+    })
+    const [roles, locTypes] = await Promise.all([
+      wip.defStore.listTerms('AA_CHARACTER_ROLE', { page_size: 50, namespace: WIP_NAMESPACE }),
+      wip.defStore.listTerms('AA_LOCATION_TYPE', { page_size: 50, namespace: WIP_NAMESPACE }),
+    ])
+    termEnums = {
+      roles: roles.items.map((t: any) => t.value),
+      locationTypes: locTypes.items.map((t: any) => t.value),
+    }
+    console.log(`Loaded term enums: ${termEnums.roles.length} roles, ${termEnums.locationTypes.length} location types`)
+  } catch (err: any) {
+    console.warn('Failed to load term enums from WIP, using defaults:', err.message)
+  }
+}
+
 // --- Start ---
 async function main() {
   await initAgent()
+  await loadTermEnums()
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`)
   })
