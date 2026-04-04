@@ -4,11 +4,5 @@
   "description": "Plot thread title registry",
   "extensible": true,
   "ontology": "part_of",
-  "terms": [
-    {
-      "value": "THE_MISSING_ARTIFACT",
-      "label": "The Missing Artifact",
-      "aliases": []
-    }
-  ]
+  "terms": []
 }

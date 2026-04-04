@@ -4,21 +4,5 @@
   "description": "Location name registry with aliases",
   "extensible": true,
   "ontology": "part_of",
-  "terms": [
-    {
-      "value": "CAPITAL_CITY",
-      "label": "Capital City",
-      "aliases": [
-        "the capital"
-      ]
-    },
-    {
-      "value": "THE_TAVERN",
-      "label": "The Tavern",
-      "aliases": [
-        "Old Pete's",
-        "the bar"
-      ]
-    }
-  ]
+  "terms": []
 }

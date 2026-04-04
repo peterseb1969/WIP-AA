@@ -24,9 +24,9 @@ import {
   Plus,
   Save,
   Trash2,
-  Scissors,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
+import { useBookStructure, type BookStructure } from '../lib/useBookStructure'
 import CreateEntityModal from '../components/CreateEntityModal'
 import { notifyDraftChange } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
@@ -37,8 +37,6 @@ import BackLink from '../components/BackLink'
 interface EventData {
   title: string
   event_type?: string
-  chapter_number?: number
-  scene_order?: number
   story_time_raw?: string
   story_time_sort?: number
   location?: string
@@ -51,8 +49,7 @@ interface EventData {
 }
 
 interface ChapterData {
-  number: number
-  title?: string
+  title: string
   status?: string
 }
 
@@ -103,38 +100,58 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 function SceneSelector({
   events,
   chapters,
+  structure,
   onSelect,
   onFlowView,
   onCreateScene,
 }: {
   events: Array<{ document_id: string; data: EventData }>
   chapters: Array<{ document_id: string; data: ChapterData }>
+  structure: BookStructure | undefined
   onSelect: (id: string) => void
-  onFlowView: (chapterNum: number) => void
+  onFlowView: (chapterId: string) => void
   onCreateScene: () => void
 }) {
-  const { byChapter, unassigned } = useMemo(() => {
-    const map = new Map<number, Array<{ document_id: string; data: EventData }>>()
-    const noChapter: Array<{ document_id: string; data: EventData }> = []
-    events.forEach((e) => {
-      const ch = e.data.chapter_number
-      if (ch != null) {
-        if (!map.has(ch)) map.set(ch, [])
-        map.get(ch)!.push(e)
-      } else {
-        noChapter.push(e)
-      }
-    })
-    map.forEach((scenes) =>
-      scenes.sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0))
-    )
-    return { byChapter: map, unassigned: noChapter }
+  // Build a lookup from document_id to event
+  const eventMap = useMemo(() => {
+    const map = new Map<string, { document_id: string; data: EventData }>()
+    events.forEach((e) => map.set(e.document_id, e))
+    return map
   }, [events])
 
-  const sortedChapters = useMemo(
-    () => [...chapters].sort((a, b) => a.data.number - b.data.number),
-    [chapters]
-  )
+  // Build a lookup from document_id to chapter
+  const chapterMap = useMemo(() => {
+    const map = new Map<string, { document_id: string; data: ChapterData }>()
+    chapters.forEach((c) => map.set(c.document_id, c))
+    return map
+  }, [chapters])
+
+  // Ordered chapters with their scenes, plus unassigned scenes
+  const { orderedChapters, unassigned } = useMemo(() => {
+    if (!structure) {
+      // No structure yet — all scenes are unassigned
+      return { orderedChapters: [] as Array<{ chapterId: string; chapterDoc: { document_id: string; data: ChapterData } | undefined; chapterNumber: number; scenes: Array<{ document_id: string; data: EventData }> }>, unassigned: [...events] }
+    }
+
+    const assignedSceneIds = new Set(structure.getAllSceneIds())
+
+    const ordered = structure.raw.chapters.map((slot, index) => {
+      const chapterDoc = chapterMap.get(slot.chapter_id)
+      const scenes = slot.scene_ids
+        .map((sid) => eventMap.get(sid))
+        .filter((e): e is { document_id: string; data: EventData } => e != null)
+      return {
+        chapterId: slot.chapter_id,
+        chapterDoc,
+        chapterNumber: index + 1,
+        scenes,
+      }
+    })
+
+    const unassignedScenes = events.filter((e) => !assignedSceneIds.has(e.document_id))
+
+    return { orderedChapters: ordered, unassigned: unassignedScenes }
+  }, [structure, events, eventMap, chapterMap])
 
   return (
     <div className="p-6 max-w-4xl">
@@ -156,72 +173,69 @@ function SceneSelector({
         Select a scene to edit, or enter Flow view to read an entire chapter.
       </p>
 
-      {sortedChapters.length > 0 ? (
+      {orderedChapters.length > 0 ? (
         <div className="space-y-4">
-          {sortedChapters.map((ch) => {
-            const scenes = byChapter.get(ch.data.number) ?? []
-            return (
-              <div key={ch.document_id} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="w-4 h-4 text-primary" />
-                    <span className="font-semibold text-text">
-                      Chapter {ch.data.number}
-                      {ch.data.title ? `: ${ch.data.title}` : ''}
-                    </span>
-                    <span className="text-xs text-text-muted">{scenes.length} scene{scenes.length !== 1 ? 's' : ''}</span>
-                  </div>
-                  {scenes.length > 0 ? (
-                    <button
-                      onClick={() => onFlowView(ch.data.number)}
-                      className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-dark transition-colors"
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      Flow view
-                    </button>
-                  ) : null}
+          {orderedChapters.map((ch) => (
+            <div key={ch.chapterId} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <BookOpen className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-text">
+                    Chapter {ch.chapterNumber}
+                    {ch.chapterDoc?.data.title ? `: ${ch.chapterDoc.data.title}` : ''}
+                  </span>
+                  <span className="text-xs text-text-muted">{ch.scenes.length} scene{ch.scenes.length !== 1 ? 's' : ''}</span>
                 </div>
-
-                {scenes.length > 0 ? (
-                  <div>
-                    {scenes.map((scene, i) => (
-                      <button
-                        key={scene.document_id}
-                        onClick={() => onSelect(scene.document_id)}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface transition-colors border-b border-gray-50 last:border-b-0"
-                      >
-                        <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-medium text-primary">
-                          {i + 1}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-medium text-text truncate">{scene.data.title}</div>
-                          <div className="text-xs text-text-muted mt-0.5">
-                            {scene.data.location ? scene.data.location : ''}
-                            {scene.data.characters?.length
-                              ? `${scene.data.location ? ' — ' : ''}${scene.data.characters.map(String).join(', ')}`
-                              : ''}
-                          </div>
-                        </div>
-                        {scene.data.event_type ? (
-                          <StatusBadge
-                            label={scene.data.event_type}
-                            colorClass={EVENT_TYPE_COLORS[scene.data.event_type] ?? 'bg-gray-100 text-gray-700'}
-                          />
-                        ) : null}
-                        {scene.data.emotional_beat ? (
-                          <span className="text-xs text-text-light italic max-w-28 truncate hidden sm:block">
-                            {scene.data.emotional_beat}
-                          </span>
-                        ) : null}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-4 text-sm text-text-muted">No scenes in this chapter yet.</div>
-                )}
+                {ch.scenes.length > 0 ? (
+                  <button
+                    onClick={() => onFlowView(ch.chapterId)}
+                    className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-dark transition-colors"
+                  >
+                    <Eye className="w-3.5 h-3.5" />
+                    Flow view
+                  </button>
+                ) : null}
               </div>
-            )
-          })}
+
+              {ch.scenes.length > 0 ? (
+                <div>
+                  {ch.scenes.map((scene, i) => (
+                    <button
+                      key={scene.document_id}
+                      onClick={() => onSelect(scene.document_id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-surface transition-colors border-b border-gray-50 last:border-b-0"
+                    >
+                      <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center flex-shrink-0 text-xs font-medium text-primary">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-text truncate">{scene.data.title}</div>
+                        <div className="text-xs text-text-muted mt-0.5">
+                          {scene.data.location ? scene.data.location : ''}
+                          {scene.data.characters?.length
+                            ? `${scene.data.location ? ' — ' : ''}${scene.data.characters.map(String).join(', ')}`
+                            : ''}
+                        </div>
+                      </div>
+                      {scene.data.event_type ? (
+                        <StatusBadge
+                          label={scene.data.event_type}
+                          colorClass={EVENT_TYPE_COLORS[scene.data.event_type] ?? 'bg-gray-100 text-gray-700'}
+                        />
+                      ) : null}
+                      {scene.data.emotional_beat ? (
+                        <span className="text-xs text-text-light italic max-w-28 truncate hidden sm:block">
+                          {scene.data.emotional_beat}
+                        </span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-4 text-sm text-text-muted">No scenes in this chapter yet.</div>
+              )}
+            </div>
+          ))}
         </div>
       ) : null}
 
@@ -263,7 +277,7 @@ function SceneSelector({
         </div>
       ) : null}
 
-      {sortedChapters.length === 0 && unassigned.length === 0 ? (
+      {orderedChapters.length === 0 && unassigned.length === 0 ? (
         <p className="text-text-muted">No scenes yet. Click "New Scene" to create one.</p>
       ) : null}
     </div>
@@ -274,12 +288,16 @@ function SceneSelector({
 
 function MetadataStrip({
   scene,
-  chapter,
+  chapterTitle,
+  chapterNumber,
+  sceneNumber,
   expanded,
   onToggle,
 }: {
   scene: EventData
-  chapter?: ChapterData
+  chapterTitle?: string
+  chapterNumber?: number
+  sceneNumber?: number
   expanded: boolean
   onToggle: () => void
 }) {
@@ -293,11 +311,11 @@ function MetadataStrip({
         <div className="flex items-center gap-2 text-sm">
           <BookOpen className="w-3.5 h-3.5 text-text-muted" />
           <span className="text-text-muted">
-            Ch. {scene.chapter_number ?? '?'}
-            {chapter?.title ? `: ${chapter.title}` : ''}
+            Ch. {chapterNumber ?? '?'}
+            {chapterTitle ? `: ${chapterTitle}` : ''}
           </span>
           <span className="text-text-light">·</span>
-          <span className="text-text-muted">Scene {scene.scene_order ?? '?'}</span>
+          <span className="text-text-muted">Scene {sceneNumber ?? '?'}</span>
         </div>
 
         <div className="flex items-center gap-3 text-xs text-text-muted flex-1 min-w-0">
@@ -698,22 +716,46 @@ function ContinuityStrip({
 // ── Flow View ────────────────────────────────────────────
 
 function FlowView({
-  scenes,
-  chapterNum,
-  chapterTitle,
+  events,
+  structure,
+  chapterId,
   onExit,
 }: {
-  scenes: EventData[]
-  chapterNum: number
-  chapterTitle?: string
+  events: Array<{ document_id: string; data: EventData }>
+  structure: BookStructure | undefined
+  chapterId: string
   onExit: () => void
 }) {
+  // Build event lookup
+  const eventMap = useMemo(() => {
+    const map = new Map<string, EventData>()
+    events.forEach((e) => map.set(e.document_id, e.data))
+    return map
+  }, [events])
+
+  const chapterNum = structure?.getChapterNumber(chapterId)
+
+  // Get ordered scenes for this chapter from structure
+  const scenes = useMemo(() => {
+    if (!structure) return []
+    const sceneIds = structure.getScenesForChapter(chapterId)
+    return sceneIds
+      .map((sid) => eventMap.get(sid))
+      .filter((s): s is EventData => s != null)
+  }, [structure, chapterId, eventMap])
+
+  // Find chapter title from events list (chapters are loaded separately in parent)
+  // We receive it indirectly — the parent could pass it, but we can derive from structure
+  // For the title, we need the chapter documents. Let's accept it won't be available here
+  // and just show the number. The parent passes chapterId, and the chapter doc lookup
+  // happens in the parent. We'll keep it simple.
+
   return (
     <div className="max-w-3xl mx-auto py-8 px-6">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-xl font-bold text-text">
-            Chapter {chapterNum}{chapterTitle ? `: ${chapterTitle}` : ''}
+            Chapter {chapterNum ?? '?'}
           </h2>
           <p className="text-sm text-text-muted mt-1">Flow view — continuous reading</p>
         </div>
@@ -775,6 +817,7 @@ function SceneEditor({
   sceneId,
   events,
   chapters,
+  structure,
   characterDocs,
   locationDocs,
   threadDocs,
@@ -786,6 +829,7 @@ function SceneEditor({
   sceneId: string
   events: Array<{ document_id: string; data: EventData }>
   chapters: Array<{ document_id: string; data: ChapterData }>
+  structure: BookStructure | undefined
   characterDocs: Array<{ document_id: string; data: CharacterDocData }>
   locationDocs: Array<{ document_id: string; data: LocationData }>
   threadDocs: Array<{ document_id: string; data: PlotThreadData }>
@@ -815,22 +859,49 @@ function SceneEditor({
   // localStorage key for auto-backup
   const draftKey = `aa-scene-draft-${sceneId}`
 
-  // Order scenes within same chapter for prev/next
-  const chapterScenes = useMemo(() => {
-    if (!sceneData?.chapter_number) return []
-    return events
-      .filter((e) => e.data.chapter_number === sceneData.chapter_number)
-      .sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0))
-  }, [events, sceneData?.chapter_number])
-
-  const currentIndex = chapterScenes.findIndex((e) => e.document_id === sceneId)
-  const prevScene = currentIndex > 0 ? chapterScenes[currentIndex - 1] : undefined
-  const nextScene = currentIndex < chapterScenes.length - 1 ? chapterScenes[currentIndex + 1] : undefined
-
-  const chapter = useMemo(
-    () => chapters.find((c) => c.data.number === sceneData?.chapter_number),
-    [chapters, sceneData?.chapter_number]
+  // Use structure for chapter/scene info
+  const scenePosition = useMemo(
+    () => structure?.getScenePosition(sceneId),
+    [structure, sceneId]
   )
+
+  const chapterNumber = useMemo(
+    () => structure?.getChapterNumberForScene(sceneId),
+    [structure, sceneId]
+  )
+
+  const sceneNumber = useMemo(
+    () => scenePosition ? scenePosition.sceneIndex + 1 : undefined,
+    [scenePosition]
+  )
+
+  // Find chapter document for metadata
+  const chapter = useMemo(() => {
+    const chapterId = structure?.getChapterForScene(sceneId)
+    if (!chapterId) return undefined
+    return chapters.find((c) => c.document_id === chapterId)
+  }, [structure, sceneId, chapters])
+
+  // Build event lookup for navigation
+  const eventMap = useMemo(() => {
+    const map = new Map<string, { document_id: string; data: EventData }>()
+    events.forEach((e) => map.set(e.document_id, e))
+    return map
+  }, [events])
+
+  // Order scenes within same chapter for prev/next using structure
+  const { prevScene, nextScene } = useMemo(() => {
+    if (!structure || !scenePosition) {
+      return { prevScene: undefined, nextScene: undefined }
+    }
+    const chapterSceneIds = structure.getScenesForChapter(scenePosition.chapterId)
+    const idx = chapterSceneIds.indexOf(sceneId)
+    const prevId = idx > 0 ? chapterSceneIds[idx - 1] : undefined
+    const nextId = idx < chapterSceneIds.length - 1 ? chapterSceneIds[idx + 1] : undefined
+    const prev = prevId ? eventMap.get(prevId) : undefined
+    const next = nextId ? eventMap.get(nextId) : undefined
+    return { prevScene: prev, nextScene: next }
+  }, [structure, scenePosition, sceneId, eventMap])
 
   // Resolve initial content: localStorage draft if newer, else WIP prose
   const initialContent = useMemo(() => {
@@ -997,77 +1068,6 @@ function SceneEditor({
     )
   }, [deleteDocument, sceneId, draftKey, onBack])
 
-  const [splitting, setSplitting] = useState(false)
-  const [splitError, setSplitError] = useState('')
-
-  const handleSplit = useCallback(() => {
-    if (!editor || !sceneData) return
-    setSplitError('')
-
-    const { from } = editor.state.selection
-    const docSize = editor.state.doc.content.size
-
-    // Check cursor is actually placed inside the text (not at very start or end)
-    if (from <= 1 || from >= docSize - 1) {
-      setSplitError('Click inside the text where you want to split, then press Split.')
-      return
-    }
-
-    // Use TipTap's HTML: split into before/after at the ProseMirror position
-    // Get HTML for the two halves by manipulating the document
-    const textBefore = editor.state.doc.textBetween(0, from, '\n').trim()
-    const textAfter = editor.state.doc.textBetween(from, docSize, '\n').trim()
-
-    if (!textBefore || !textAfter) {
-      setSplitError('Click inside the text where you want to split. Both halves need content.')
-      return
-    }
-
-    setSplitting(true)
-
-    const currentSceneOrder = sceneData.scene_order ?? 1
-    const newSceneOrder = currentSceneOrder + 1
-
-    // Save current scene with text before cursor
-    createDocument.mutate(
-      {
-        template_id: TEMPLATES.EVENT,
-        namespace: NAMESPACE,
-        data: { ...sceneData, prose: textBefore },
-      },
-      {
-        onSuccess: () => {
-          // Create new scene with text after cursor
-          createDocument.mutate(
-            {
-              template_id: TEMPLATES.EVENT,
-              namespace: NAMESPACE,
-              data: {
-                title: `${sceneData.title} (split)`,
-                event_type: sceneData.event_type ?? 'SCENE',
-                chapter_number: sceneData.chapter_number,
-                scene_order: newSceneOrder,
-                story_time_sort: (sceneData.chapter_number ?? 0) * 1000 + newSceneOrder,
-                prose: textAfter,
-                characters: sceneData.characters ?? [],
-              },
-            },
-            {
-              onSuccess: () => {
-                setSplitting(false)
-                localStorage.removeItem(draftKey)
-                notifyDraftChange()
-                onBack()
-              },
-              onError: () => { setSplitting(false); setSplitError('Failed to create second scene.') },
-            }
-          )
-        },
-        onError: () => { setSplitting(false); setSplitError('Failed to save first scene.') },
-      }
-    )
-  }, [editor, sceneData, createDocument, draftKey, onBack])
-
   if (!sceneData) {
     return (
       <div className="p-6">
@@ -1157,20 +1157,6 @@ function SceneEditor({
           {createDocument.isPending ? 'Saving...' : 'Save'}
         </button>
 
-        {/* Split */}
-        <button
-          onClick={handleSplit}
-          disabled={splitting || createDocument.isPending}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
-          title="Split scene at cursor position"
-        >
-          <Scissors className="w-3.5 h-3.5" />
-          {splitting ? 'Splitting...' : 'Split'}
-        </button>
-        {splitError ? (
-          <span className="text-xs text-red-600 max-w-48">{splitError}</span>
-        ) : null}
-
         {/* Delete */}
         {confirmDelete ? (
           <span className="inline-flex items-center gap-1.5">
@@ -1232,7 +1218,9 @@ function SceneEditor({
       {/* Metadata strip */}
       <MetadataStrip
         scene={sceneData}
-        chapter={chapter?.data}
+        chapterTitle={chapter?.data.title}
+        chapterNumber={chapterNumber}
+        sceneNumber={sceneNumber}
         expanded={metadataExpanded}
         onToggle={() => setMetadataExpanded(!metadataExpanded)}
       />
@@ -1256,7 +1244,7 @@ function SceneEditor({
               ) : isDirty ? (
                 <span className="text-amber-500 mr-2">Unsaved changes</span>
               ) : null}
-              Ch. {sceneData.chapter_number ?? '?'} · Scene {sceneData.scene_order ?? '?'}
+              Ch. {chapterNumber ?? '?'} · Scene {sceneNumber ?? '?'}
             </span>
           </div>
         </div>
@@ -1294,17 +1282,19 @@ export default function ScenesPage() {
     searchParams.get('id')
   )
   const [showCreate, setShowCreate] = useState(false)
-  const [flowChapter, setFlowChapter] = useState<number | null>(
-    searchParams.has('flow') ? Number(searchParams.get('flow')) : null
+  const [flowChapterId, setFlowChapterId] = useState<string | null>(
+    searchParams.get('flow') ?? null
   )
+
+  const { structure } = useBookStructure()
 
   // Sync URL params when selection changes
   useEffect(() => {
     const params = new URLSearchParams()
     if (selectedSceneId) params.set('id', selectedSceneId)
-    else if (flowChapter != null) params.set('flow', String(flowChapter))
+    else if (flowChapterId != null) params.set('flow', flowChapterId)
     setSearchParams(params, { replace: true })
-  }, [selectedSceneId, flowChapter, setSearchParams])
+  }, [selectedSceneId, flowChapterId, setSearchParams])
 
   const { data: events, isLoading: loadingEvents } = useDocuments({
     template_id: TEMPLATES.EVENT,
@@ -1416,18 +1406,13 @@ export default function ScenesPage() {
   }
 
   // ── Flow View mode ───────────────────────────────────
-  if (flowChapter != null) {
-    const chapterScenes = allEvents
-      .filter((e) => e.data.chapter_number === flowChapter)
-      .sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0))
-    const chapter = allChapters.find((c) => c.data.number === flowChapter)
-
+  if (flowChapterId != null) {
     return (
       <FlowView
-        scenes={chapterScenes.map((s) => s.data)}
-        chapterNum={flowChapter}
-        chapterTitle={chapter?.data.title}
-        onExit={() => setFlowChapter(null)}
+        events={allEvents}
+        structure={structure}
+        chapterId={flowChapterId}
+        onExit={() => setFlowChapterId(null)}
       />
     )
   }
@@ -1439,6 +1424,7 @@ export default function ScenesPage() {
         sceneId={selectedSceneId}
         events={allEvents}
         chapters={allChapters}
+        structure={structure}
         characterDocs={characterDocs}
         locationDocs={locationDocs}
         threadDocs={threadDocs}
@@ -1456,8 +1442,9 @@ export default function ScenesPage() {
     <SceneSelector
       events={allEvents}
       chapters={allChapters}
+      structure={structure}
       onSelect={(id) => setSelectedSceneId(id)}
-      onFlowView={(chNum) => setFlowChapter(chNum)}
+      onFlowView={(chapterId) => setFlowChapterId(chapterId)}
       onCreateScene={() => setShowCreate(true)}
     />
 

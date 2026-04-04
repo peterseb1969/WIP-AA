@@ -13,6 +13,11 @@
 - **Resizable scene editor sidebar** — Context panel has fixed width, cannot be resized
 - **Project metadata editing** — Dashboard shows project info but no way to edit it
 
+## Ideas
+- **Full-text prose search** — Index scene prose for keyword/phrase search across the entire manuscript
+- **Entity merge outside import** — Allow merging duplicate characters, locations, or plot threads at any time, not only during the import review step
+- **Test Ask Bar with valid API key** — Verify the chat assistant works end-to-end with a real Anthropic API key and MCP connection
+
 ## Done
 - All 11 pages built with live WIP data (Dashboard, Scenes, Corkboard, Characters, Chapters, Timeline, Locations, Plot Threads, Notes, World Rules, Import)
 - Mouse-driven entity creation on every page (CreateEntityModal)

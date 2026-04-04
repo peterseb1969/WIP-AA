@@ -1,0 +1,21 @@
+{
+  "value": "AA_CHAPTER_SLOT",
+  "label": "Chapter Slot",
+  "description": "Embedded chapter/scene ordering entry for book structure",
+  "identity_fields": [],
+  "fields": [
+    {
+      "name": "chapter_id",
+      "label": "Chapter ID",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "scene_ids",
+      "label": "Scene IDs",
+      "type": "array",
+      "mandatory": false,
+      "array_item_type": "string"
+    }
+  ]
+}

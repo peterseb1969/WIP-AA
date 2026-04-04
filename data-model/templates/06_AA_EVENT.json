@@ -1,7 +1,7 @@
 {
   "value": "AA_EVENT",
   "label": "Event/Scene",
-  "description": "Scene or event \u2014 the hub entity linking characters, locations, chapters, and plot threads",
+  "description": "Scene or event \u2014 the hub entity linking characters, locations, chapters, and plot threads. Ordering comes from AA_BOOK_STRUCTURE.",
   "identity_fields": [
     "title"
   ],
@@ -18,18 +18,6 @@
       "type": "term",
       "mandatory": false,
       "terminology_ref": "AA_EVENT_TYPE"
-    },
-    {
-      "name": "chapter_number",
-      "label": "Chapter Number",
-      "type": "integer",
-      "mandatory": false
-    },
-    {
-      "name": "scene_order",
-      "label": "Scene Order",
-      "type": "integer",
-      "mandatory": false
     },
     {
       "name": "story_time_raw",

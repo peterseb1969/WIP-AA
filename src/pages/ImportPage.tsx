@@ -860,23 +860,22 @@ export default function ImportPage() {
     setImportError('')
 
     const includedChapters = chapters.filter(ch => ch.included)
-    const includedScenes = includedChapters.flatMap(ch =>
-      ch.scenes.filter(s => s.included).map(s => ({ ...s, chapterNumber: ch.number }))
-    )
 
-    const total = includedChapters.length + includedScenes.length +
-      characters.length + locations.length + plotThreads.length
+    // +1 for the book structure document created at the end
+    const includedSceneCount = includedChapters.reduce((sum, ch) => sum + ch.scenes.filter(s => s.included).length, 0)
+    const total = includedChapters.length + includedSceneCount +
+      characters.length + locations.length + plotThreads.length + 1
     setImportTotal(total)
     setImportProgress(0)
 
     let created = 0
 
-    const createOne = (templateId: string, data: Record<string, unknown>): Promise<void> => {
+    const createOne = (templateId: string, data: Record<string, unknown>): Promise<string> => {
       return new Promise((resolve, reject) => {
         createDocument.mutate(
           { template_id: templateId, namespace: 'aa', data },
           {
-            onSuccess: () => { created++; setImportProgress(created); resolve() },
+            onSuccess: (result: any) => { created++; setImportProgress(created); resolve(result.document_id) },
             onError: (err) => { created++; setImportProgress(created); reject(err) },
           }
         )
@@ -898,29 +897,46 @@ export default function ImportPage() {
         try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
 
-      // Create chapters
+      // Create chapters and collect document IDs (ordered)
+      const chapterDocIds: string[] = []
       for (const ch of includedChapters) {
-        await createOne(TEMPLATES.CHAPTER, {
-          number: ch.number,
+        const docId = await createOne(TEMPLATES.CHAPTER, {
           title: ch.title,
           status: 'DRAFT',
           summary: chapterSummaries.get(ch.number) || '',
         })
+        chapterDocIds.push(docId)
       }
 
-      // Create scenes
-      for (const scene of includedScenes) {
-        await createOne(TEMPLATES.EVENT, {
-          title: scene.title,
-          event_type: 'SCENE',
-          chapter_number: scene.chapterNumber,
-          scene_order: scene.sceneOrder,
-          story_time_sort: scene.chapterNumber * 1000 + scene.sceneOrder,
-          prose: scene.prose,
-          summary: chapterSummaries.get(scene.chapterNumber) || '',
-          characters: chapterCharacters.get(scene.chapterNumber) || [],
-        })
+      // Create scenes per chapter and collect document IDs (grouped by chapter)
+      const chapterSceneIds: string[][] = []
+      for (let ci = 0; ci < includedChapters.length; ci++) {
+        const ch = includedChapters[ci]!
+        const includedScenes = ch.scenes.filter(s => s.included)
+        const sceneIds: string[] = []
+        for (const scene of includedScenes) {
+          const docId = await createOne(TEMPLATES.EVENT, {
+            title: scene.title,
+            event_type: 'SCENE',
+            story_time_sort: (ci + 1) * 1000 + scene.sceneOrder,
+            prose: scene.prose,
+            summary: chapterSummaries.get(ch.number) || '',
+            characters: chapterCharacters.get(ch.number) || [],
+          })
+          sceneIds.push(docId)
+        }
+        chapterSceneIds.push(sceneIds)
       }
+
+      // Create the book structure document
+      const structureChapters = chapterDocIds.map((chapterId, i) => ({
+        chapter_id: chapterId,
+        scene_ids: chapterSceneIds[i] || [],
+      }))
+      await createOne(TEMPLATES.BOOK_STRUCTURE, {
+        book_title: includedChapters[0]?.title ? 'Imported Book' : 'Untitled',
+        chapters: structureChapters,
+      })
 
       // Create characters (use term values for name)
       for (const c of characters) {

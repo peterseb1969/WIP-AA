@@ -78,6 +78,87 @@ app.post('/api/import/extract', async (req, res) => {
   }
 })
 
+// --- Delete book data ---
+// Body: { templates: string[], clearNames: boolean }
+// templates: array of template values to delete documents for (e.g. ['AA_CHAPTER', 'AA_EVENT'])
+// clearNames: also delete terms from extensible terminologies (AA_CHARACTERS, AA_LOCATIONS, AA_PLOT_THREADS)
+const TEMPLATE_VALUES = [
+  'AA_CHAPTER', 'AA_EVENT', 'AA_CHARACTER', 'AA_LOCATION',
+  'AA_PLOT_THREAD', 'AA_NOTE', 'AA_WORLD_RULE', 'AA_BOOK_STRUCTURE',
+] as const
+
+app.delete('/api/book/reset', async (req, res) => {
+  try {
+    const { templates = [], clearNames = false } = req.body || {}
+    const templateSet = new Set(templates as string[])
+    const wip = createWipClient({
+      baseUrl: WIP_BASE_URL,
+      auth: { type: 'api-key', key: WIP_API_KEY },
+    })
+
+    let deletedDocs = 0
+    let deletedTerms = 0
+
+    // Delete documents by template
+    for (const tv of TEMPLATE_VALUES) {
+      if (!templateSet.has(tv)) continue
+
+      while (true) {
+        const docs = await wip.documents.listDocuments({
+          namespace: WIP_NAMESPACE,
+          template_value: tv,
+          status: 'active',
+          page: 1,
+          page_size: 100,
+        })
+
+        if (!docs.items.length) break
+
+        await Promise.all(
+          docs.items.map((doc: any) =>
+            wip.documents.deleteDocument(doc.document_id, { updatedBy: 'book-reset' }).catch(() => {})
+          )
+        )
+        deletedDocs += docs.items.length
+
+        if (docs.items.length < 100) break
+      }
+    }
+
+    // Delete terms from extensible terminologies
+    if (clearNames) {
+      const extensible = ['AA_CHARACTERS', 'AA_LOCATIONS', 'AA_PLOT_THREADS']
+      for (const termValue of extensible) {
+        let terminologyId: string | null = null
+        try {
+          const t = await wip.defStore.getTerminology(termValue)
+          terminologyId = (t as any).terminology_id
+        } catch { continue }
+        if (!terminologyId) continue
+
+        while (true) {
+          const termPage = await wip.defStore.listTerms(terminologyId, { page: 1, page_size: 100 })
+          if (!termPage.items.length) break
+
+          await Promise.all(
+            termPage.items.map((term: any) =>
+              wip.defStore.deleteTerm(term.term_id, { hardDelete: true }).catch(() => {})
+            )
+          )
+          deletedTerms += termPage.items.length
+
+          if (termPage.items.length < 100) break
+        }
+      }
+    }
+
+    res.json({ status: 'ok', deletedDocs, deletedTerms })
+  } catch (err: any) {
+    console.error('Reset error:', err)
+    res.status(500).json({ error: err.message || 'Reset failed' })
+  }
+})
+
 // --- Load term enums from WIP ---
 async function loadTermEnums() {
   try {

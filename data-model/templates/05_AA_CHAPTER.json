@@ -1,22 +1,16 @@
 {
   "value": "AA_CHAPTER",
   "label": "Chapter",
-  "description": "Chapter structure",
+  "description": "Chapter structure. Ordering comes from AA_BOOK_STRUCTURE.",
   "identity_fields": [
-    "number"
+    "title"
   ],
   "fields": [
-    {
-      "name": "number",
-      "label": "Number",
-      "type": "integer",
-      "mandatory": true
-    },
     {
       "name": "title",
       "label": "Title",
       "type": "string",
-      "mandatory": false
+      "mandatory": true
     },
     {
       "name": "summary",

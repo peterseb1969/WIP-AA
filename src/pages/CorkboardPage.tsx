@@ -8,6 +8,7 @@ import {
   Palette,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
+import { useBookStructure } from '../lib/useBookStructure'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 
@@ -16,8 +17,6 @@ import BackLink from '../components/BackLink'
 interface EventData {
   title: string
   event_type?: string
-  chapter_number?: number
-  scene_order?: number
   location?: string
   characters?: string[]
   summary?: string
@@ -27,7 +26,6 @@ interface EventData {
 }
 
 interface ChapterData {
-  number: number
   title?: string
   status?: string
   pov_character?: string
@@ -145,6 +143,8 @@ export default function CorkboardPage() {
   const [colorBy, setColorBy] = useState<ColorBy>('chapter_status')
   const [filterChapter, setFilterChapter] = useState<number | null>(null)
 
+  const { structure } = useBookStructure()
+
   const { data: events, isLoading } = useDocuments({
     template_id: TEMPLATES.EVENT,
     status: 'active',
@@ -175,10 +175,10 @@ export default function CorkboardPage() {
     [chapters]
   )
 
-  // Build chapter lookup
+  // Build chapter lookup by document_id
   const chapterMap = useMemo(() => {
-    const m = new Map<number, ChapterData>()
-    allChapters.forEach((c) => m.set(c.data.number, c.data))
+    const m = new Map<string, ChapterData>()
+    allChapters.forEach((c) => m.set(c.document_id, c.data))
     return m
   }, [allChapters])
 
@@ -197,52 +197,73 @@ export default function CorkboardPage() {
     return map
   }, [allChapters])
 
+  // Ordered scene IDs from the book structure (defines canonical sort order)
+  const orderedSceneIds = useMemo(
+    () => structure?.getAllSceneIds() ?? [],
+    [structure]
+  )
+
+  // Helper: get structure-based sort index for a scene
+  const sceneOrderIndex = useMemo(() => {
+    const m = new Map<string, number>()
+    orderedSceneIds.forEach((id, i) => m.set(id, i))
+    return m
+  }, [orderedSceneIds])
+
+  const sortByStructure = <T extends { document_id: string }>(items: T[]): T[] =>
+    [...items].sort(
+      (a, b) => (sceneOrderIndex.get(a.document_id) ?? Infinity) - (sceneOrderIndex.get(b.document_id) ?? Infinity)
+    )
+
   // Filter events
   const filtered = useMemo(() => {
     let items = allEvents
-    if (filterChapter != null) {
-      items = items.filter((e) => e.data.chapter_number === filterChapter)
+    if (filterChapter != null && structure) {
+      items = items.filter((e) => structure.getChapterNumberForScene(e.document_id) === filterChapter)
     }
     return items
-  }, [allEvents, filterChapter])
+  }, [allEvents, filterChapter, structure])
 
   // Get card color class
-  const getColorClass = (event: EventData): string => {
+  const getColorClass = (sceneId: string, event: EventData): string => {
     if (colorBy === 'event_type') {
       return EVENT_TYPE_COLORS[event.event_type ?? 'SCENE'] ?? 'border-l-gray-300'
     }
+    const chapterId = structure?.getChapterForScene(sceneId)
+    const ch = chapterId ? chapterMap.get(chapterId) : undefined
     if (colorBy === 'pov') {
-      const ch = event.chapter_number != null ? chapterMap.get(event.chapter_number) : undefined
       return ch?.pov_character
         ? povColorMap.get(ch.pov_character) ?? 'border-l-gray-300'
         : 'border-l-gray-300'
     }
     // chapter_status
-    const ch = event.chapter_number != null ? chapterMap.get(event.chapter_number) : undefined
     return CHAPTER_STATUS_BORDER[ch?.status ?? 'OUTLINE'] ?? 'border-l-gray-300'
   }
 
   // Group events
   const groups = useMemo(() => {
     if (groupBy === 'none') {
-      return [{ label: 'All Scenes', events: [...filtered].sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0)) }]
+      return [{ label: 'All Scenes', events: sortByStructure(filtered) }]
     }
 
     if (groupBy === 'chapter') {
+      // Group by chapter using structure ordering
       const byChapter = new Map<number, typeof filtered>()
       filtered.forEach((e) => {
-        const ch = e.data.chapter_number ?? 0
+        const ch = structure?.getChapterNumberForScene(e.document_id) ?? 0
         if (!byChapter.has(ch)) byChapter.set(ch, [])
         byChapter.get(ch)!.push(e)
       })
       return [...byChapter.entries()]
         .sort(([a], [b]) => a - b)
         .map(([num, evts]) => {
-          const ch = chapterMap.get(num)
+          // Look up the chapter document to get title/status
+          const chapterId = structure?.raw.chapters[num - 1]?.chapter_id
+          const ch = chapterId ? chapterMap.get(chapterId) : undefined
           return {
             label: `Chapter ${num}${ch?.title ? `: ${ch.title}` : ''}`,
             status: ch?.status,
-            events: evts.sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0)),
+            events: sortByStructure(evts),
           }
         })
     }
@@ -273,12 +294,18 @@ export default function CorkboardPage() {
     return [...byThread.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([title, evts]) => ({ label: title, events: evts }))
-  }, [filtered, groupBy, chapterMap])
+  }, [filtered, groupBy, chapterMap, structure, sceneOrderIndex])
 
-  const sortedChapters = useMemo(
-    () => [...allChapters].sort((a, b) => a.data.number - b.data.number),
-    [allChapters]
-  )
+  // Chapters sorted by structure order for the filter dropdown
+  const sortedChapters = useMemo(() => {
+    if (!structure) return allChapters
+    return structure.raw.chapters
+      .map((slot, i) => {
+        const ch = allChapters.find((c) => c.document_id === slot.chapter_id)
+        return ch ? { ...ch, structureNumber: i + 1 } : null
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+  }, [allChapters, structure])
 
   if (isLoading) {
     return (
@@ -353,8 +380,8 @@ export default function CorkboardPage() {
           >
             <option value="">All chapters</option>
             {sortedChapters.map((ch) => (
-              <option key={ch.document_id} value={ch.data.number}>
-                Ch. {ch.data.number}{ch.data.title ? `: ${ch.data.title}` : ''}
+              <option key={ch.document_id} value={'structureNumber' in ch ? (ch.structureNumber as number) : 0}>
+                Ch. {'structureNumber' in ch ? String(ch.structureNumber) : '?'}{ch.data.title ? `: ${ch.data.title}` : ''}
               </option>
             ))}
           </select>
@@ -384,7 +411,7 @@ export default function CorkboardPage() {
                   <SceneCard
                     key={event.document_id}
                     event={event}
-                    colorClass={getColorClass(event.data)}
+                    colorClass={getColorClass(event.document_id, event.data)}
                   />
                 ))}
               </div>

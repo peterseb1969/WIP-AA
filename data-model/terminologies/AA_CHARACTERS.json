@@ -3,23 +3,5 @@
   "label": "Characters",
   "description": "Character name registry with aliases",
   "extensible": true,
-  "terms": [
-    {
-      "value": "ALICE_ASHWORTH",
-      "label": "Alice Ashworth",
-      "aliases": [
-        "Ali",
-        "The Queen",
-        "Lady Ashworth"
-      ]
-    },
-    {
-      "value": "BOB_THORNE",
-      "label": "Bob Thorne",
-      "aliases": [
-        "Bob",
-        "The Blacksmith"
-      ]
-    }
-  ]
+  "terms": []
 }

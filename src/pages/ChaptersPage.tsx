@@ -1,15 +1,15 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
+import { useBookStructure } from '../lib/useBookStructure'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
 
 interface ChapterData {
-  number: number
-  title?: string
+  title: string
   summary?: string
   themes?: string[]
   status?: string
@@ -19,8 +19,6 @@ interface ChapterData {
 
 interface EventData {
   title: string
-  chapter_number?: number
-  scene_order?: number
   story_time_raw?: string
   location?: string
   characters?: string[]
@@ -29,6 +27,7 @@ interface EventData {
 }
 
 function ChapterRow({
+  chapterNumber,
   data,
   scenes,
   expanded,
@@ -36,6 +35,7 @@ function ChapterRow({
   onEdit,
   onDelete,
 }: {
+  chapterNumber: number
   data: ChapterData
   scenes: Array<{ document_id: string; data: EventData }>
   expanded: boolean
@@ -62,7 +62,7 @@ function ChapterRow({
         )}
 
         <span className="text-lg font-semibold text-primary w-12">
-          {data.number}
+          {chapterNumber}
         </span>
 
         <div className="flex-1 min-w-0">
@@ -156,11 +156,13 @@ function ChapterRow({
 }
 
 export default function ChaptersPage() {
-  const [expandedChapters, setExpandedChapters] = useState<Set<number>>(new Set())
-  const [showCreate, setShowCreate] = useState<string | null>(null) // 'chapter' or 'scene'
+  const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
+  const [showCreate, setShowCreate] = useState<string | null>(null)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const deleteDoc = useDeleteDocument()
+
+  const { structure, isLoading: loadingStructure } = useBookStructure()
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -176,37 +178,33 @@ export default function ChaptersPage() {
     namespace: NAMESPACE,
   })
 
-  const toggleChapter = (num: number) => {
+  // Build lookup maps
+  const chapterMap = useMemo(() => {
+    const map = new Map<string, { document_id: string; data: ChapterData }>()
+    chapters?.items?.forEach((ch) => {
+      map.set(ch.document_id, { document_id: ch.document_id, data: ch.data as unknown as ChapterData })
+    })
+    return map
+  }, [chapters])
+
+  const eventMap = useMemo(() => {
+    const map = new Map<string, { document_id: string; data: EventData }>()
+    events?.items?.forEach((ev) => {
+      map.set(ev.document_id, { document_id: ev.document_id, data: ev.data as unknown as EventData })
+    })
+    return map
+  }, [events])
+
+  const toggleChapter = (docId: string) => {
     setExpandedChapters((prev) => {
       const next = new Set(prev)
-      if (next.has(num)) next.delete(num)
-      else next.add(num)
+      if (next.has(docId)) next.delete(docId)
+      else next.add(docId)
       return next
     })
   }
 
-  // Group scenes by chapter number, sorted by scene_order
-  const scenesByChapter = new Map<number, Array<{ document_id: string; data: EventData }>>()
-  events?.items?.forEach((event) => {
-    const d = event.data as unknown as EventData
-    const chNum = d.chapter_number
-    if (chNum != null) {
-      if (!scenesByChapter.has(chNum)) scenesByChapter.set(chNum, [])
-      scenesByChapter.get(chNum)!.push({ document_id: event.document_id, data: d })
-    }
-  })
-  // Sort scenes within each chapter by scene_order
-  scenesByChapter.forEach((scenes) => {
-    scenes.sort((a, b) => (a.data.scene_order ?? 0) - (b.data.scene_order ?? 0))
-  })
-
-  const sortedChapters = [...(chapters?.items ?? [])].sort((a, b) => {
-    const an = (a.data as unknown as ChapterData).number
-    const bn = (b.data as unknown as ChapterData).number
-    return an - bn
-  })
-
-  if (loadingChapters) {
+  if (loadingChapters || loadingStructure) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
         <div className="text-text-muted">Loading chapters...</div>
@@ -214,13 +212,30 @@ export default function ChaptersPage() {
     )
   }
 
+  // Build ordered chapter list from structure
+  const orderedChapters = structure
+    ? structure.raw.chapters.map((slot, index) => {
+        const ch = chapterMap.get(slot.chapter_id)
+        const scenes = slot.scene_ids
+          .map((sid) => eventMap.get(sid))
+          .filter(Boolean) as Array<{ document_id: string; data: EventData }>
+        return { chapterId: slot.chapter_id, chapterNumber: index + 1, chapter: ch, scenes }
+      })
+    : // Fallback: no structure yet, show chapters unordered
+      [...(chapters?.items ?? [])].map((ch) => ({
+        chapterId: ch.document_id,
+        chapterNumber: 0,
+        chapter: { document_id: ch.document_id, data: ch.data as unknown as ChapterData },
+        scenes: [] as Array<{ document_id: string; data: EventData }>,
+      }))
+
   return (
     <div className="p-6 max-w-4xl">
       <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <BookOpen className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">Chapters</h1>
-        <span className="text-sm text-text-muted">({chapters?.total ?? 0})</span>
+        <span className="text-sm text-text-muted">({structure?.chapterCount ?? chapters?.total ?? 0})</span>
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => setShowCreate('scene')}
@@ -239,20 +254,20 @@ export default function ChaptersPage() {
         </div>
       </div>
 
-      {sortedChapters.length > 0 ? (
+      {orderedChapters.length > 0 ? (
         <div className="space-y-3">
-          {sortedChapters.map((ch) => {
-            const data = ch.data as unknown as ChapterData
-            const scenes = scenesByChapter.get(data.number) ?? []
+          {orderedChapters.map((entry) => {
+            if (!entry.chapter) return null
             return (
               <ChapterRow
-                key={ch.document_id}
-                data={data}
-                scenes={scenes}
-                expanded={expandedChapters.has(data.number)}
-                onToggle={() => toggleChapter(data.number)}
-                onEdit={() => setEditData(data as unknown as Record<string, unknown>)}
-                onDelete={() => setConfirmDelete(ch.document_id)}
+                key={entry.chapterId}
+                chapterNumber={entry.chapterNumber}
+                data={entry.chapter.data}
+                scenes={entry.scenes}
+                expanded={expandedChapters.has(entry.chapterId)}
+                onToggle={() => toggleChapter(entry.chapterId)}
+                onEdit={() => setEditData(entry.chapter!.data as unknown as Record<string, unknown>)}
+                onDelete={() => setConfirmDelete(entry.chapterId)}
               />
             )
           })}

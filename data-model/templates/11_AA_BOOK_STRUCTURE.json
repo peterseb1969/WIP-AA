@@ -1,0 +1,23 @@
+{
+  "value": "AA_BOOK_STRUCTURE",
+  "label": "Book Structure",
+  "description": "Single document owning all chapter/scene ordering for the book",
+  "identity_fields": [
+    "book_title"
+  ],
+  "fields": [
+    {
+      "name": "book_title",
+      "label": "Book Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "chapters",
+      "label": "Chapters",
+      "type": "array",
+      "mandatory": false,
+      "array_template_ref": "AA_CHAPTER_SLOT"
+    }
+  ]
+}

@@ -12,6 +12,8 @@ export const TEMPLATES = {
   PLOT_THREAD: 'AA_PLOT_THREAD',
   NOTE: 'AA_NOTE',
   WORLD_RULE: 'AA_WORLD_RULE',
+  BOOK_STRUCTURE: 'AA_BOOK_STRUCTURE',
+  CHAPTER_SLOT: 'AA_CHAPTER_SLOT',
 } as const
 
 /** Terminology values (synonyms) — stable across bootstrap */

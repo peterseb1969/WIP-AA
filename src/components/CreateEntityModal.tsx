@@ -58,8 +58,7 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     templateId: TEMPLATES.CHAPTER,
     label: 'Chapter',
     fields: [
-      { name: 'number', label: 'Chapter Number', type: 'number', required: true, placeholder: '1' },
-      { name: 'title', label: 'Title', type: 'text', placeholder: 'Chapter title' },
+      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Chapter title' },
       { name: 'summary', label: 'Summary', type: 'textarea', placeholder: 'What happens in this chapter?' },
       { name: 'status', label: 'Status', type: 'select', terminologyId: TERMINOLOGIES.CHAPTER_STATUS },
       { name: 'pov_character', label: 'POV Character', type: 'select', terminologyId: TERMINOLOGIES.CHARACTERS },
@@ -73,8 +72,6 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
     fields: [
       { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Scene title' },
       { name: 'event_type', label: 'Event Type', type: 'select', required: true, terminologyId: TERMINOLOGIES.EVENT_TYPE },
-      { name: 'chapter_number', label: 'Chapter', type: 'number', placeholder: '1' },
-      { name: 'scene_order', label: 'Scene Order', type: 'number', placeholder: '1' },
       { name: 'story_time_raw', label: 'Story Time', type: 'text', placeholder: 'e.g. Day 1, Morning after the battle' },
       { name: 'story_time_sort', label: 'Sort Order (numeric)', type: 'number', required: true, placeholder: '10' },
       { name: 'location', label: 'Location', type: 'select', terminologyId: TERMINOLOGIES.LOCATIONS },
@@ -202,7 +199,7 @@ function TermSelect({
       onChange={(e) => onChange(e.target.value)}
       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-text focus:outline-none focus:border-primary"
     >
-      <option value="">{placeholder ?? 'Select...'}</option>
+      <option value="">{placeholder ?? '— None —'}</option>
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
