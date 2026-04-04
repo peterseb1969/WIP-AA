@@ -20,6 +20,7 @@ import {
   Square,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
+import { clearAllDrafts } from '../components/UnsavedDraftBanner'
 import BackLink from '../components/BackLink'
 
 const toTermValue = (text: string): string =>
@@ -325,8 +326,8 @@ function EntitiesStep({
   onBack: () => void
   onNext: () => void
 }) {
-  const { data: roleTerms } = useTerms(TERMINOLOGIES.CHARACTER_ROLE, { page_size: 50 })
-  const { data: locationTypeTerms } = useTerms(TERMINOLOGIES.LOCATION_TYPE, { page_size: 50 })
+  const { data: roleTerms } = useTerms(TERMINOLOGIES.CHARACTER_ROLE, { page_size: 50, namespace: NAMESPACE } as any)
+  const { data: locationTypeTerms } = useTerms(TERMINOLOGIES.LOCATION_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
   const roleValues = (roleTerms?.items || []).map(t => t.value)
   const locationTypeValues = (locationTypeTerms?.items || []).map(t => t.value)
 
@@ -772,6 +773,7 @@ export default function ImportPage() {
   const [originalLocations, setOriginalLocations] = useState<ExtractedLocation[]>([])
   const [originalPlotThreads, setOriginalPlotThreads] = useState<ExtractedPlotThread[]>([])
   const [chapterSummaries, setChapterSummaries] = useState<Map<number, string>>(new Map())
+  const [chapterCharacters, setChapterCharacters] = useState<Map<number, string[]>>(new Map())
   const [extracting, setExtracting] = useState(false)
   const [extractProgress, setExtractProgress] = useState(0)
   const [extractTotal, setExtractTotal] = useState(0)
@@ -797,6 +799,7 @@ export default function ImportPage() {
     const allLocations: ExtractedLocation[] = []
     const allThreads: ExtractedPlotThread[] = []
     const summaries = new Map<number, string>()
+    const perChapterChars = new Map<number, string[]>()
 
     // Process chapters sequentially to avoid rate limits
     for (let i = 0; i < included.length; i++) {
@@ -813,11 +816,14 @@ export default function ImportPage() {
         const data = await res.json()
         if (res.ok) {
           // Deduplicate by name (case-insensitive)
+          const chapterCharNames: string[] = []
           for (const c of data.characters || []) {
+            chapterCharNames.push(toTermValue(c.name))
             if (!allCharacters.some(existing => existing.name.toLowerCase() === c.name.toLowerCase())) {
               allCharacters.push({ name: c.name, role: c.role, description: c.description })
             }
           }
+          perChapterChars.set(ch.number, chapterCharNames)
           for (const l of data.locations || []) {
             if (!allLocations.some(existing => existing.name.toLowerCase() === l.name.toLowerCase())) {
               allLocations.push({ name: l.name, type: l.type, atmosphere: l.atmosphere })
@@ -845,6 +851,7 @@ export default function ImportPage() {
     setOriginalLocations(allLocations.map(l => ({ ...l })))
     setOriginalPlotThreads(allThreads.map(p => ({ ...p })))
     setChapterSummaries(summaries)
+    setChapterCharacters(perChapterChars)
     setExtracting(false)
   }, [chapters])
 
@@ -897,6 +904,7 @@ export default function ImportPage() {
           number: ch.number,
           title: ch.title,
           status: 'DRAFT',
+          summary: chapterSummaries.get(ch.number) || '',
         })
       }
 
@@ -910,6 +918,7 @@ export default function ImportPage() {
           story_time_sort: scene.chapterNumber * 1000 + scene.sceneOrder,
           prose: scene.prose,
           summary: chapterSummaries.get(scene.chapterNumber) || '',
+          characters: chapterCharacters.get(scene.chapterNumber) || [],
         })
       }
 
@@ -941,13 +950,14 @@ export default function ImportPage() {
       }
 
       setImportedCount(created)
+      clearAllDrafts()
       setStep('done')
     } catch (err: any) {
       setImportError(err.message || 'Import failed')
       setImportedCount(created)
       setStep('done')
     }
-  }, [chapters, characters, locations, plotThreads, chapterSummaries, createDocument, wipClient])
+  }, [chapters, characters, locations, plotThreads, chapterSummaries, chapterCharacters, createDocument, wipClient])
 
   const handleResetEntities = useCallback(() => {
     setCharacters(originalCharacters.map(c => ({ ...c })))

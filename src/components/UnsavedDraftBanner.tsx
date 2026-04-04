@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, X } from 'lucide-react'
 
 interface DraftEntry {
   sceneId: string
@@ -14,6 +14,17 @@ export const DRAFT_CHANGED_EVENT = 'aa-draft-changed'
 /** Fire this after writing or removing a scene draft to refresh the banner */
 export function notifyDraftChange() {
   window.dispatchEvent(new Event(DRAFT_CHANGED_EVENT))
+}
+
+/** Remove all scene drafts from localStorage */
+export function clearAllDrafts() {
+  const keys: string[] = []
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith('aa-scene-draft-')) keys.push(key)
+  }
+  keys.forEach((k) => localStorage.removeItem(k))
+  notifyDraftChange()
 }
 
 function scanDrafts(): DraftEntry[] {
@@ -50,21 +61,38 @@ export default function UnsavedDraftBanner() {
     }
   }, [refresh])
 
+  const dismissDraft = useCallback((sceneId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    localStorage.removeItem(`aa-scene-draft-${sceneId}`)
+    notifyDraftChange()
+  }, [])
+
   if (drafts.length === 0) return null
 
   return (
     <div className="space-y-0">
       {drafts.map((d) => (
-        <button
+        <div
           key={d.sceneId}
-          onClick={() => navigate(`/scenes?id=${d.sceneId}`)}
-          className="w-full flex items-center gap-3 px-4 py-2.5 bg-red-50 border-b border-red-200 text-left hover:bg-red-100 transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-2.5 bg-red-50 border-b border-red-200"
         >
           <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
-          <span className="text-sm font-semibold text-red-700">Unsaved draft:</span>
-          <span className="text-sm text-red-700 truncate">{d.title}</span>
-          <span className="text-xs text-red-400 flex-shrink-0 ml-auto">Click to resume</span>
-        </button>
+          <button
+            onClick={() => navigate(`/scenes?id=${d.sceneId}`)}
+            className="flex items-center gap-2 flex-1 min-w-0 text-left hover:underline"
+          >
+            <span className="text-sm font-semibold text-red-700">Unsaved draft:</span>
+            <span className="text-sm text-red-700 truncate">{d.title}</span>
+            <span className="text-xs text-red-400 flex-shrink-0">Click to resume</span>
+          </button>
+          <button
+            onClick={(e) => dismissDraft(d.sceneId, e)}
+            className="p-1 text-red-400 hover:text-red-700 hover:bg-red-100 rounded transition-colors flex-shrink-0"
+            title="Dismiss draft"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       ))}
     </div>
   )

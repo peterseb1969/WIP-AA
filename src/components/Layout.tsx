@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
-import { TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import UnsavedDraftBanner from './UnsavedDraftBanner'
 import {
   PenTool,
@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 
 export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active' })
+  const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active', namespace: NAMESPACE })
   const projectTitle = (projects?.items?.[0]?.data as Record<string, unknown> | undefined)?.title as string | undefined
 
   return (

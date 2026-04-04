@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDocuments, useTerms, useDeleteDocument } from '@wip/react'
 import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2 } from 'lucide-react'
-import { TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -52,7 +52,7 @@ function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => 
 
 function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   // Resolve character names from terms
-  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50 })
+  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50, namespace: NAMESPACE } as any)
   const termLookup = new Map(charTerms?.items?.map((t) => [t.value, t.label]) ?? [])
 
   const sections = [
@@ -166,6 +166,7 @@ export default function CharactersPage() {
     template_id: TEMPLATES.CHARACTER,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   const selected = characters?.items?.find((c) => c.document_id === selectedId)

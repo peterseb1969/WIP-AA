@@ -78,9 +78,10 @@ export function parseText(text: string): ParsedChapter[] {
     // Split buffer into scenes by scene breaks
     const sceneTexts = prose.split(SCENE_BREAK_RE).map(s => s.trim()).filter(Boolean)
     for (const sceneText of sceneTexts) {
+      const sceneNum = currentChapter.scenes.length + 1
       currentChapter.scenes.push({
-        sceneOrder: currentChapter.scenes.length + 1,
-        title: `Scene ${currentChapter.scenes.length + 1}`,
+        sceneOrder: sceneNum,
+        title: `Ch${currentChapter.number} Scene ${sceneNum}`,
         prose: sceneText,
       })
     }
@@ -119,7 +120,7 @@ export function parseText(text: string): ParsedChapter[] {
       title: 'Chapter 1',
       scenes: scenes.map((prose, i) => ({
         sceneOrder: i + 1,
-        title: `Scene ${i + 1}`,
+        title: `Ch1 Scene ${i + 1}`,
         prose,
       })),
     })

@@ -8,7 +8,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react'
-import { TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 
@@ -116,11 +116,13 @@ export default function TimelinePage() {
     template_id: TEMPLATES.EVENT,
     status: 'active',
     page_size: 200,
+    namespace: NAMESPACE,
   })
   const { data: chapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   const allEvents = useMemo(

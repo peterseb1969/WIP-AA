@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { GitBranch, Plus, Pencil, Trash2 } from 'lucide-react'
-import { TEMPLATES, THREAD_STATUS_COLORS } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, THREAD_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -25,6 +25,7 @@ export default function PlotThreadsPage() {
     template_id: TEMPLATES.PLOT_THREAD,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   if (isLoading) {

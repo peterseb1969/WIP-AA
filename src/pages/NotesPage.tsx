@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { StickyNote, Filter, Plus, Pencil, Trash2 } from 'lucide-react'
-import { TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -37,6 +37,7 @@ export default function NotesPage() {
     template_id: TEMPLATES.NOTE,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   const filtered = filterType

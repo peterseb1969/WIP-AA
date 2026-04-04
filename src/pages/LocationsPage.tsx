@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { MapPin, ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react'
-import { TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -103,6 +103,7 @@ export default function LocationsPage() {
     template_id: TEMPLATES.LOCATION,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   const selected = locations?.items?.find((l) => l.document_id === selectedId)

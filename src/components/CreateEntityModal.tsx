@@ -139,7 +139,7 @@ function TermSelect({
   placeholder?: string
   multiple?: boolean
 }) {
-  const { data: terms } = useTerms(terminologyId, { page_size: 100 })
+  const { data: terms } = useTerms(terminologyId, { page_size: 100, namespace: NAMESPACE } as any)
 
   const options = useMemo(
     () =>

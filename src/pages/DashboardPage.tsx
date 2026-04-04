@@ -9,7 +9,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 
 function StatCard({ icon: Icon, label, value, to }: {
@@ -40,16 +40,18 @@ export default function DashboardPage() {
   const { data: projects, isLoading: loadingProject } = useDocuments({
     template_id: TEMPLATES.PROJECT,
     status: 'active',
+    namespace: NAMESPACE,
   })
-  const { data: characters } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1 })
-  const { data: locations } = useTerms(TERMINOLOGIES.LOCATIONS, { page_size: 1 })
-  const { data: chapters } = useDocuments({ template_id: TEMPLATES.CHAPTER, status: 'active', page_size: 50 })
+  const { data: characters } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1, namespace: NAMESPACE } as any)
+  const { data: locations } = useTerms(TERMINOLOGIES.LOCATIONS, { page_size: 1, namespace: NAMESPACE } as any)
+  const { data: chapters } = useDocuments({ template_id: TEMPLATES.CHAPTER, status: 'active', page_size: 50, namespace: NAMESPACE })
   const { data: events } = useDocuments({
     template_id: TEMPLATES.EVENT,
     status: 'active',
     page_size: 5,
+    namespace: NAMESPACE,
   })
-  const { data: threads } = useDocuments({ template_id: TEMPLATES.PLOT_THREAD, status: 'active', page_size: 50 })
+  const { data: threads } = useDocuments({ template_id: TEMPLATES.PLOT_THREAD, status: 'active', page_size: 50, namespace: NAMESPACE })
 
   const project = projects?.items?.[0]
   const projectData = project?.data as Record<string, unknown> | undefined

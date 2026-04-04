@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -166,12 +166,14 @@ export default function ChaptersPage() {
     template_id: TEMPLATES.CHAPTER,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   const { data: events } = useDocuments({
     template_id: TEMPLATES.EVENT,
     status: 'active',
     page_size: 200,
+    namespace: NAMESPACE,
   })
 
   const toggleChapter = (num: number) => {

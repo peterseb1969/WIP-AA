@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { Globe, Plus, Pencil, Trash2 } from 'lucide-react'
-import { TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
 
@@ -24,6 +24,7 @@ export default function WorldRulesPage() {
     template_id: TEMPLATES.WORLD_RULE,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   if (isLoading) {

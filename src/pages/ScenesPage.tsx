@@ -24,8 +24,9 @@ import {
   Plus,
   Save,
   Trash2,
+  Scissors,
 } from 'lucide-react'
-import { TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
 import { notifyDraftChange } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
@@ -434,7 +435,7 @@ function CharactersPanel({
           </button>
 
           {expandedChar === c.name && c.doc ? (
-            <div className="ml-12 mr-3 mb-2 space-y-2">
+            <div className="ml-12 mr-3 mb-2 space-y-2 break-words">
               {c.doc.description ? (
                 <p className="text-xs text-text-muted">{c.doc.description}</p>
               ) : null}
@@ -540,7 +541,7 @@ function ContextPanel({
         {tab === 'location' ? (
           <div className="p-3">
             {locationDoc ? (
-              <div className="space-y-2">
+              <div className="space-y-2 break-words">
                 <div className="font-medium text-sm text-text">{locationDoc.data.name}</div>
                 {locationDoc.data.type ? (
                   <StatusBadge label={locationDoc.data.type} colorClass="bg-blue-100 text-blue-800" />
@@ -570,7 +571,7 @@ function ContextPanel({
           <div className="p-3 space-y-2">
             {activeThreads.length > 0 ? (
               activeThreads.map((t) => (
-                <div key={t.document_id} className="bg-surface rounded p-2">
+                <div key={t.document_id} className="bg-surface rounded p-2 break-words">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-text">{t.data.title}</span>
                     {t.data.status ? (
@@ -601,9 +602,9 @@ function ContextPanel({
           <div className="p-3 space-y-2">
             {ruleDocs.length > 0 ? (
               ruleDocs.map((r) => (
-                <div key={r.document_id} className="bg-surface rounded p-2">
-                  <div className="text-sm font-medium text-text">{r.data.name}</div>
-                  <p className="text-xs text-text-muted mt-0.5">{r.data.rule}</p>
+                <div key={r.document_id} className="bg-surface rounded p-2 overflow-hidden">
+                  <div className="text-sm font-medium text-text break-words">{r.data.name}</div>
+                  <p className="text-xs text-text-muted mt-0.5 break-words">{r.data.rule}</p>
                 </div>
               ))
             ) : (
@@ -616,7 +617,7 @@ function ContextPanel({
           <div className="p-3 space-y-2">
             {noteDocs.length > 0 ? (
               noteDocs.map((n) => (
-                <div key={n.document_id} className="bg-surface rounded p-2">
+                <div key={n.document_id} className="bg-surface rounded p-2 break-words">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-text">{n.data.title}</span>
                     <StatusBadge label={n.data.note_type} colorClass="bg-gray-100 text-gray-700" />
@@ -800,6 +801,8 @@ function SceneEditor({
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isDirtyRef = useRef(false)
+  const userEditedRef = useRef(false)
   const createDocument = useCreateDocument()
   const deleteDocument = useDeleteDocument()
 
@@ -872,7 +875,13 @@ function SceneEditor({
         },
       },
       onUpdate: () => {
+        // Skip the initial update fired by TipTap when parsing content on mount
+        if (!userEditedRef.current) {
+          userEditedRef.current = true
+          return
+        }
         setIsDirty(true)
+        isDirtyRef.current = true
       },
     },
     [sceneId]
@@ -880,10 +889,15 @@ function SceneEditor({
 
   // Mark dirty on mount if we loaded a localStorage draft that differs from WIP
   useEffect(() => {
+    userEditedRef.current = false
     if (initialContent !== (sceneData?.prose ?? '')) {
       setIsDirty(true)
+      isDirtyRef.current = true
+      // This was a real draft — mark as user-edited so next onUpdate isn't skipped
+      userEditedRef.current = true
     } else {
       setIsDirty(false)
+      isDirtyRef.current = false
     }
     setLastSaved(null)
   }, [sceneId]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -912,7 +926,7 @@ function SceneEditor({
     const handler = () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
       autoSaveTimerRef.current = setTimeout(() => {
-        if (editor.getText().trim()) {
+        if (isDirtyRef.current && editor.getText().trim()) {
           writeDraft(editor.getHTML())
         }
       }, 3000)
@@ -922,8 +936,8 @@ function SceneEditor({
     return () => {
       editor.off('update', handler)
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
-      // Sync flush — editor is still alive during cleanup
-      if (editor.getText().trim()) {
+      // Only save draft if user actually made edits
+      if (isDirtyRef.current && editor.getText().trim()) {
         writeDraft(editor.getHTML())
       }
     }
@@ -942,6 +956,7 @@ function SceneEditor({
       {
         onSuccess: () => {
           setIsDirty(false)
+          isDirtyRef.current = false
           setLastSaved(new Date())
           // Clear localStorage draft since we've saved to WIP
           localStorage.removeItem(draftKey)
@@ -981,6 +996,77 @@ function SceneEditor({
       }
     )
   }, [deleteDocument, sceneId, draftKey, onBack])
+
+  const [splitting, setSplitting] = useState(false)
+  const [splitError, setSplitError] = useState('')
+
+  const handleSplit = useCallback(() => {
+    if (!editor || !sceneData) return
+    setSplitError('')
+
+    const { from } = editor.state.selection
+    const docSize = editor.state.doc.content.size
+
+    // Check cursor is actually placed inside the text (not at very start or end)
+    if (from <= 1 || from >= docSize - 1) {
+      setSplitError('Click inside the text where you want to split, then press Split.')
+      return
+    }
+
+    // Use TipTap's HTML: split into before/after at the ProseMirror position
+    // Get HTML for the two halves by manipulating the document
+    const textBefore = editor.state.doc.textBetween(0, from, '\n').trim()
+    const textAfter = editor.state.doc.textBetween(from, docSize, '\n').trim()
+
+    if (!textBefore || !textAfter) {
+      setSplitError('Click inside the text where you want to split. Both halves need content.')
+      return
+    }
+
+    setSplitting(true)
+
+    const currentSceneOrder = sceneData.scene_order ?? 1
+    const newSceneOrder = currentSceneOrder + 1
+
+    // Save current scene with text before cursor
+    createDocument.mutate(
+      {
+        template_id: TEMPLATES.EVENT,
+        namespace: NAMESPACE,
+        data: { ...sceneData, prose: textBefore },
+      },
+      {
+        onSuccess: () => {
+          // Create new scene with text after cursor
+          createDocument.mutate(
+            {
+              template_id: TEMPLATES.EVENT,
+              namespace: NAMESPACE,
+              data: {
+                title: `${sceneData.title} (split)`,
+                event_type: sceneData.event_type ?? 'SCENE',
+                chapter_number: sceneData.chapter_number,
+                scene_order: newSceneOrder,
+                story_time_sort: (sceneData.chapter_number ?? 0) * 1000 + newSceneOrder,
+                prose: textAfter,
+                characters: sceneData.characters ?? [],
+              },
+            },
+            {
+              onSuccess: () => {
+                setSplitting(false)
+                localStorage.removeItem(draftKey)
+                notifyDraftChange()
+                onBack()
+              },
+              onError: () => { setSplitting(false); setSplitError('Failed to create second scene.') },
+            }
+          )
+        },
+        onError: () => { setSplitting(false); setSplitError('Failed to save first scene.') },
+      }
+    )
+  }, [editor, sceneData, createDocument, draftKey, onBack])
 
   if (!sceneData) {
     return (
@@ -1070,6 +1156,20 @@ function SceneEditor({
           <Save className="w-3.5 h-3.5" />
           {createDocument.isPending ? 'Saving...' : 'Save'}
         </button>
+
+        {/* Split */}
+        <button
+          onClick={handleSplit}
+          disabled={splitting || createDocument.isPending}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+          title="Split scene at cursor position"
+        >
+          <Scissors className="w-3.5 h-3.5" />
+          {splitting ? 'Splitting...' : 'Split'}
+        </button>
+        {splitError ? (
+          <span className="text-xs text-red-600 max-w-48">{splitError}</span>
+        ) : null}
 
         {/* Delete */}
         {confirmDelete ? (
@@ -1210,36 +1310,43 @@ export default function ScenesPage() {
     template_id: TEMPLATES.EVENT,
     status: 'active',
     page_size: 200,
+    namespace: NAMESPACE,
   })
   const { data: chapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
   const { data: characterDocsRaw } = useDocuments({
     template_id: TEMPLATES.CHARACTER,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
   const { data: locationDocsRaw } = useDocuments({
     template_id: TEMPLATES.LOCATION,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
   const { data: threadDocsRaw } = useDocuments({
     template_id: TEMPLATES.PLOT_THREAD,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
   const { data: ruleDocsRaw } = useDocuments({
     template_id: TEMPLATES.WORLD_RULE,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
   const { data: noteDocsRaw } = useDocuments({
     template_id: TEMPLATES.NOTE,
     status: 'active',
     page_size: 50,
+    namespace: NAMESPACE,
   })
 
   // Cast all documents
