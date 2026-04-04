@@ -4,6 +4,7 @@ import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import AliasManager from '../components/AliasManager'
 import BackLink from '../components/BackLink'
 
 interface CharacterData {
@@ -107,6 +108,8 @@ function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterDa
           ) : null}
         </div>
       </div>
+
+      <AliasManager terminologyValue={TERMINOLOGIES.CHARACTERS} entityTermValue={data.name} />
 
       {/* Character bible sections */}
       {sections.length > 0 ? (

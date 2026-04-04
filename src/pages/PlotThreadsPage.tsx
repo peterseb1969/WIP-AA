@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { GitBranch, Plus, Pencil, Trash2 } from 'lucide-react'
-import { NAMESPACE, TEMPLATES, THREAD_STATUS_COLORS } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import AliasManager from '../components/AliasManager'
 import BackLink from '../components/BackLink'
 
 interface PlotThreadData {
@@ -121,6 +122,7 @@ export default function PlotThreadsPage() {
                       {thread.data.description ? (
                         <p className="text-sm text-text-muted mb-2">{thread.data.description}</p>
                       ) : null}
+                      <AliasManager terminologyValue={TERMINOLOGIES.PLOT_THREADS} entityTermValue={thread.data.title} />
                       <div className="flex items-center gap-4 text-xs text-text-light">
                         {thread.data.opened_chapter != null ? (
                           <span>Opened: Ch. {thread.data.opened_chapter}</span>

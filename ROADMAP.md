@@ -16,10 +16,10 @@
 - **AI-based scene validation** — Second validation mechanism complementing regex-based ValidateSceneAnnotations. Uses AI to detect entities mentioned indirectly (pronouns, descriptions, nicknames not in aliases) and flag semantic issues (character in wrong location, timeline inconsistencies). Design TBD
 - **Full-text prose search** — Index scene prose for keyword/phrase search across the entire manuscript
 - **Entity merge outside import** — Merge duplicates from entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions." Depends on ValidateSceneAnnotations
-- **Alias management in AA UI** — Entity detail pages should show term aliases as removable tags. Support adding and deleting aliases without leaving the app (currently requires WIP Console, which has its own bugs — CASE-07)
 - **Test Ask Bar with valid API key** — Verify the chat assistant works end-to-end with a real Anthropic API key and MCP connection
 
 ## Done
+- Alias management: AliasManager component on Characters, Locations, and Plot Threads detail pages. Add/remove aliases as tags, immediate save via WIP API. No console access needed
 - ValidateSceneAnnotations: regex-based prose scanning for characters, locations, plot threads. Four states (confirmed, missing, detected, suppressed). Shield button in toolbar, Validate tab in context panel. Actions: add, dismiss, remove, restore. AA_EVENT template v2 with `suppressed_suggestions` field
 - Split scene: scissors button splits prose at cursor (paragraph boundary), creates new scene, updates book structure
 - Book structure refactoring: AA_BOOK_STRUCTURE replaces chapter_number/scene_order fields

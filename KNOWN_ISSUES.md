@@ -32,6 +32,12 @@ The Corkboard displays scene cards but does not support drag-and-drop reordering
 ### No cross-entity stats on detail pages
 Location, Character, and Plot Thread detail views don't show how many scenes reference them. Requires the WIP reporting layer (`useReportQuery` hook).
 
+### Alias collision not detected
+**Page:** Characters, Locations, Plot Threads (any detail page with AliasManager)
+**Symptom:** A writer can add an alias that is already used as a label or alias on a different entity. For example, adding "The Captain" to character "Carter" when "The Captain" is already an alias for "Briggs". ValidateSceneAnnotations would then match both entities for the same text, producing confusing results.
+**What's needed:** Before adding an alias, check all terms in the same terminology for label/alias collisions. Warn or block if the alias is already taken. Show which entity owns it so the writer can decide.
+**Status:** Not implemented. The alias is accepted silently.
+
 ## Deferred decisions
 
 ### Scene auto-save vs explicit save

@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { MapPin, ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react'
-import { NAMESPACE, TEMPLATES } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import AliasManager from '../components/AliasManager'
 import BackLink from '../components/BackLink'
 
 interface LocationData {
@@ -77,6 +78,8 @@ function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData
       {data.description ? (
         <p className="text-sm text-text mb-4 max-w-xl">{data.description}</p>
       ) : null}
+
+      <AliasManager terminologyValue={TERMINOLOGIES.LOCATIONS} entityTermValue={data.name} />
 
       {sections.length > 0 ? (
         <div className="grid md:grid-cols-2 gap-4">
