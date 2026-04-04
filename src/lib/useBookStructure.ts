@@ -73,6 +73,7 @@ export function useBookStructure() {
   const { data: docs, isLoading, error, refetch } = useDocuments({
     template_id: TEMPLATES.BOOK_STRUCTURE,
     namespace: NAMESPACE,
+    status: 'active',
   })
 
   const structure = useMemo(() => {

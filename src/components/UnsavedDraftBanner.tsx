@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, X } from 'lucide-react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { AlertTriangle, X, Trash2 } from 'lucide-react'
 
 interface DraftEntry {
   sceneId: string
@@ -11,9 +11,17 @@ interface DraftEntry {
 /** Custom event name fired when scene drafts change in localStorage */
 export const DRAFT_CHANGED_EVENT = 'aa-draft-changed'
 
+/** Custom event fired when user discards a draft — scene editor should reset */
+export const DRAFT_DISCARD_EVENT = 'aa-draft-discard'
+
 /** Fire this after writing or removing a scene draft to refresh the banner */
 export function notifyDraftChange() {
   window.dispatchEvent(new Event(DRAFT_CHANGED_EVENT))
+}
+
+/** Fire this to tell the scene editor to discard and reload from WIP */
+export function notifyDraftDiscard(sceneId: string) {
+  window.dispatchEvent(new CustomEvent(DRAFT_DISCARD_EVENT, { detail: { sceneId } }))
 }
 
 /** Remove all scene drafts from localStorage */
@@ -47,12 +55,13 @@ function scanDrafts(): DraftEntry[] {
 
 export default function UnsavedDraftBanner() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [drafts, setDrafts] = useState<DraftEntry[]>(scanDrafts)
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
 
   const refresh = useCallback(() => setDrafts(scanDrafts()), [])
 
   useEffect(() => {
-    // Listen for cross-tab storage events and same-tab custom events
     window.addEventListener('storage', refresh)
     window.addEventListener(DRAFT_CHANGED_EVENT, refresh)
     return () => {
@@ -61,24 +70,53 @@ export default function UnsavedDraftBanner() {
     }
   }, [refresh])
 
-  const dismissDraft = useCallback((sceneId: string, e: React.MouseEvent) => {
+  // Clear dismissed set when drafts change (e.g. new draft appears)
+  useEffect(() => {
+    setDismissed((prev) => {
+      const activeIds = new Set(drafts.map((d) => d.sceneId))
+      const next = new Set<string>()
+      prev.forEach((id) => { if (activeIds.has(id)) next.add(id) })
+      return next.size === prev.size ? prev : next
+    })
+  }, [drafts])
+
+  const handleResume = useCallback((sceneId: string) => {
+    const target = `/scenes?id=${sceneId}`
+    // If already on the scenes page with this scene selected, force remount via key
+    const currentParams = new URLSearchParams(location.search)
+    if (location.pathname === '/scenes' && currentParams.get('id') === sceneId) {
+      // Navigate away and back to force remount
+      navigate(target, { replace: true, state: { ts: Date.now() } })
+    } else {
+      navigate(target)
+    }
+  }, [navigate, location])
+
+  const handleDismiss = useCallback((sceneId: string, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setDismissed((prev) => new Set(prev).add(sceneId))
+  }, [])
+
+  const handleDiscard = useCallback((sceneId: string, e: React.MouseEvent) => {
     e.stopPropagation()
     localStorage.removeItem(`aa-scene-draft-${sceneId}`)
+    notifyDraftDiscard(sceneId)
     notifyDraftChange()
   }, [])
 
-  if (drafts.length === 0) return null
+  const visible = drafts.filter((d) => !dismissed.has(d.sceneId))
+  if (visible.length === 0) return null
 
   return (
     <div className="space-y-0">
-      {drafts.map((d) => (
+      {visible.map((d) => (
         <div
           key={d.sceneId}
           className="w-full flex items-center gap-3 px-4 py-2.5 bg-red-50 border-b border-red-200"
         >
           <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
           <button
-            onClick={() => navigate(`/scenes?id=${d.sceneId}`)}
+            onClick={() => handleResume(d.sceneId)}
             className="flex items-center gap-2 flex-1 min-w-0 text-left hover:underline"
           >
             <span className="text-sm font-semibold text-red-700">Unsaved draft:</span>
@@ -86,9 +124,17 @@ export default function UnsavedDraftBanner() {
             <span className="text-xs text-red-400 flex-shrink-0">Click to resume</span>
           </button>
           <button
-            onClick={(e) => dismissDraft(d.sceneId, e)}
+            onClick={(e) => handleDiscard(d.sceneId, e)}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-100 rounded transition-colors flex-shrink-0"
+            title="Discard draft and revert to saved version"
+          >
+            <Trash2 className="w-3 h-3" />
+            Discard
+          </button>
+          <button
+            onClick={(e) => handleDismiss(d.sceneId, e)}
             className="p-1 text-red-400 hover:text-red-700 hover:bg-red-100 rounded transition-colors flex-shrink-0"
-            title="Dismiss draft"
+            title="Hide this warning"
           >
             <X className="w-3.5 h-3.5" />
           </button>

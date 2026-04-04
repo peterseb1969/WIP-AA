@@ -4,6 +4,7 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
 import { useDocuments, useCreateDocument, useDeleteDocument } from '@wip/react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   PenTool,
   ChevronLeft,
@@ -23,12 +24,13 @@ import {
   FileText,
   Plus,
   Save,
+  Scissors,
   Trash2,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, type BookStructure } from '../lib/useBookStructure'
 import CreateEntityModal from '../components/CreateEntityModal'
-import { notifyDraftChange } from '../components/UnsavedDraftBanner'
+import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 
@@ -818,6 +820,7 @@ function SceneEditor({
   events,
   chapters,
   structure,
+  structureDocId,
   characterDocs,
   locationDocs,
   threadDocs,
@@ -830,6 +833,7 @@ function SceneEditor({
   events: Array<{ document_id: string; data: EventData }>
   chapters: Array<{ document_id: string; data: ChapterData }>
   structure: BookStructure | undefined
+  structureDocId: string | undefined
   characterDocs: Array<{ document_id: string; data: CharacterDocData }>
   locationDocs: Array<{ document_id: string; data: LocationData }>
   threadDocs: Array<{ document_id: string; data: PlotThreadData }>
@@ -846,7 +850,8 @@ function SceneEditor({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isDirtyRef = useRef(false)
-  const userEditedRef = useRef(false)
+  const baselineHtmlRef = useRef('')
+  const queryClient = useQueryClient()
   const createDocument = useCreateDocument()
   const deleteDocument = useDeleteDocument()
 
@@ -945,14 +950,14 @@ function SceneEditor({
           style: "font-family: 'Georgia', 'Times New Roman', serif; font-size: 16px; line-height: 1.8;",
         },
       },
-      onUpdate: () => {
-        // Skip the initial update fired by TipTap when parsing content on mount
-        if (!userEditedRef.current) {
-          userEditedRef.current = true
-          return
-        }
-        setIsDirty(true)
-        isDirtyRef.current = true
+      onCreate: ({ editor: e }) => {
+        // Capture TipTap's normalized HTML as the baseline for dirty comparison
+        baselineHtmlRef.current = e.getHTML()
+      },
+      onUpdate: ({ editor: e }) => {
+        const changed = e.getHTML() !== baselineHtmlRef.current
+        setIsDirty(changed)
+        isDirtyRef.current = changed
       },
     },
     [sceneId]
@@ -960,12 +965,9 @@ function SceneEditor({
 
   // Mark dirty on mount if we loaded a localStorage draft that differs from WIP
   useEffect(() => {
-    userEditedRef.current = false
     if (initialContent !== (sceneData?.prose ?? '')) {
       setIsDirty(true)
       isDirtyRef.current = true
-      // This was a real draft — mark as user-edited so next onUpdate isn't skipped
-      userEditedRef.current = true
     } else {
       setIsDirty(false)
       isDirtyRef.current = false
@@ -1014,6 +1016,22 @@ function SceneEditor({
     }
   }, [editor, draftKey, writeDraft])
 
+  // Listen for discard events from the banner — reset editor to WIP version
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (detail?.sceneId !== sceneId || !editor) return
+      const wipProse = sceneData?.prose ?? ''
+      editor.commands.setContent(wipProse)
+      baselineHtmlRef.current = editor.getHTML()
+      setIsDirty(false)
+      isDirtyRef.current = false
+      setLastSaved(null)
+    }
+    window.addEventListener(DRAFT_DISCARD_EVENT, handler)
+    return () => window.removeEventListener(DRAFT_DISCARD_EVENT, handler)
+  }, [editor, sceneId, sceneData?.prose])
+
   // Save prose to WIP — creates a new version with all existing data + updated prose
   const handleSave = useCallback(() => {
     if (!editor || !sceneData) return
@@ -1026,6 +1044,8 @@ function SceneEditor({
       },
       {
         onSuccess: () => {
+          // Reset baseline to current content so further edits compare against saved state
+          if (editor) baselineHtmlRef.current = editor.getHTML()
           setIsDirty(false)
           isDirtyRef.current = false
           setLastSaved(new Date())
@@ -1067,6 +1087,143 @@ function SceneEditor({
       }
     )
   }, [deleteDocument, sceneId, draftKey, onBack])
+
+  const [splitting, setSplitting] = useState(false)
+
+  const handleSplit = useCallback(async () => {
+    if (!editor || !sceneData || !structure || !structureDocId) return
+    const { from } = editor.state.selection
+
+    // Find the block-level split point: walk up from cursor to find top-level node boundary
+    const doc = editor.state.doc
+    let splitPos = from
+
+    // Resolve to a top-level block boundary (depth 1 = direct child of doc)
+    const resolved = doc.resolve(splitPos)
+    if (resolved.depth > 1) {
+      // Move to the end of the nearest top-level block
+      const topIndex = resolved.index(1)
+      let pos = 0
+      doc.forEach((node, offset, index) => {
+        if (index === topIndex) pos = offset + node.nodeSize
+      })
+      if (pos > 0) splitPos = pos + 1 // +1 for the doc opening
+    }
+
+    // Generate HTML for before and after the split
+    const json = editor.getJSON()
+    const allContent = json.content || []
+    // Find which top-level node the cursor is in
+    let cumPos = 1 // TipTap doc starts at pos 1
+    let splitIndex = 0
+    for (let i = 0; i < allContent.length; i++) {
+      const nodeSize = editor.state.doc.child(i).nodeSize
+      if (cumPos + nodeSize > from) {
+        splitIndex = i + 1 // split AFTER this node
+        break
+      }
+      cumPos += nodeSize
+    }
+
+    // Ensure we don't split at the very start or end
+    if (splitIndex === 0) splitIndex = 1
+    if (splitIndex >= allContent.length) {
+      alert('Place the cursor between paragraphs to split the scene.')
+      return
+    }
+
+    const firstHalf = allContent.slice(0, splitIndex)
+    const secondHalf = allContent.slice(splitIndex)
+
+    // Use ProseMirror's DOMSerializer to convert JSON slices back to HTML
+    const { schema } = editor.state
+    const { DOMSerializer } = await import('@tiptap/pm/model')
+    const serializer = DOMSerializer.fromSchema(schema)
+    const jsonToHtml = (content: any[]) => {
+      const node = schema.nodeFromJSON({ type: 'doc', content })
+      const fragment = serializer.serializeFragment(node.content)
+      const div = document.createElement('div')
+      div.appendChild(fragment)
+      return div.innerHTML
+    }
+    const firstHtml = jsonToHtml(firstHalf)
+    const secondHtml = jsonToHtml(secondHalf)
+
+    setSplitting(true)
+    try {
+      // 1. Save first half to current scene
+      await new Promise<void>((resolve, reject) => {
+        createDocument.mutate(
+          {
+            template_id: TEMPLATES.EVENT,
+            namespace: 'aa',
+            data: { ...sceneData, prose: firstHtml },
+          },
+          { onSuccess: () => resolve(), onError: reject }
+        )
+      })
+
+      // 2. Create new scene with second half
+      const newTitle = `${sceneData.title} (continued)`
+      const newSceneId = await new Promise<string>((resolve, reject) => {
+        createDocument.mutate(
+          {
+            template_id: TEMPLATES.EVENT,
+            namespace: 'aa',
+            data: {
+              title: newTitle,
+              event_type: sceneData.event_type,
+              story_time_raw: sceneData.story_time_raw,
+              story_time_sort: (sceneData.story_time_sort ?? 0) + 1,
+              location: sceneData.location,
+              characters: sceneData.characters,
+              summary: '',
+              prose: secondHtml,
+              plot_threads: sceneData.plot_threads,
+              emotional_beat: '',
+            },
+          },
+          {
+            onSuccess: (data: any) => resolve(data.document_id),
+            onError: reject,
+          }
+        )
+      })
+
+      // 3. Update book structure — insert new scene after current scene
+      const pos = structure.getScenePosition(sceneId)
+      if (pos) {
+        const newChapters = structure.raw.chapters.map((slot, ci) => {
+          if (ci !== pos.chapterIndex) return slot
+          const newSceneIds = [...slot.scene_ids]
+          newSceneIds.splice(pos.sceneIndex + 1, 0, newSceneId)
+          return { ...slot, scene_ids: newSceneIds }
+        })
+        await new Promise<void>((resolve, reject) => {
+          createDocument.mutate(
+            {
+              template_id: TEMPLATES.BOOK_STRUCTURE,
+              namespace: 'aa',
+              data: { ...structure.raw, chapters: newChapters },
+            },
+            { onSuccess: () => resolve(), onError: reject }
+          )
+        })
+      }
+
+      // 4. Invalidate cache so both scenes load fresh from WIP
+      localStorage.removeItem(draftKey)
+      notifyDraftChange()
+      await queryClient.invalidateQueries()
+
+      // Navigate to the new scene
+      onNavigate(newSceneId)
+    } catch (err: any) {
+      alert(`Split failed: ${err.message || 'Unknown error'}`)
+    } finally {
+      setSplitting(false)
+    }
+  }, [editor, sceneData, structure, structureDocId, sceneId, createDocument, draftKey, onNavigate])
 
   if (!sceneData) {
     return (
@@ -1157,6 +1314,16 @@ function SceneEditor({
           {createDocument.isPending ? 'Saving...' : 'Save'}
         </button>
 
+        {/* Split */}
+        <button
+          onClick={handleSplit}
+          disabled={splitting || !structure || !structureDocId}
+          className="text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
+          title="Split scene at cursor position"
+        >
+          <Scissors className="w-3.5 h-3.5" />
+        </button>
+
         {/* Delete */}
         {confirmDelete ? (
           <span className="inline-flex items-center gap-1.5">
@@ -1194,7 +1361,7 @@ function SceneEditor({
             }`}
           >
             <FileText className="w-3.5 h-3.5 inline mr-1" />
-            Edit
+            {mode === 'full' ? 'Editing' : 'Edit'}
           </button>
           <button
             onClick={() => setMode('composition')}
@@ -1286,7 +1453,15 @@ export default function ScenesPage() {
     searchParams.get('flow') ?? null
   )
 
-  const { structure } = useBookStructure()
+  const { structure, structureDocId } = useBookStructure()
+
+  // Sync incoming URL params → state (e.g. banner resume navigation)
+  useEffect(() => {
+    const urlId = searchParams.get('id')
+    if (urlId && urlId !== selectedSceneId) {
+      setSelectedSceneId(urlId)
+    }
+  }, [searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync URL params when selection changes
   useEffect(() => {
@@ -1425,6 +1600,7 @@ export default function ScenesPage() {
         events={allEvents}
         chapters={allChapters}
         structure={structure}
+        structureDocId={structureDocId}
         characterDocs={characterDocs}
         locationDocs={locationDocs}
         threadDocs={threadDocs}

@@ -47,9 +47,12 @@ function ChapterRow({
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface/50 transition-colors"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle() }}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface/50 transition-colors cursor-pointer"
       >
         {scenes.length > 0 ? (
           expanded ? (
@@ -96,7 +99,7 @@ function ChapterRow({
             <Trash2 className="w-3 h-3" />
           </button>
         </div>
-      </button>
+      </div>
 
       {/* Summary */}
       {data.summary ? (

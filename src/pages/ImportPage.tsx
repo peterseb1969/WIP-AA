@@ -558,11 +558,9 @@ function EntitiesStep({
                       className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
                   )}
                 </div>
-                {!merging && (
-                  <button onClick={(e) => { e.stopPropagation(); removeCharacter(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                <button onClick={(e) => { e.stopPropagation(); removeCharacter(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )
           }) : <p className="text-sm text-text-muted py-4">No characters detected.</p>
@@ -603,11 +601,9 @@ function EntitiesStep({
                       className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
                   )}
                 </div>
-                {!merging && (
-                  <button onClick={(e) => { e.stopPropagation(); removeLocation(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                <button onClick={(e) => { e.stopPropagation(); removeLocation(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )
           }) : <p className="text-sm text-text-muted py-4">No locations detected.</p>
@@ -641,11 +637,9 @@ function EntitiesStep({
                       className="w-full text-xs text-text-muted bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 ml-5" />
                   )}
                 </div>
-                {!merging && (
-                  <button onClick={(e) => { e.stopPropagation(); removeThread(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
+                <button onClick={(e) => { e.stopPropagation(); removeThread(i) }} className="text-text-muted hover:text-red-500 p-1 flex-shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
               </div>
             )
           }) : <p className="text-sm text-text-muted py-4">No plot threads detected.</p>
@@ -941,7 +935,7 @@ export default function ImportPage() {
       // Create characters (use term values for name)
       for (const c of characters) {
         await createOne(TEMPLATES.CHARACTER, {
-          name: toTermValue(c.name),
+          name: c.name,
           role: c.role,
           description: c.description,
         })
@@ -950,7 +944,7 @@ export default function ImportPage() {
       // Create locations (use term values for name)
       for (const l of locations) {
         await createOne(TEMPLATES.LOCATION, {
-          name: toTermValue(l.name),
+          name: l.name,
           type: l.type,
           atmosphere: l.atmosphere,
         })
@@ -959,7 +953,7 @@ export default function ImportPage() {
       // Create plot threads (use term values for title)
       for (const p of plotThreads) {
         await createOne(TEMPLATES.PLOT_THREAD, {
-          title: toTermValue(p.title),
+          title: p.title,
           status: 'OPEN',
           description: p.description,
         })
