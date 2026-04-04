@@ -2,7 +2,7 @@
 
 ## What This App Does
 
-> TODO: Describe what this app does in one paragraph.
+AuthorAssist is a novel writing assistant built on WIP. Authors import a manuscript (plain text), and the app extracts structure (chapters, scenes) and entities (characters, locations, plot threads) using AI. The app then provides 11 pages for managing the novel: a prose editor with context panels, a visual corkboard, a timeline, and CRUD pages for characters, locations, chapters, plot threads, notes, and world rules. All data lives in WIP's `aa` namespace across 9 templates and 12 terminologies.
 
 ## The Golden Rule
 
