@@ -75,6 +75,13 @@
       "label": "Notes",
       "type": "string",
       "mandatory": false
+    },
+    {
+      "name": "suppressed_suggestions",
+      "label": "Suppressed Suggestions",
+      "type": "array",
+      "mandatory": false,
+      "description": "Entity term values the user intentionally excluded from this scene's annotations. Used by ValidateSceneAnnotations to avoid re-suggesting dismissed entities."
     }
   ]
 }

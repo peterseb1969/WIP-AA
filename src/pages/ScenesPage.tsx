@@ -26,9 +26,15 @@ import {
   Save,
   Scissors,
   Trash2,
+  ShieldCheck,
+  Check,
+  XCircle,
+  AlertTriangle,
+  EyeOff,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, type BookStructure } from '../lib/useBookStructure'
+import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
 import CreateEntityModal from '../components/CreateEntityModal'
 import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
@@ -48,6 +54,7 @@ interface EventData {
   plot_threads?: string[]
   emotional_beat?: string
   notes?: string
+  suppressed_suggestions?: string[]
 }
 
 interface ChapterData {
@@ -481,7 +488,7 @@ function CharactersPanel({
 
 // ── Context Panel (right, tabbed) ────────────────────────
 
-type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes'
+type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'validate'
 
 function ContextPanel({
   scene,
@@ -490,6 +497,11 @@ function ContextPanel({
   threadDocs,
   ruleDocs,
   noteDocs,
+  validationResults,
+  onValidationConfirm,
+  onValidationDismiss,
+  onValidationRemove,
+  onValidationUnsuppress,
 }: {
   scene: EventData
   characterDocs: Array<{ document_id: string; data: CharacterDocData }>
@@ -497,6 +509,11 @@ function ContextPanel({
   threadDocs: Array<{ document_id: string; data: PlotThreadData }>
   ruleDocs: Array<{ document_id: string; data: WorldRuleData }>
   noteDocs: Array<{ document_id: string; data: { title: string; content: string; note_type: string } }>
+  validationResults: AnnotationResult[] | null
+  onValidationConfirm: (result: AnnotationResult) => void
+  onValidationDismiss: (result: AnnotationResult) => void
+  onValidationRemove: (result: AnnotationResult) => void
+  onValidationUnsuppress: (result: AnnotationResult) => void
 }) {
   const [tab, setTab] = useState<ContextTab>('characters')
 
@@ -517,12 +534,17 @@ function ContextPanel({
     [threadDocs, scene.plot_threads]
   )
 
-  const tabs: Array<{ key: ContextTab; label: string; icon: typeof Users; count?: number }> = [
+  const validationActionCount = validationResults
+    ? validationResults.filter(r => r.state === 'detected' || r.state === 'missing').length
+    : undefined
+
+  const tabs: Array<{ key: ContextTab; label: string; icon: typeof Users; count?: number; highlight?: boolean }> = [
     { key: 'characters', label: 'Characters', icon: Users, count: scene.characters?.length ?? 0 },
     { key: 'location', label: 'Location', icon: MapPin },
     { key: 'threads', label: 'Threads', icon: GitBranch, count: activeThreads.length },
     { key: 'rules', label: 'Rules', icon: Globe, count: ruleDocs.length },
     { key: 'notes', label: 'Notes', icon: StickyNote, count: noteDocs.length },
+    { key: 'validate', label: 'Validate', icon: ShieldCheck, count: validationActionCount, highlight: (validationActionCount ?? 0) > 0 },
   ]
 
   return (
@@ -542,8 +564,8 @@ function ContextPanel({
           >
             <t.icon className="w-3.5 h-3.5" />
             <span className="hidden xl:inline">{t.label}</span>
-            {t.count ? (
-              <span className="ml-0.5 text-[10px] opacity-60">{t.count}</span>
+            {t.count != null && t.count > 0 ? (
+              <span className={`ml-0.5 text-[10px] ${t.highlight ? 'text-amber-600 font-bold' : 'opacity-60'}`}>{t.count}</span>
             ) : null}
           </button>
         ))}
@@ -649,6 +671,16 @@ function ContextPanel({
               <div className="text-xs text-text-muted">No notes.</div>
             )}
           </div>
+        ) : null}
+
+        {tab === 'validate' ? (
+          <ValidationPanel
+            results={validationResults ?? []}
+            onConfirm={onValidationConfirm}
+            onDismiss={onValidationDismiss}
+            onRemove={onValidationRemove}
+            onUnsuppress={onValidationUnsuppress}
+          />
         ) : null}
       </div>
     </div>
@@ -805,6 +837,133 @@ function FlowView({
   )
 }
 
+// ── Validation Results Panel ─────────────────────────────
+
+const STATE_CONFIG: Record<AnnotationResult['state'], { icon: typeof Check; label: string; color: string; bgColor: string }> = {
+  confirmed: { icon: Check, label: 'Confirmed', color: 'text-green-600', bgColor: 'bg-green-50' },
+  missing: { icon: AlertTriangle, label: 'Missing from prose', color: 'text-amber-600', bgColor: 'bg-amber-50' },
+  detected: { icon: Eye, label: 'Detected — not listed', color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  suppressed: { icon: EyeOff, label: 'Intentionally excluded', color: 'text-gray-400', bgColor: 'bg-gray-50' },
+}
+
+const CATEGORY_LABELS: Record<string, string> = {
+  character: 'Characters',
+  location: 'Locations',
+  plot_thread: 'Plot Threads',
+}
+
+function ValidationPanel({
+  results,
+  onConfirm,
+  onDismiss,
+  onRemove,
+  onUnsuppress,
+}: {
+  results: AnnotationResult[]
+  onConfirm: (result: AnnotationResult) => void
+  onDismiss: (result: AnnotationResult) => void
+  onRemove: (result: AnnotationResult) => void
+  onUnsuppress: (result: AnnotationResult) => void
+}) {
+  if (results.length === 0) {
+    return (
+      <div className="text-xs text-text-muted p-3 text-center py-8">
+        No validation results. Click Validate to scan prose.
+      </div>
+    )
+  }
+
+  // Group by category
+  const grouped = useMemo(() => {
+    const map = new Map<string, AnnotationResult[]>()
+    for (const r of results) {
+      const list = map.get(r.category) ?? []
+      list.push(r)
+      map.set(r.category, list)
+    }
+    return map
+  }, [results])
+
+  const actionable = results.filter(r => r.state !== 'confirmed')
+
+  return (
+    <div className="space-y-3 p-3">
+      {/* Summary */}
+      <div className="flex items-center gap-2 text-xs text-text-muted">
+        <span>{results.filter(r => r.state === 'confirmed').length} confirmed</span>
+        <span className="text-gray-300">|</span>
+        <span className={actionable.length > 0 ? 'text-amber-600 font-medium' : ''}>{actionable.length} need attention</span>
+      </div>
+
+      {(['character', 'location', 'plot_thread'] as const).map(cat => {
+        const items = grouped.get(cat)
+        if (!items || items.length === 0) return null
+
+        return (
+          <div key={cat}>
+            <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1.5">
+              {CATEGORY_LABELS[cat]}
+            </div>
+            <div className="space-y-1">
+              {items.map(r => {
+                const config = STATE_CONFIG[r.state]
+                const Icon = config.icon
+                return (
+                  <div
+                    key={`${r.category}-${r.termValue}`}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs ${config.bgColor}`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${config.color}`} />
+                    <span className="flex-1 min-w-0 truncate font-medium text-text">{r.label}</span>
+
+                    {/* Actions */}
+                    {r.state === 'detected' && (
+                      <div className="flex items-center gap-1 flex-shrink-0">
+                        <button
+                          onClick={() => onConfirm(r)}
+                          className="text-green-600 hover:text-green-800 p-0.5"
+                          title="Add to scene"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => onDismiss(r)}
+                          className="text-gray-400 hover:text-gray-600 p-0.5"
+                          title="Exclude — don't suggest again"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                    {r.state === 'missing' && (
+                      <button
+                        onClick={() => onRemove(r)}
+                        className="text-amber-600 hover:text-red-600 p-0.5 flex-shrink-0"
+                        title="Remove stale annotation"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {r.state === 'suppressed' && (
+                      <button
+                        onClick={() => onUnsuppress(r)}
+                        className="text-gray-400 hover:text-gray-600 p-0.5 flex-shrink-0"
+                        title="Restore — allow suggestions again"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Word Count ───────────────────────────────────────────
 
 function wordCount(text: string): number {
@@ -854,6 +1013,8 @@ function SceneEditor({
   const queryClient = useQueryClient()
   const createDocument = useCreateDocument()
   const deleteDocument = useDeleteDocument()
+  const [validationResults, setValidationResults] = useState<AnnotationResult[] | null>(null)
+  const { characterTerms, locationTerms, plotThreadTerms, isLoading: termsLoading } = useEntityTerms()
 
   const scene = useMemo(
     () => events.find((e) => e.document_id === sceneId),
@@ -1225,6 +1386,100 @@ function SceneEditor({
     }
   }, [editor, sceneData, structure, structureDocId, sceneId, createDocument, draftKey, onNavigate])
 
+  // ── Validation ──────────────────────────────────────────
+  const handleValidate = useCallback(() => {
+    if (!sceneData || termsLoading) return
+    const prose = editor?.getHTML() ?? sceneData.prose ?? ''
+    const results = validateSceneAnnotations(
+      prose,
+      sceneData.characters ?? [],
+      sceneData.location,
+      sceneData.plot_threads ?? [],
+      sceneData.suppressed_suggestions ?? [],
+      characterTerms,
+      locationTerms,
+      plotThreadTerms,
+    )
+    setValidationResults(results)
+  }, [sceneData, editor, termsLoading, characterTerms, locationTerms, plotThreadTerms])
+
+  // Clear validation results when switching scenes
+  useEffect(() => {
+    setValidationResults(null)
+  }, [sceneId])
+
+  // Save scene data with mutations (used by validation actions)
+  const saveSceneData = useCallback((updatedData: EventData) => {
+    createDocument.mutate(
+      {
+        template_id: TEMPLATES.EVENT,
+        namespace: 'aa',
+        data: updatedData as unknown as Record<string, unknown>,
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries()
+        },
+      }
+    )
+  }, [createDocument, queryClient])
+
+  const handleValidationConfirm = useCallback((result: AnnotationResult) => {
+    if (!sceneData) return
+    const updated = { ...sceneData }
+    if (result.category === 'character') {
+      updated.characters = [...(updated.characters ?? []), result.termValue]
+    } else if (result.category === 'location') {
+      updated.location = result.termValue
+    } else if (result.category === 'plot_thread') {
+      updated.plot_threads = [...(updated.plot_threads ?? []), result.termValue]
+    }
+    saveSceneData(updated)
+    // Update results locally
+    setValidationResults(prev =>
+      prev?.map(r => r === result ? { ...r, state: 'confirmed' as const } : r) ?? null
+    )
+  }, [sceneData, saveSceneData])
+
+  const handleValidationDismiss = useCallback((result: AnnotationResult) => {
+    if (!sceneData) return
+    const updated = { ...sceneData }
+    updated.suppressed_suggestions = [...(updated.suppressed_suggestions ?? []), result.termValue]
+    saveSceneData(updated)
+    setValidationResults(prev =>
+      prev?.map(r => r === result ? { ...r, state: 'suppressed' as const } : r) ?? null
+    )
+  }, [sceneData, saveSceneData])
+
+  const handleValidationRemove = useCallback((result: AnnotationResult) => {
+    if (!sceneData) return
+    const updated = { ...sceneData }
+    if (result.category === 'character') {
+      updated.characters = (updated.characters ?? []).filter(c => c !== result.termValue)
+    } else if (result.category === 'location') {
+      if (updated.location === result.termValue) updated.location = undefined
+    } else if (result.category === 'plot_thread') {
+      updated.plot_threads = (updated.plot_threads ?? []).filter(p => p !== result.termValue)
+    }
+    saveSceneData(updated)
+    // Remove from results
+    setValidationResults(prev => prev?.filter(r => r !== result) ?? null)
+  }, [sceneData, saveSceneData])
+
+  const handleValidationUnsuppress = useCallback((result: AnnotationResult) => {
+    if (!sceneData) return
+    const updated = { ...sceneData }
+    updated.suppressed_suggestions = (updated.suppressed_suggestions ?? []).filter(s => s !== result.termValue)
+    saveSceneData(updated)
+    setValidationResults(prev =>
+      prev?.map(r => r === result ? { ...r, state: 'detected' as const } : r) ?? null
+    )
+  }, [sceneData, saveSceneData])
+
+  const validationBadgeCount = validationResults
+    ? validationResults.filter(r => r.state === 'detected' || r.state === 'missing').length
+    : 0
+
   if (!sceneData) {
     return (
       <div className="p-6">
@@ -1322,6 +1577,21 @@ function SceneEditor({
           title="Split scene at cursor position"
         >
           <Scissors className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Validate */}
+        <button
+          onClick={handleValidate}
+          disabled={termsLoading}
+          className="relative text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
+          title="Validate scene annotations"
+        >
+          <ShieldCheck className="w-3.5 h-3.5" />
+          {validationBadgeCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+              {validationBadgeCount}
+            </span>
+          )}
         </button>
 
         {/* Delete */}
@@ -1426,6 +1696,11 @@ function SceneEditor({
               threadDocs={threadDocs}
               ruleDocs={ruleDocs}
               noteDocs={noteDocs}
+              validationResults={validationResults}
+              onValidationConfirm={handleValidationConfirm}
+              onValidationDismiss={handleValidationDismiss}
+              onValidationRemove={handleValidationRemove}
+              onValidationUnsuppress={handleValidationUnsuppress}
             />
           </div>
         ) : null}
