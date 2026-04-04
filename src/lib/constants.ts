@@ -55,6 +55,7 @@ export const ROLE_COLORS: Record<string, string> = {
   DEUTERAGONIST: 'bg-accent/10 text-accent',
   ANTAGONIST: 'bg-red-100 text-red-800',
   SUPPORTING: 'bg-blue-100 text-blue-800',
+  NARRATOR: 'bg-violet-100 text-violet-800',
   MINOR: 'bg-gray-200 text-gray-700',
   MENTIONED: 'bg-gray-100 text-gray-500',
 }

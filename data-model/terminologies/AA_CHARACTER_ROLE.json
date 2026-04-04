@@ -47,13 +47,21 @@
       "sort_order": 5
     },
     {
+      "value": "NARRATOR",
+      "label": "Narrator",
+      "aliases": [
+        "first-person narrator"
+      ],
+      "sort_order": 6
+    },
+    {
       "value": "MENTIONED",
       "label": "Mentioned",
       "aliases": [
         "referenced",
         "off-screen"
       ],
-      "sort_order": 6
+      "sort_order": 7
     }
   ]
 }

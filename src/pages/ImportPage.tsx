@@ -546,7 +546,10 @@ function EntitiesStep({
                       className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1" />
                     <select value={c.role} onChange={(e) => updateCharacter(i, 'role', e.target.value)}
                       onClick={(e) => e.stopPropagation()}
-                      className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted">
+                      className={`text-xs border-0 rounded px-2 py-1 ${roleValues.length > 0 && !roleValues.includes(c.role) ? 'bg-red-50 text-red-700' : 'bg-surface text-text-muted'}`}>
+                      {roleValues.length > 0 && !roleValues.includes(c.role) && (
+                        <option value={c.role}>{c.role} (invalid)</option>
+                      )}
                       {roleValues.map(r => (
                         <option key={r} value={r}>{r}</option>
                       ))}
@@ -589,7 +592,10 @@ function EntitiesStep({
                       className="text-sm font-medium text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1" />
                     <select value={l.type} onChange={(e) => updateLocation(i, 'type', e.target.value)}
                       onClick={(e) => e.stopPropagation()}
-                      className="text-xs bg-surface border-0 rounded px-2 py-1 text-text-muted">
+                      className={`text-xs border-0 rounded px-2 py-1 ${locationTypeValues.length > 0 && !locationTypeValues.includes(l.type) ? 'bg-red-50 text-red-700' : 'bg-surface text-text-muted'}`}>
+                      {locationTypeValues.length > 0 && !locationTypeValues.includes(l.type) && (
+                        <option value={l.type}>{l.type} (invalid)</option>
+                      )}
                       {locationTypeValues.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
