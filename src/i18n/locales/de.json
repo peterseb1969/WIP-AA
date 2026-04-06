@@ -1,0 +1,428 @@
+{
+  "common": {
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "save_changes": "Änderungen speichern",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "yes": "Ja",
+    "no": "Nein",
+    "loading": "Wird geladen...",
+    "deleting": "Wird gelöscht...",
+    "creating": "Wird erstellt...",
+    "saving": "Wird gespeichert...",
+    "send": "Senden",
+    "reset": "Zurücksetzen",
+    "none_dash": "— Keine —",
+    "add": "Hinzufügen...",
+    "select": "Auswählen...",
+    "no_prose": "(Noch kein Text)",
+    "untitled": "Ohne Titel",
+    "words": "{{count}} Wörter",
+    "words_zero": "leer",
+    "scene_count_one": "{{count}} Szene",
+    "scene_count_other": "{{count}} Szenen",
+    "event_count_one": "{{count}} Ereignis",
+    "event_count_other": "{{count}} Ereignisse",
+    "invalid_suffix": "(ungültig)",
+    "scenes": "Szenen",
+    "chapter_prefix": "Kapitel {{number}}"
+  },
+
+  "nav": {
+    "scenes": "Szenen-Editor",
+    "corkboard": "Pinnwand",
+    "dashboard": "Übersicht",
+    "characters": "Figuren",
+    "chapters": "Kapitel",
+    "timeline": "Zeitstrahl",
+    "locations": "Schauplätze",
+    "plot_threads": "Handlungsstränge",
+    "notes": "Notizen",
+    "world_rules": "Weltregeln",
+    "import": "Buch importieren"
+  },
+
+  "language": {
+    "label": "Sprache",
+    "en": "English",
+    "de": "Deutsch"
+  },
+
+  "dashboard": {
+    "title": "Übersicht",
+    "no_project": "Noch kein Projekt erstellt. Verwende die Frageleiste, um eines zu erstellen.",
+    "by_author": "von {{author}}",
+    "time_label": "Zeit: {{system}}",
+    "recent_scenes": "Letzte Szenen",
+    "no_scenes": "Noch keine Szenen.",
+    "open_threads": "Offene Handlungsstränge",
+    "no_open_threads": "Keine offenen Stränge.",
+    "chapter_progress": "Kapitelfortschritt",
+    "ch_short": "Kap. {{number}}",
+    "loading_project": "Projekt wird geladen...",
+    "danger_zone": "Gefahrenzone",
+    "reset_book": "Buch zurücksetzen",
+    "reset_description": "Buchdaten löschen, um neu zu beginnen oder erneut zu importieren.",
+    "reset_title": "Buchdaten zurücksetzen",
+    "reset_instructions": "Wähle aus, was gelöscht werden soll. Vorlagen und feste Terminologien werden nicht betroffen.",
+    "select_all": "Alle auswählen",
+    "delete_selected": "Ausgewählte löschen",
+    "chapters_scenes": "Kapitel & Szenen",
+    "chapters_scenes_desc": "Kapitel, Szenen, Prosa und Buchstruktur",
+    "characters_label": "Figuren",
+    "characters_desc": "Figurenprofile",
+    "locations_label": "Schauplätze",
+    "locations_desc": "Schauplatzeinträge",
+    "plots_label": "Handlungsstränge",
+    "plots_desc": "Handlungsstrangeinträge",
+    "notes_label": "Notizen",
+    "notes_desc": "Freie Notizen",
+    "rules_label": "Weltregeln",
+    "rules_desc": "Weltenbau-Regeln",
+    "name_registries": "Namensregister",
+    "name_registries_desc": "Figuren-, Schauplatz- & Strangnamen aus Dropdowns",
+    "deleted_result": "{{docs}} Dokument(e) und {{terms}} Namensregister gelöscht. Du kannst jetzt neu importieren.",
+    "reimport_ready": "Du kannst jetzt neu importieren."
+  },
+
+  "characters": {
+    "title": "Figuren",
+    "new": "Neue Figur",
+    "loading": "Figuren werden geladen...",
+    "empty": "Noch keine Figuren. Klicke auf \"Neue Figur\", um eine zu erstellen.",
+    "all": "Alle Figuren",
+    "delete_title": "Figur löschen?",
+    "delete_confirm": "<strong>{{name}}</strong> wird unwiderruflich gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "age_label": "Alter: {{age}}",
+    "relationships": "Beziehungen",
+    "relationship_count_one": "{{count}} Beziehung",
+    "relationship_count_other": "{{count}} Beziehungen",
+    "personality": "Persönlichkeit",
+    "backstory": "Hintergrundgeschichte",
+    "goals": "Ziele",
+    "flaws": "Schwächen",
+    "voice_notes": "Sprachnotizen",
+    "arc_summary": "Entwicklungsbogen"
+  },
+
+  "locations": {
+    "title": "Schauplätze",
+    "new": "Neuer Schauplatz",
+    "loading": "Schauplätze werden geladen...",
+    "empty": "Noch keine Schauplätze. Klicke auf \"Neuer Schauplatz\", um einen zu erstellen.",
+    "all": "Alle Schauplätze",
+    "delete_title": "Schauplatz löschen?",
+    "delete_confirm": "<strong>{{name}}</strong> wird unwiderruflich gelöscht. Dies kann nicht rückgängig gemacht werden.",
+    "atmosphere": "Atmosphäre",
+    "rules": "Regeln",
+    "significance": "Bedeutung"
+  },
+
+  "chapters_page": {
+    "title": "Kapitel",
+    "new_chapter": "Neues Kapitel",
+    "new_scene": "Neue Szene",
+    "loading": "Kapitel werden geladen...",
+    "empty": "Noch keine Kapitel. Klicke auf \"Neues Kapitel\", um eines zu erstellen.",
+    "delete_title": "Kapitel löschen?",
+    "delete_confirm": "Dieses Kapitel wird unwiderruflich gelöscht. Szenen bleiben erhalten, werden aber keinem Kapitel zugeordnet.",
+    "pov_label": "Perspektive: {{character}}"
+  },
+
+  "plot_threads": {
+    "title": "Handlungsstränge",
+    "new": "Neuer Strang",
+    "loading": "Handlungsstränge werden geladen...",
+    "empty": "Noch keine Handlungsstränge. Klicke auf \"Neuer Strang\", um einen zu erstellen.",
+    "delete_confirm": "Löschen?",
+    "opened_ch": "Eröffnet: Kap. {{number}}",
+    "resolved_ch": "Aufgelöst: Kap. {{number}}"
+  },
+
+  "notes": {
+    "title": "Notizen",
+    "new": "Neue Notiz",
+    "loading": "Notizen werden geladen...",
+    "empty": "Noch keine Notizen. Klicke auf \"Neue Notiz\", um eine zu erstellen.",
+    "empty_filtered": "Keine {{type}}-Notizen.",
+    "delete_confirm": "Löschen?",
+    "all": "Alle"
+  },
+
+  "world_rules": {
+    "title": "Weltregeln",
+    "new": "Neue Regel",
+    "loading": "Weltregeln werden geladen...",
+    "empty": "Noch keine Weltregeln. Klicke auf \"Neue Regel\", um eine zu erstellen.",
+    "delete_confirm": "Löschen?",
+    "general": "Allgemein",
+    "implications": "Auswirkungen",
+    "exceptions": "Ausnahmen"
+  },
+
+  "scenes": {
+    "title": "Szenen-Editor",
+    "new": "Neue Szene",
+    "select_prompt": "Wähle eine Szene zum Bearbeiten, oder öffne die Leseansicht für ein ganzes Kapitel.",
+    "loading": "Szenen werden geladen...",
+    "empty": "Noch keine Szenen. Klicke auf \"Neue Szene\", um eine zu erstellen.",
+    "chapter_label": "Kapitel {{number}}",
+    "unassigned": "Nicht zugeordnete Szenen",
+    "no_scenes_in_chapter": "Noch keine Szenen in diesem Kapitel.",
+    "flow_view": "Leseansicht",
+    "exit_flow": "Leseansicht beenden",
+    "flow_subtitle": "Leseansicht — fortlaufendes Lesen",
+    "composition_mode": "Schreibmodus",
+    "maximize": "Maximieren",
+    "minimize": "Minimieren",
+    "split": "Teilen",
+    "save": "Speichern",
+    "saved_at": "Gespeichert {{time}}",
+    "validate_btn": "Prüfen",
+    "saving_prose": "Wird gespeichert...",
+    "delete_scene_title": "Szene löschen?",
+    "delete_scene_confirm": "Diese Szene und ihr Text werden unwiderruflich gelöscht.",
+    "placeholder": "Beginne hier mit dem Schreiben...",
+    "previous": "Vorherige",
+    "next": "Nächste",
+    "start_of_chapter": "Kapitelanfang",
+    "end_of_chapter": "Kapitelende",
+    "metadata_title": "Titel",
+    "metadata_location": "Schauplatz",
+    "metadata_story_time": "Erzählzeit",
+    "metadata_event_type": "Szenentyp",
+    "metadata_emotional_beat": "Emotionaler Ton",
+    "metadata_characters": "Figuren",
+    "metadata_summary": "Zusammenfassung",
+    "metadata_notes": "Notizen",
+
+    "panel_characters": "Figuren",
+    "panel_location": "Schauplatz",
+    "panel_threads": "Stränge",
+    "panel_rules": "Regeln",
+    "panel_notes": "Notizen",
+    "panel_validate": "Prüfen",
+
+    "no_characters": "Keine Figuren in dieser Szene.",
+    "no_location_set": "Kein Schauplatz für diese Szene festgelegt.",
+    "no_location_doc": "\"{{name}}\" — kein Schauplatzdokument gefunden.",
+    "no_threads": "Keine Handlungsstränge mit dieser Szene verknüpft.",
+    "no_rules": "Keine Weltregeln definiert.",
+    "no_notes": "Keine Notizen.",
+
+    "validation_empty": "Keine Prüfergebnisse. Klicke auf Prüfen, um den Text zu scannen.",
+    "validation_confirmed": "{{count}} bestätigt",
+    "validation_attention": "{{count}} erfordern Aufmerksamkeit",
+    "state_confirmed": "Bestätigt",
+    "state_missing": "Fehlt im Text",
+    "state_detected": "Erkannt — nicht verknüpft",
+    "state_suppressed": "Bewusst ausgeschlossen",
+    "action_add": "Zur Szene hinzufügen",
+    "action_dismiss": "Ausschließen — nicht erneut vorschlagen",
+    "action_remove": "Veraltete Anmerkung entfernen",
+    "action_restore": "Wiederherstellen — Vorschläge wieder erlauben",
+    "category_character": "Figuren",
+    "category_location": "Schauplätze",
+    "category_plot_thread": "Handlungsstränge",
+
+    "char_personality": "Persönlichkeit",
+    "char_goals": "Ziele",
+    "loc_atmosphere": "Atmosphäre",
+    "loc_rules": "Regeln"
+  },
+
+  "corkboard": {
+    "title": "Pinnwand",
+    "loading": "Pinnwand wird geladen...",
+    "empty": "Keine Szenen zum Anzeigen.",
+    "no_synopsis": "Keine Zusammenfassung",
+    "group_label": "Gruppierung:",
+    "group_chapter": "Kapitel",
+    "group_character": "Figur",
+    "group_thread": "Strang",
+    "group_flat": "Flach",
+    "color_label": "Farbe:",
+    "color_status": "Status",
+    "color_type": "Typ",
+    "color_pov": "Perspektive",
+    "all_chapters": "Alle Kapitel",
+    "all_scenes": "Alle Szenen"
+  },
+
+  "timeline": {
+    "title": "Zeitstrahl",
+    "loading": "Zeitstrahl wird geladen...",
+    "empty": "Noch keine Ereignisse. Verwende die Frageleiste, um Kapitel und Szenen zu erstellen.",
+    "empty_filtered": "Keine Ereignisse entsprechen den aktuellen Filtern.",
+    "view_label": "Ansicht:",
+    "by_time": "Nach Zeit",
+    "by_chapter": "Nach Kapitel",
+    "all_characters": "Alle Figuren",
+    "all_locations": "Alle Schauplätze",
+    "time_point": "Zeitpunkt {{number}}",
+    "parallel_events": "({{count}} Ereignisse — parallel)"
+  },
+
+  "import": {
+    "title": "Buch importieren",
+    "step_upload": "Hochladen",
+    "step_structure": "Struktur",
+    "step_entities": "Entitäten",
+    "step_confirm": "Bestätigen",
+    "step_importing": "Importieren",
+    "step_done": "Fertig",
+
+    "paste_label": "Füge dein Manuskript ein oder lade eine .txt-Datei hoch",
+    "upload_txt": ".txt hochladen",
+    "parse_structure": "Struktur erkennen",
+    "parsing": "Wird analysiert...",
+
+    "detected_summary": "<strong>{{chapters}}</strong> Kapitel mit <strong>{{scenes}}</strong> Szenen erkannt. Deaktiviere Einträge, um sie auszuschließen. Titel können direkt bearbeitet werden.",
+    "extract_entities": "Entitäten extrahieren",
+
+    "entity_instructions": "Alles auf dieser Liste wird importiert. Entferne, was du nicht brauchst, führe Duplikate zusammen und fahre dann fort.",
+    "analysing": "Analysiere Kapitel {{current}} von {{total}}...",
+    "merge_aliases": "Aliase zusammenführen",
+    "merge_selection": "Einträge zum Zusammenführen auswählen ({{count}} ausgewählt)",
+    "merge_btn": "Zusammenführen",
+    "all_btn": "Alle",
+    "none_btn": "Keine",
+    "review_import": "Überprüfen & Importieren",
+    "no_characters": "Keine Figuren erkannt.",
+    "no_locations": "Keine Schauplätze erkannt.",
+    "no_threads": "Keine Handlungsstränge erkannt.",
+
+    "confirm_total": "Bereit, <strong>{{total}}</strong> Dokumente in WIP zu erstellen:",
+    "confirm_warning": "Es werden neue Dokumente in WIP erstellt. Falls Entitäten mit denselben Identitätsfeldern bereits existieren, werden neue Versionen erstellt.",
+    "create_import": "Erstellen & Importieren",
+
+    "importing_progress": "Importieren... ({{current}}/{{total}})",
+    "importing_step": "Erstelle {{type}}...",
+
+    "done_title": "Import abgeschlossen",
+    "done_message": "Dein Manuskript wurde erfolgreich importiert.",
+    "view_dashboard": "Zur Übersicht",
+    "view_chapters": "Zu den Kapiteln"
+  },
+
+  "ask_bar": {
+    "title": "Fragen",
+    "new_chat": "Neu",
+    "placeholder": "Stelle eine Frage zu deinen Daten...",
+    "input_placeholder": "Gib deine Frage ein...",
+    "thinking": "Denke nach...",
+    "tool_calls_one": "{{count}} Tool-Aufruf",
+    "tool_calls_other": "{{count}} Tool-Aufrufe",
+    "open_chat": "Chat öffnen",
+    "error_prefix": "Fehler: {{message}}",
+    "connection_error": "Verbindungsfehler: {{message}}"
+  },
+
+  "draft_banner": {
+    "unsaved_draft": "Ungespeicherter Entwurf:",
+    "click_resume": "Klicke zum Fortsetzen",
+    "discard": "Verwerfen",
+    "discard_title": "Entwurf verwerfen und zur gespeicherten Version zurückkehren",
+    "hide_title": "Diese Warnung ausblenden"
+  },
+
+  "alias_manager": {
+    "also_known_as": "Auch bekannt als",
+    "add_placeholder": "Alias hinzufügen...",
+    "add_title": "Alias hinzufügen",
+    "remove_title": "\"{{alias}}\" entfernen"
+  },
+
+  "entities": {
+    "character": {
+      "label": "Figur",
+      "fields": {
+        "name": { "label": "Name", "placeholder": "Name der Figur" },
+        "role": { "label": "Rolle" },
+        "age": { "label": "Alter", "placeholder": "z.B. Ende 20, 42" },
+        "description": { "label": "Beschreibung", "placeholder": "Äußeres Erscheinungsbild, besondere Merkmale" },
+        "personality": { "label": "Persönlichkeit", "placeholder": "Wichtige Charaktereigenschaften" },
+        "backstory": { "label": "Hintergrund", "placeholder": "Vorgeschichte und Werdegang" },
+        "goals": { "label": "Ziele", "placeholder": "Was treibt diese Figur an?" },
+        "flaws": { "label": "Schwächen", "placeholder": "Schwachstellen, blinde Flecken" },
+        "voice_notes": { "label": "Sprachnotizen", "placeholder": "Sprechweise, verbale Eigenheiten" }
+      }
+    },
+    "location": {
+      "label": "Schauplatz",
+      "fields": {
+        "name": { "label": "Name", "placeholder": "Name des Schauplatzes" },
+        "type": { "label": "Typ" },
+        "description": { "label": "Beschreibung", "placeholder": "Wie sieht es dort aus?" },
+        "atmosphere": { "label": "Atmosphäre", "placeholder": "Stimmung, Geräusche, Gerüche" },
+        "rules": { "label": "Regeln", "placeholder": "Welche Regeln gelten hier?" },
+        "significance": { "label": "Bedeutung", "placeholder": "Warum ist dieser Ort wichtig?" }
+      }
+    },
+    "chapter": {
+      "label": "Kapitel",
+      "fields": {
+        "title": { "label": "Titel", "placeholder": "Kapiteltitel" },
+        "summary": { "label": "Zusammenfassung", "placeholder": "Was passiert in diesem Kapitel?" },
+        "status": { "label": "Status" },
+        "pov_character": { "label": "Perspektivfigur" },
+        "themes": { "label": "Themen", "placeholder": "Thema hinzufügen..." },
+        "notes": { "label": "Notizen", "placeholder": "Kapitelnotizen" }
+      }
+    },
+    "scene": {
+      "label": "Szene",
+      "fields": {
+        "title": { "label": "Titel", "placeholder": "Szenentitel" },
+        "event_type": { "label": "Szenentyp" },
+        "story_time_raw": { "label": "Erzählzeit", "placeholder": "z.B. Tag 1, Morgen nach der Schlacht" },
+        "story_time_sort": { "label": "Sortierreihenfolge (numerisch)", "placeholder": "10" },
+        "location": { "label": "Schauplatz" },
+        "characters": { "label": "Figuren" },
+        "summary": { "label": "Zusammenfassung", "placeholder": "Was passiert in dieser Szene?" },
+        "plot_threads": { "label": "Handlungsstränge" },
+        "emotional_beat": { "label": "Emotionaler Ton", "placeholder": "Die emotionale Stimmung" }
+      }
+    },
+    "plot_thread": {
+      "label": "Handlungsstrang",
+      "fields": {
+        "title": { "label": "Titel", "placeholder": "Strangtitel" },
+        "status": { "label": "Status" },
+        "description": { "label": "Beschreibung", "placeholder": "Worum geht es in diesem Strang?" },
+        "opened_chapter": { "label": "Eröffnet in Kapitel", "placeholder": "1" },
+        "characters": { "label": "Figuren" },
+        "notes": { "label": "Notizen", "placeholder": "Notizen zu diesem Strang" }
+      }
+    },
+    "note": {
+      "label": "Notiz",
+      "fields": {
+        "title": { "label": "Titel", "placeholder": "Notiztitel" },
+        "note_type": { "label": "Typ" },
+        "content": { "label": "Inhalt", "placeholder": "Notizinhalt..." },
+        "tags": { "label": "Schlagwörter", "placeholder": "Schlagwort hinzufügen..." },
+        "linked_characters": { "label": "Verknüpfte Figuren" },
+        "linked_locations": { "label": "Verknüpfte Schauplätze" },
+        "linked_plot_threads": { "label": "Verknüpfte Handlungsstränge" }
+      }
+    },
+    "world_rule": {
+      "label": "Weltregel",
+      "fields": {
+        "name": { "label": "Name", "placeholder": "Regelname" },
+        "domain": { "label": "Bereich", "placeholder": "z.B. Magie, Physik, Gesellschaft" },
+        "rule": { "label": "Regel", "placeholder": "Beschreibe die Regel" },
+        "implications": { "label": "Auswirkungen", "placeholder": "Was bedeutet das für die Geschichte?" },
+        "exceptions": { "label": "Ausnahmen", "placeholder": "Wann gilt diese Regel nicht?" },
+        "related_characters": { "label": "Zugehörige Figuren" },
+        "related_locations": { "label": "Zugehörige Schauplätze" }
+      }
+    },
+    "new_title": "{{entity}} erstellen",
+    "edit_title": "{{entity}} bearbeiten",
+    "create_btn": "{{entity}} erstellen"
+  }
+}

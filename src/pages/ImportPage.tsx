@@ -239,7 +239,7 @@ function StructureStep({
                 onClick={() => setExpandedChapter(expandedChapter === chIdx ? null : chIdx)}
                 className="text-xs text-text-muted hover:text-primary"
               >
-                {ch.scenes.length === 1 ? t('common.scene_count', { count: ch.scenes.length }) : t('common.scene_count_plural', { count: ch.scenes.length })}
+                {t('common.scene_count', { count: ch.scenes.length })}
               </button>
             </div>
 

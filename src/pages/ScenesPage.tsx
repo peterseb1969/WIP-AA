@@ -171,7 +171,7 @@ function SceneSelector({
       <div className="flex items-center gap-3 mb-6">
         <PenTool className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">{t('scenes.title')}</h1>
-        <span className="text-sm text-text-muted">({events.length === 1 ? t('common.scene_count', { count: events.length }) : t('common.scene_count_plural', { count: events.length })})</span>
+        <span className="text-sm text-text-muted">({t('common.scene_count', { count: events.length })})</span>
         <button
           onClick={onCreateScene}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
@@ -196,7 +196,7 @@ function SceneSelector({
                     {t('scenes.chapter_label', { number: ch.chapterNumber })}
                     {ch.chapterDoc?.data.title ? `: ${ch.chapterDoc.data.title}` : ''}
                   </span>
-                  <span className="text-xs text-text-muted">{ch.scenes.length === 1 ? t('common.scene_count', { count: ch.scenes.length }) : t('common.scene_count_plural', { count: ch.scenes.length })}</span>
+                  <span className="text-xs text-text-muted">{t('common.scene_count', { count: ch.scenes.length })}</span>
                 </div>
                 {ch.scenes.length > 0 ? (
                   <button
@@ -256,7 +256,7 @@ function SceneSelector({
         <div className="bg-white rounded-lg border border-gray-200 border-dashed overflow-hidden mt-4">
           <div className="flex items-center gap-3 p-4 border-b border-gray-100">
             <span className="font-semibold text-text-muted">{t('scenes.unassigned')}</span>
-            <span className="text-xs text-text-muted">{unassigned.length === 1 ? t('common.scene_count', { count: unassigned.length }) : t('common.scene_count_plural', { count: unassigned.length })}</span>
+            <span className="text-xs text-text-muted">{t('common.scene_count', { count: unassigned.length })}</span>
           </div>
           <div>
             {unassigned.map((scene) => (

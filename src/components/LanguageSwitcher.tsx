@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
+  { code: 'de', label: 'Deutsch' },
 ] as const
 
 export default function LanguageSwitcher() {
