@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -121,6 +122,8 @@ function SceneSelector({
   onFlowView: (chapterId: string) => void
   onCreateScene: () => void
 }) {
+  const { t } = useTranslation()
+
   // Build a lookup from document_id to event
   const eventMap = useMemo(() => {
     const map = new Map<string, { document_id: string; data: EventData }>()
@@ -167,19 +170,19 @@ function SceneSelector({
       <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <PenTool className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Scene Editor</h1>
-        <span className="text-sm text-text-muted">({events.length} scenes)</span>
+        <h1 className="text-2xl font-semibold text-text">{t('scenes.title')}</h1>
+        <span className="text-sm text-text-muted">({events.length === 1 ? t('common.scene_count', { count: events.length }) : t('common.scene_count_plural', { count: events.length })})</span>
         <button
           onClick={onCreateScene}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Plus className="w-4 h-4" />
-          New Scene
+          {t('scenes.new')}
         </button>
       </div>
 
       <p className="text-sm text-text-muted mb-6">
-        Select a scene to edit, or enter Flow view to read an entire chapter.
+        {t('scenes.select_prompt')}
       </p>
 
       {orderedChapters.length > 0 ? (
@@ -190,10 +193,10 @@ function SceneSelector({
                 <div className="flex items-center gap-3">
                   <BookOpen className="w-4 h-4 text-primary" />
                   <span className="font-semibold text-text">
-                    Chapter {ch.chapterNumber}
+                    {t('scenes.chapter_label', { number: ch.chapterNumber })}
                     {ch.chapterDoc?.data.title ? `: ${ch.chapterDoc.data.title}` : ''}
                   </span>
-                  <span className="text-xs text-text-muted">{ch.scenes.length} scene{ch.scenes.length !== 1 ? 's' : ''}</span>
+                  <span className="text-xs text-text-muted">{ch.scenes.length === 1 ? t('common.scene_count', { count: ch.scenes.length }) : t('common.scene_count_plural', { count: ch.scenes.length })}</span>
                 </div>
                 {ch.scenes.length > 0 ? (
                   <button
@@ -201,7 +204,7 @@ function SceneSelector({
                     className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-dark transition-colors"
                   >
                     <Eye className="w-3.5 h-3.5" />
-                    Flow view
+                    {t('scenes.flow_view')}
                   </button>
                 ) : null}
               </div>
@@ -241,7 +244,7 @@ function SceneSelector({
                   ))}
                 </div>
               ) : (
-                <div className="p-4 text-sm text-text-muted">No scenes in this chapter yet.</div>
+                <div className="p-4 text-sm text-text-muted">{t('scenes.no_scenes_in_chapter')}</div>
               )}
             </div>
           ))}
@@ -252,8 +255,8 @@ function SceneSelector({
       {unassigned.length > 0 ? (
         <div className="bg-white rounded-lg border border-gray-200 border-dashed overflow-hidden mt-4">
           <div className="flex items-center gap-3 p-4 border-b border-gray-100">
-            <span className="font-semibold text-text-muted">Unassigned Scenes</span>
-            <span className="text-xs text-text-muted">{unassigned.length} scene{unassigned.length !== 1 ? 's' : ''}</span>
+            <span className="font-semibold text-text-muted">{t('scenes.unassigned')}</span>
+            <span className="text-xs text-text-muted">{unassigned.length === 1 ? t('common.scene_count', { count: unassigned.length }) : t('common.scene_count_plural', { count: unassigned.length })}</span>
           </div>
           <div>
             {unassigned.map((scene) => (
@@ -287,7 +290,7 @@ function SceneSelector({
       ) : null}
 
       {orderedChapters.length === 0 && unassigned.length === 0 ? (
-        <p className="text-text-muted">No scenes yet. Click "New Scene" to create one.</p>
+        <p className="text-text-muted">{t('scenes.empty')}</p>
       ) : null}
     </div>
   )
@@ -310,6 +313,8 @@ function MetadataStrip({
   expanded: boolean
   onToggle: () => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <div className="bg-white border-b border-gray-200">
       {/* Compact strip — always visible */}
@@ -320,7 +325,7 @@ function MetadataStrip({
         <div className="flex items-center gap-2 text-sm">
           <BookOpen className="w-3.5 h-3.5 text-text-muted" />
           <span className="text-text-muted">
-            Ch. {chapterNumber ?? '?'}
+            {t('dashboard.ch_short', { number: chapterNumber ?? '?' })}
             {chapterTitle ? `: ${chapterTitle}` : ''}
           </span>
           <span className="text-text-light">·</span>
@@ -359,27 +364,27 @@ function MetadataStrip({
       {expanded ? (
         <div className="px-4 pb-4 grid grid-cols-2 md:grid-cols-3 gap-3 border-t border-gray-100 pt-3">
           <div>
-            <label className="text-xs font-medium text-text-muted block mb-1">Title</label>
+            <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_title')}</label>
             <div className="text-sm text-text">{scene.title}</div>
           </div>
           <div>
-            <label className="text-xs font-medium text-text-muted block mb-1">Location</label>
+            <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_location')}</label>
             <div className="text-sm text-text">{scene.location ?? '—'}</div>
           </div>
           <div>
-            <label className="text-xs font-medium text-text-muted block mb-1">Story Time</label>
+            <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_story_time')}</label>
             <div className="text-sm text-text">{scene.story_time_raw ?? '—'}</div>
           </div>
           <div>
-            <label className="text-xs font-medium text-text-muted block mb-1">Event Type</label>
+            <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_event_type')}</label>
             <div className="text-sm text-text">{scene.event_type ?? 'SCENE'}</div>
           </div>
           <div>
-            <label className="text-xs font-medium text-text-muted block mb-1">Emotional Beat</label>
+            <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_emotional_beat')}</label>
             <div className="text-sm text-text italic">{scene.emotional_beat ?? '—'}</div>
           </div>
           <div>
-            <label className="text-xs font-medium text-text-muted block mb-1">Characters</label>
+            <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_characters')}</label>
             <div className="flex flex-wrap gap-1">
               {scene.characters?.length ? (
                 scene.characters.map((c, i) => (
@@ -394,13 +399,13 @@ function MetadataStrip({
           </div>
           {scene.summary ? (
             <div className="col-span-full">
-              <label className="text-xs font-medium text-text-muted block mb-1">Summary</label>
+              <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_summary')}</label>
               <div className="text-sm text-text">{scene.summary}</div>
             </div>
           ) : null}
           {scene.notes ? (
             <div className="col-span-full">
-              <label className="text-xs font-medium text-text-muted block mb-1">Notes</label>
+              <label className="text-xs font-medium text-text-muted block mb-1">{t('scenes.metadata_notes')}</label>
               <div className="text-sm text-text-muted italic">{scene.notes}</div>
             </div>
           ) : null}
@@ -419,6 +424,7 @@ function CharactersPanel({
   characterNames: string[]
   characterDocs: Array<{ document_id: string; data: CharacterDocData }>
 }) {
+  const { t } = useTranslation()
   const [expandedChar, setExpandedChar] = useState<string | null>(null)
 
   // Match character docs by name
@@ -433,7 +439,7 @@ function CharactersPanel({
 
   if (present.length === 0) {
     return (
-      <div className="text-xs text-text-muted p-3">No characters in this scene.</div>
+      <div className="text-xs text-text-muted p-3">{t('scenes.no_characters')}</div>
     )
   }
 
@@ -468,13 +474,13 @@ function CharactersPanel({
               ) : null}
               {c.doc.personality ? (
                 <div>
-                  <span className="text-xs font-medium text-primary">Personality: </span>
+                  <span className="text-xs font-medium text-primary">{t('scenes.char_personality')}: </span>
                   <span className="text-xs text-text-muted">{c.doc.personality}</span>
                 </div>
               ) : null}
               {c.doc.goals ? (
                 <div>
-                  <span className="text-xs font-medium text-primary">Goals: </span>
+                  <span className="text-xs font-medium text-primary">{t('scenes.char_goals')}: </span>
                   <span className="text-xs text-text-muted">{c.doc.goals}</span>
                 </div>
               ) : null}
@@ -515,6 +521,7 @@ function ContextPanel({
   onValidationRemove: (result: AnnotationResult) => void
   onValidationUnsuppress: (result: AnnotationResult) => void
 }) {
+  const { t } = useTranslation()
   const [tab, setTab] = useState<ContextTab>('characters')
 
   // Find location doc matching scene.location
@@ -526,9 +533,9 @@ function ContextPanel({
   // Find threads matching scene.plot_threads
   const activeThreads = useMemo(
     () =>
-      threadDocs.filter((t) =>
+      threadDocs.filter((item) =>
         scene.plot_threads?.some(
-          (pt) => String(pt).toLowerCase() === t.data.title.toLowerCase()
+          (pt) => String(pt).toLowerCase() === item.data.title.toLowerCase()
         )
       ),
     [threadDocs, scene.plot_threads]
@@ -538,34 +545,34 @@ function ContextPanel({
     ? validationResults.filter(r => r.state === 'detected' || r.state === 'missing').length
     : undefined
 
-  const tabs: Array<{ key: ContextTab; label: string; icon: typeof Users; count?: number; highlight?: boolean }> = [
-    { key: 'characters', label: 'Characters', icon: Users, count: scene.characters?.length ?? 0 },
-    { key: 'location', label: 'Location', icon: MapPin },
-    { key: 'threads', label: 'Threads', icon: GitBranch, count: activeThreads.length },
-    { key: 'rules', label: 'Rules', icon: Globe, count: ruleDocs.length },
-    { key: 'notes', label: 'Notes', icon: StickyNote, count: noteDocs.length },
-    { key: 'validate', label: 'Validate', icon: ShieldCheck, count: validationActionCount, highlight: (validationActionCount ?? 0) > 0 },
+  const tabs: Array<{ key: ContextTab; labelKey: string; icon: typeof Users; count?: number; highlight?: boolean }> = [
+    { key: 'characters', labelKey: 'scenes.panel_characters', icon: Users, count: scene.characters?.length ?? 0 },
+    { key: 'location', labelKey: 'scenes.panel_location', icon: MapPin },
+    { key: 'threads', labelKey: 'scenes.panel_threads', icon: GitBranch, count: activeThreads.length },
+    { key: 'rules', labelKey: 'scenes.panel_rules', icon: Globe, count: ruleDocs.length },
+    { key: 'notes', labelKey: 'scenes.panel_notes', icon: StickyNote, count: noteDocs.length },
+    { key: 'validate', labelKey: 'scenes.panel_validate', icon: ShieldCheck, count: validationActionCount, highlight: (validationActionCount ?? 0) > 0 },
   ]
 
   return (
     <div className="flex flex-col h-full">
       {/* Tab bar */}
       <div className="flex border-b border-gray-200 bg-white px-1">
-        {tabs.map((t) => (
+        {tabs.map((tb) => (
           <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
+            key={tb.key}
+            onClick={() => setTab(tb.key)}
             className={`flex items-center gap-1 px-2.5 py-2 text-xs font-medium transition-colors border-b-2 ${
-              tab === t.key
+              tab === tb.key
                 ? 'border-primary text-primary'
                 : 'border-transparent text-text-muted hover:text-text'
             }`}
-            title={t.label}
+            title={t(tb.labelKey)}
           >
-            <t.icon className="w-3.5 h-3.5" />
-            <span className="hidden xl:inline">{t.label}</span>
-            {t.count != null && t.count > 0 ? (
-              <span className={`ml-0.5 text-[10px] ${t.highlight ? 'text-amber-600 font-bold' : 'opacity-60'}`}>{t.count}</span>
+            <tb.icon className="w-3.5 h-3.5" />
+            <span className="hidden xl:inline">{t(tb.labelKey)}</span>
+            {tb.count != null && tb.count > 0 ? (
+              <span className={`ml-0.5 text-[10px] ${tb.highlight ? 'text-amber-600 font-bold' : 'opacity-60'}`}>{tb.count}</span>
             ) : null}
           </button>
         ))}
@@ -590,20 +597,20 @@ function ContextPanel({
                 ) : null}
                 {locationDoc.data.atmosphere ? (
                   <div>
-                    <span className="text-xs font-medium text-primary">Atmosphere: </span>
+                    <span className="text-xs font-medium text-primary">{t('scenes.loc_atmosphere')}: </span>
                     <span className="text-xs text-text-muted">{locationDoc.data.atmosphere}</span>
                   </div>
                 ) : null}
                 {locationDoc.data.rules ? (
                   <div>
-                    <span className="text-xs font-medium text-primary">Rules: </span>
+                    <span className="text-xs font-medium text-primary">{t('scenes.loc_rules')}: </span>
                     <span className="text-xs text-text-muted">{locationDoc.data.rules}</span>
                   </div>
                 ) : null}
               </div>
             ) : (
               <div className="text-xs text-text-muted">
-                {scene.location ? `"${scene.location}" — no location document found.` : 'No location set for this scene.'}
+                {scene.location ? t('scenes.no_location_doc', { name: scene.location }) : t('scenes.no_location_set')}
               </div>
             )}
           </div>
@@ -612,30 +619,30 @@ function ContextPanel({
         {tab === 'threads' ? (
           <div className="p-3 space-y-2">
             {activeThreads.length > 0 ? (
-              activeThreads.map((t) => (
-                <div key={t.document_id} className="bg-surface rounded p-2 break-words">
+              activeThreads.map((item) => (
+                <div key={item.document_id} className="bg-surface rounded p-2 break-words">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-text">{t.data.title}</span>
-                    {t.data.status ? (
+                    <span className="text-sm font-medium text-text">{item.data.title}</span>
+                    {item.data.status ? (
                       <StatusBadge
-                        label={t.data.status}
+                        label={item.data.status}
                         colorClass={
-                          t.data.status === 'OPEN'
+                          item.data.status === 'OPEN'
                             ? 'bg-blue-100 text-blue-800'
-                            : t.data.status === 'DEVELOPING'
+                            : item.data.status === 'DEVELOPING'
                               ? 'bg-amber-100 text-amber-800'
                               : 'bg-gray-100 text-gray-700'
                         }
                       />
                     ) : null}
                   </div>
-                  {t.data.description ? (
-                    <p className="text-xs text-text-muted mt-1">{t.data.description}</p>
+                  {item.data.description ? (
+                    <p className="text-xs text-text-muted mt-1">{item.data.description}</p>
                   ) : null}
                 </div>
               ))
             ) : (
-              <div className="text-xs text-text-muted">No plot threads linked to this scene.</div>
+              <div className="text-xs text-text-muted">{t('scenes.no_threads')}</div>
             )}
           </div>
         ) : null}
@@ -650,7 +657,7 @@ function ContextPanel({
                 </div>
               ))
             ) : (
-              <div className="text-xs text-text-muted">No world rules defined.</div>
+              <div className="text-xs text-text-muted">{t('scenes.no_rules')}</div>
             )}
           </div>
         ) : null}
@@ -668,7 +675,7 @@ function ContextPanel({
                 </div>
               ))
             ) : (
-              <div className="text-xs text-text-muted">No notes.</div>
+              <div className="text-xs text-text-muted">{t('scenes.no_notes')}</div>
             )}
           </div>
         ) : null}
@@ -698,6 +705,8 @@ function ContinuityStrip({
   nextScene?: EventData
   onNavigate: (direction: 'prev' | 'next') => void
 }) {
+  const { t } = useTranslation()
+
   return (
     <div className="bg-white border-t border-gray-200 flex">
       {/* Previous */}
@@ -708,7 +717,7 @@ function ContinuityStrip({
       >
         <ChevronLeft className="w-4 h-4 text-text-muted flex-shrink-0" />
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Previous</div>
+          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{t('scenes.previous')}</div>
           {prevScene ? (
             <>
               <div className="text-xs font-medium text-text truncate">{prevScene.title}</div>
@@ -717,7 +726,7 @@ function ContinuityStrip({
               ) : null}
             </>
           ) : (
-            <div className="text-xs text-text-light">Start of chapter</div>
+            <div className="text-xs text-text-light">{t('scenes.start_of_chapter')}</div>
           )}
         </div>
       </button>
@@ -729,7 +738,7 @@ function ContinuityStrip({
         className="flex-1 flex items-center gap-2 px-4 py-2.5 text-right hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-default"
       >
         <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">Next</div>
+          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{t('scenes.next')}</div>
           {nextScene ? (
             <>
               <div className="text-xs font-medium text-text truncate">{nextScene.title}</div>
@@ -738,7 +747,7 @@ function ContinuityStrip({
               ) : null}
             </>
           ) : (
-            <div className="text-xs text-text-light">End of chapter</div>
+            <div className="text-xs text-text-light">{t('scenes.end_of_chapter')}</div>
           )}
         </div>
         <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
@@ -760,6 +769,8 @@ function FlowView({
   chapterId: string
   onExit: () => void
 }) {
+  const { t } = useTranslation()
+
   // Build event lookup
   const eventMap = useMemo(() => {
     const map = new Map<string, EventData>()
@@ -789,16 +800,16 @@ function FlowView({
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-xl font-bold text-text">
-            Chapter {chapterNum ?? '?'}
+            {t('scenes.chapter_label', { number: chapterNum ?? '?' })}
           </h2>
-          <p className="text-sm text-text-muted mt-1">Flow view — continuous reading</p>
+          <p className="text-sm text-text-muted mt-1">{t('scenes.flow_subtitle')}</p>
         </div>
         <button
           onClick={onExit}
           className="flex items-center gap-1.5 text-sm text-primary hover:text-primary-dark transition-colors"
         >
           <Minimize2 className="w-4 h-4" />
-          Exit Flow view
+          {t('scenes.exit_flow')}
         </button>
       </div>
 
@@ -817,7 +828,7 @@ function FlowView({
                 className="text-base leading-relaxed text-text whitespace-pre-wrap font-serif"
                 style={{ fontFamily: "'Georgia', 'Times New Roman', serif" }}
               >
-                {scene.prose ?? scene.summary ?? '(No prose yet)'}
+                {scene.prose ?? scene.summary ?? t('common.no_prose')}
               </div>
               {/* Subtle scene label on hover */}
               <div className="absolute -left-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -831,7 +842,7 @@ function FlowView({
       </div>
 
       {scenes.length === 0 ? (
-        <p className="text-text-muted text-center py-12">No scenes in this chapter yet.</p>
+        <p className="text-text-muted text-center py-12">{t('scenes.no_scenes_in_chapter')}</p>
       ) : null}
     </div>
   )
@@ -839,17 +850,17 @@ function FlowView({
 
 // ── Validation Results Panel ─────────────────────────────
 
-const STATE_CONFIG: Record<AnnotationResult['state'], { icon: typeof Check; label: string; color: string; bgColor: string }> = {
-  confirmed: { icon: Check, label: 'Confirmed', color: 'text-green-600', bgColor: 'bg-green-50' },
-  missing: { icon: AlertTriangle, label: 'Missing from prose', color: 'text-amber-600', bgColor: 'bg-amber-50' },
-  detected: { icon: Eye, label: 'Detected — not listed', color: 'text-blue-600', bgColor: 'bg-blue-50' },
-  suppressed: { icon: EyeOff, label: 'Intentionally excluded', color: 'text-gray-400', bgColor: 'bg-gray-50' },
+const STATE_CONFIG: Record<AnnotationResult['state'], { icon: typeof Check; labelKey: string; color: string; bgColor: string }> = {
+  confirmed: { icon: Check, labelKey: 'scenes.state_confirmed', color: 'text-green-600', bgColor: 'bg-green-50' },
+  missing: { icon: AlertTriangle, labelKey: 'scenes.state_missing', color: 'text-amber-600', bgColor: 'bg-amber-50' },
+  detected: { icon: Eye, labelKey: 'scenes.state_detected', color: 'text-blue-600', bgColor: 'bg-blue-50' },
+  suppressed: { icon: EyeOff, labelKey: 'scenes.state_suppressed', color: 'text-gray-400', bgColor: 'bg-gray-50' },
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  character: 'Characters',
-  location: 'Locations',
-  plot_thread: 'Plot Threads',
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  character: 'scenes.category_character',
+  location: 'scenes.category_location',
+  plot_thread: 'scenes.category_plot_thread',
 }
 
 function ValidationPanel({
@@ -865,10 +876,12 @@ function ValidationPanel({
   onRemove: (result: AnnotationResult) => void
   onUnsuppress: (result: AnnotationResult) => void
 }) {
+  const { t } = useTranslation()
+
   if (results.length === 0) {
     return (
       <div className="text-xs text-text-muted p-3 text-center py-8">
-        No validation results. Click Validate to scan prose.
+        {t('scenes.validation_empty')}
       </div>
     )
   }
@@ -890,9 +903,9 @@ function ValidationPanel({
     <div className="space-y-3 p-3">
       {/* Summary */}
       <div className="flex items-center gap-2 text-xs text-text-muted">
-        <span>{results.filter(r => r.state === 'confirmed').length} confirmed</span>
+        <span>{t('scenes.validation_confirmed', { count: results.filter(r => r.state === 'confirmed').length })}</span>
         <span className="text-gray-300">|</span>
-        <span className={actionable.length > 0 ? 'text-amber-600 font-medium' : ''}>{actionable.length} need attention</span>
+        <span className={actionable.length > 0 ? 'text-amber-600 font-medium' : ''}>{t('scenes.validation_attention', { count: actionable.length })}</span>
       </div>
 
       {(['character', 'location', 'plot_thread'] as const).map(cat => {
@@ -902,7 +915,7 @@ function ValidationPanel({
         return (
           <div key={cat}>
             <div className="text-xs font-medium text-text-muted uppercase tracking-wider mb-1.5">
-              {CATEGORY_LABELS[cat]}
+              {t(CATEGORY_LABEL_KEYS[cat] ?? cat)}
             </div>
             <div className="space-y-1">
               {items.map(r => {
@@ -922,14 +935,14 @@ function ValidationPanel({
                         <button
                           onClick={() => onConfirm(r)}
                           className="text-green-600 hover:text-green-800 p-0.5"
-                          title="Add to scene"
+                          title={t('scenes.action_add')}
                         >
                           <Plus className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => onDismiss(r)}
                           className="text-gray-400 hover:text-gray-600 p-0.5"
-                          title="Exclude — don't suggest again"
+                          title={t('scenes.action_dismiss')}
                         >
                           <XCircle className="w-3.5 h-3.5" />
                         </button>
@@ -939,7 +952,7 @@ function ValidationPanel({
                       <button
                         onClick={() => onRemove(r)}
                         className="text-amber-600 hover:text-red-600 p-0.5 flex-shrink-0"
-                        title="Remove stale annotation"
+                        title={t('scenes.action_remove')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -948,7 +961,7 @@ function ValidationPanel({
                       <button
                         onClick={() => onUnsuppress(r)}
                         className="text-gray-400 hover:text-gray-600 p-0.5 flex-shrink-0"
-                        title="Restore — allow suggestions again"
+                        title={t('scenes.action_restore')}
                       >
                         <Eye className="w-3.5 h-3.5" />
                       </button>
@@ -1001,6 +1014,7 @@ function SceneEditor({
   onBack: () => void
   onNavigate: (id: string) => void
 }) {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<EditorMode>('full')
   const [metadataExpanded, setMetadataExpanded] = useState(false)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
@@ -1485,7 +1499,7 @@ function SceneEditor({
       <div className="p-6">
         <button onClick={handleBack} className="flex items-center gap-1 text-sm text-text-muted hover:text-primary mb-4">
           <ChevronLeft className="w-4 h-4" />
-          Back to scenes
+          {t('common.scenes')}
         </button>
         <p className="text-text-muted">Scene not found.</p>
       </div>
@@ -1503,14 +1517,14 @@ function SceneEditor({
             {isDirty ? <span className="text-amber-400 ml-1">*</span> : null}
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-xs">{currentWordCount} words</span>
+            <span className="text-xs">{t('common.words', { count: currentWordCount })}</span>
             <button
               onClick={handleSave}
               disabled={!isDirty || createDocument.isPending}
               className="flex items-center gap-1.5 text-sm hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default"
             >
               <Save className="w-4 h-4" />
-              {createDocument.isPending ? 'Saving...' : 'Save'}
+              {createDocument.isPending ? t('scenes.saving_prose') : t('scenes.save')}
             </button>
             <button
               onClick={() => setMode('full')}
@@ -1545,7 +1559,7 @@ function SceneEditor({
           className="flex items-center gap-1 text-sm text-text-muted hover:text-primary transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          <span className="hidden sm:inline">Scenes</span>
+          <span className="hidden sm:inline">{t('common.scenes')}</span>
         </button>
 
         <div className="flex-1 min-w-0">
@@ -1566,7 +1580,7 @@ function SceneEditor({
           } disabled:opacity-50`}
         >
           <Save className="w-3.5 h-3.5" />
-          {createDocument.isPending ? 'Saving...' : 'Save'}
+          {createDocument.isPending ? t('scenes.saving_prose') : t('scenes.save')}
         </button>
 
         {/* Split */}
@@ -1574,7 +1588,7 @@ function SceneEditor({
           onClick={handleSplit}
           disabled={splitting || !structure || !structureDocId}
           className="text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
-          title="Split scene at cursor position"
+          title={t('scenes.split')}
         >
           <Scissors className="w-3.5 h-3.5" />
         </button>
@@ -1584,7 +1598,7 @@ function SceneEditor({
           onClick={handleValidate}
           disabled={termsLoading}
           className="relative text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
-          title="Validate scene annotations"
+          title={t('scenes.validate_btn')}
         >
           <ShieldCheck className="w-3.5 h-3.5" />
           {validationBadgeCount > 0 && (
@@ -1597,26 +1611,26 @@ function SceneEditor({
         {/* Delete */}
         {confirmDelete ? (
           <span className="inline-flex items-center gap-1.5">
-            <span className="text-xs text-red-600">Delete scene?</span>
+            <span className="text-xs text-red-600">{t('scenes.delete_scene_title')}</span>
             <button
               onClick={handleDelete}
               disabled={deleteDocument.isPending}
               className="px-2 py-1 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
             >
-              {deleteDocument.isPending ? '...' : 'Yes'}
+              {deleteDocument.isPending ? '...' : t('common.yes')}
             </button>
             <button
               onClick={() => setConfirmDelete(false)}
               className="px-2 py-1 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
             >
-              No
+              {t('common.no')}
             </button>
           </span>
         ) : (
           <button
             onClick={() => setConfirmDelete(true)}
             className="text-text-muted hover:text-red-600 p-1 transition-colors"
-            title="Delete scene"
+            title={t('scenes.delete_scene_title')}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -1638,7 +1652,7 @@ function SceneEditor({
             className="px-2.5 py-1 text-xs rounded font-medium transition-colors text-text-muted hover:text-text"
           >
             <Maximize2 className="w-3.5 h-3.5 inline mr-1" />
-            Focus
+            {t('scenes.composition_mode')}
           </button>
         </div>
 
@@ -1674,14 +1688,14 @@ function SceneEditor({
 
           {/* Word count bar */}
           <div className="bg-surface border-t border-gray-100 px-4 py-1.5 flex items-center justify-between text-xs text-text-muted">
-            <span>{currentWordCount} words</span>
+            <span>{t('common.words', { count: currentWordCount })}</span>
             <span>
               {lastSaved ? (
-                <span className="text-green-600 mr-2">Saved</span>
+                <span className="text-green-600 mr-2">{t('scenes.saved_at', { time: '' }).trim()}</span>
               ) : isDirty ? (
                 <span className="text-amber-500 mr-2">Unsaved changes</span>
               ) : null}
-              Ch. {chapterNumber ?? '?'} · Scene {sceneNumber ?? '?'}
+              {t('dashboard.ch_short', { number: chapterNumber ?? '?' })} · Scene {sceneNumber ?? '?'}
             </span>
           </div>
         </div>
@@ -1719,6 +1733,7 @@ function SceneEditor({
 // ── Page Root ────────────────────────────────────────────
 
 export default function ScenesPage() {
+  const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(
     searchParams.get('id')
@@ -1824,9 +1839,9 @@ export default function ScenesPage() {
   )
   const threadDocs = useMemo(
     () =>
-      (threadDocsRaw?.items ?? []).map((t) => ({
-        document_id: t.document_id,
-        data: t.data as unknown as PlotThreadData,
+      (threadDocsRaw?.items ?? []).map((item) => ({
+        document_id: item.document_id,
+        data: item.data as unknown as PlotThreadData,
       })),
     [threadDocsRaw]
   )
@@ -1850,7 +1865,7 @@ export default function ScenesPage() {
   if (loadingEvents) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading scenes...</div>
+        <div className="text-text-muted">{t('scenes.loading')}</div>
       </div>
     )
   }

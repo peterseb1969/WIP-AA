@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useTerms, useDeleteDocument } from '@wip/react'
 import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
@@ -28,6 +29,7 @@ interface CharacterData {
 }
 
 function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => void }) {
+  const { t } = useTranslation()
   return (
     <button
       onClick={onClick}
@@ -37,14 +39,14 @@ function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => 
         <h3 className="font-semibold text-text">{data.name}</h3>
         <StatusBadge label={data.role} colorClass={ROLE_COLORS[data.role]} />
       </div>
-      {data.age ? <div className="text-xs text-text-muted mb-1">Age: {data.age}</div> : null}
+      {data.age ? <div className="text-xs text-text-muted mb-1">{t('characters.age_label', { age: data.age })}</div> : null}
       {data.description ? (
         <p className="text-sm text-text-muted line-clamp-2">{data.description}</p>
       ) : null}
       {data.relationships?.length ? (
         <div className="mt-2 flex items-center gap-1 text-xs text-text-light">
           <Heart className="w-3 h-3" />
-          {data.relationships.length} relationship{data.relationships.length > 1 ? 's' : ''}
+          {t('characters.relationship_count', { count: data.relationships.length })}
         </div>
       ) : null}
     </button>
@@ -52,17 +54,18 @@ function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => 
 }
 
 function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useTranslation()
   // Resolve character names from terms
   const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50, namespace: NAMESPACE } as any)
-  const termLookup = new Map(charTerms?.items?.map((t) => [t.value, t.label]) ?? [])
+  const termLookup = new Map(charTerms?.items?.map((tm) => [tm.value, tm.label]) ?? [])
 
   const sections = [
-    { label: 'Personality', value: data.personality },
-    { label: 'Backstory', value: data.backstory },
-    { label: 'Goals', value: data.goals },
-    { label: 'Flaws', value: data.flaws },
-    { label: 'Voice Notes', value: data.voice_notes },
-    { label: 'Arc Summary', value: data.arc_summary },
+    { label: t('characters.personality'), value: data.personality },
+    { label: t('characters.backstory'), value: data.backstory },
+    { label: t('characters.goals'), value: data.goals },
+    { label: t('characters.flaws'), value: data.flaws },
+    { label: t('characters.voice_notes'), value: data.voice_notes },
+    { label: t('characters.arc_summary'), value: data.arc_summary },
   ].filter((s) => s.value)
 
   return (
@@ -72,7 +75,7 @@ function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterDa
         className="flex items-center gap-1 text-sm text-text-muted hover:text-primary mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        All characters
+        {t('characters.all')}
       </button>
 
       <div className="flex items-start gap-4 mb-6">
@@ -88,20 +91,20 @@ function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterDa
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />
-                Edit
+                {t('common.edit')}
               </button>
               <button
                 onClick={onDelete}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-red-300 hover:text-red-600 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
           <div className="flex items-center gap-2 mt-1">
             <StatusBadge label={data.role} colorClass={ROLE_COLORS[data.role]} />
-            {data.age ? <span className="text-sm text-text-muted">Age: {data.age}</span> : null}
+            {data.age ? <span className="text-sm text-text-muted">{t('characters.age_label', { age: data.age })}</span> : null}
           </div>
           {data.description ? (
             <p className="text-sm text-text-muted mt-2 max-w-xl">{data.description}</p>
@@ -128,7 +131,7 @@ function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterDa
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h3 className="font-medium text-sm text-primary mb-3 flex items-center gap-2">
             <Heart className="w-4 h-4" />
-            Relationships ({data.relationships.length})
+            {t('characters.relationships')} ({data.relationships.length})
           </h3>
           <div className="space-y-2">
             {data.relationships.map((rel, i) => (
@@ -159,6 +162,7 @@ function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterDa
 }
 
 export default function CharactersPage() {
+  const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
@@ -178,7 +182,7 @@ export default function CharactersPage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading characters...</div>
+        <div className="text-text-muted">{t('characters.loading')}</div>
       </div>
     )
   }
@@ -197,23 +201,21 @@ export default function CharactersPage() {
           {confirmDelete ? (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
-                <h3 className="text-lg font-semibold text-text mb-2">Delete character?</h3>
-                <p className="text-sm text-text-muted mb-4">
-                  This will permanently delete <strong>{selectedData.name}</strong>. This cannot be undone.
-                </p>
+                <h3 className="text-lg font-semibold text-text mb-2">{t('characters.delete_title')}</h3>
+                <p className="text-sm text-text-muted mb-4" dangerouslySetInnerHTML={{ __html: t('characters.delete_confirm', { name: selectedData.name }) }} />
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setConfirmDelete(false)}
                     className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={() => deleteDoc.mutate({ id: selectedId! }, { onSuccess: () => { setConfirmDelete(false); setSelectedId(null) } })}
                     disabled={deleteDoc.isPending}
                     className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                   >
-                    {deleteDoc.isPending ? 'Deleting...' : 'Delete'}
+                    {deleteDoc.isPending ? t('common.deleting') : t('common.delete')}
                   </button>
                 </div>
               </div>
@@ -233,14 +235,14 @@ export default function CharactersPage() {
         <>
           <div className="flex items-center gap-3 mb-6">
             <Users className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-semibold text-text">Characters</h1>
+            <h1 className="text-2xl font-semibold text-text">{t('characters.title')}</h1>
             <span className="text-sm text-text-muted">({characters?.total ?? 0})</span>
             <button
               onClick={() => setShowCreate(true)}
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
             >
               <Plus className="w-4 h-4" />
-              New Character
+              {t('characters.new')}
             </button>
           </div>
 
@@ -255,7 +257,7 @@ export default function CharactersPage() {
               ))}
             </div>
           ) : (
-            <p className="text-text-muted">No characters yet. Click "New Character" to create one.</p>
+            <p className="text-text-muted">{t('characters.empty')}</p>
           )}
 
           {showCreate ? (

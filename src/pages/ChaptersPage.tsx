@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -43,6 +44,7 @@ function ChapterRow({
   onEdit: () => void
   onDelete: () => void
 }) {
+  const { t } = useTranslation()
   const status = data.status || 'OUTLINE'
 
   return (
@@ -71,25 +73,25 @@ function ChapterRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-text truncate">
-              {data.title || 'Untitled'}
+              {data.title || t('common.untitled')}
             </span>
             <StatusBadge label={status} colorClass={CHAPTER_STATUS_COLORS[status]} />
           </div>
           {data.pov_character ? (
             <div className="text-xs text-text-muted mt-0.5">
-              POV: {data.pov_character}
+              {t('chapters_page.pov_label', { character: data.pov_character })}
             </div>
           ) : null}
         </div>
 
         <div className="flex items-center gap-4 text-sm text-text-muted flex-shrink-0">
-          <span>{scenes.length} scene{scenes.length !== 1 ? 's' : ''}</span>
+          <span>{t('common.scene_count', { count: scenes.length })}</span>
           <button
             onClick={(e) => { e.stopPropagation(); onEdit() }}
             className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
           >
             <Pencil className="w-3 h-3" />
-            Edit
+            {t('common.edit')}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete() }}
@@ -159,6 +161,7 @@ function ChapterRow({
 }
 
 export default function ChaptersPage() {
+  const { t } = useTranslation()
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState<string | null>(null)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
@@ -210,7 +213,7 @@ export default function ChaptersPage() {
   if (loadingChapters || loadingStructure) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading chapters...</div>
+        <div className="text-text-muted">{t('chapters_page.loading')}</div>
       </div>
     )
   }
@@ -237,7 +240,7 @@ export default function ChaptersPage() {
       <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <BookOpen className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Chapters</h1>
+        <h1 className="text-2xl font-semibold text-text">{t('chapters_page.title')}</h1>
         <span className="text-sm text-text-muted">({structure?.chapterCount ?? chapters?.total ?? 0})</span>
         <div className="ml-auto flex items-center gap-2">
           <button
@@ -245,14 +248,14 @@ export default function ChaptersPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-primary text-primary rounded-lg hover:bg-primary/5 transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New Scene
+            {t('chapters_page.new_scene')}
           </button>
           <button
             onClick={() => setShowCreate('chapter')}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New Chapter
+            {t('chapters_page.new_chapter')}
           </button>
         </div>
       </div>
@@ -276,29 +279,29 @@ export default function ChaptersPage() {
           })}
         </div>
       ) : (
-        <p className="text-text-muted">No chapters yet. Click "New Chapter" to create one.</p>
+        <p className="text-text-muted">{t('chapters_page.empty')}</p>
       )}
 
       {confirmDelete ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-text mb-2">Delete chapter?</h3>
+            <h3 className="text-lg font-semibold text-text mb-2">{t('chapters_page.delete_title')}</h3>
             <p className="text-sm text-text-muted mb-4">
-              This will permanently delete this chapter. Scenes will remain but become unassigned.
+              {t('chapters_page.delete_confirm')}
             </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmDelete(null)}
                 className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={() => deleteDoc.mutate({ id: confirmDelete }, { onSuccess: () => setConfirmDelete(null) })}
                 disabled={deleteDoc.isPending}
                 className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {deleteDoc.isPending ? 'Deleting...' : 'Delete'}
+                {deleteDoc.isPending ? t('common.deleting') : t('common.delete')}
               </button>
             </div>
           </div>

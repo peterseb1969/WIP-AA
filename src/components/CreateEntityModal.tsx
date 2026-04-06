@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useCreateDocument, useTerms, useWipClient } from '@wip/react'
+import { useTranslation } from 'react-i18next'
 import { X, Plus } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 
@@ -9,10 +10,8 @@ type FieldType = 'text' | 'textarea' | 'number' | 'select' | 'multi-select' | 't
 
 interface FieldDef {
   name: string
-  label: string
   type: FieldType
   required?: boolean
-  placeholder?: string
   terminologyId?: string   // for select/multi-select — fetches terms as options
   options?: string[]        // static options (alternative to terminology)
   autoCreateTermIn?: string // for text fields — auto-create term in this terminology before saving
@@ -20,7 +19,6 @@ interface FieldDef {
 
 interface EntityConfig {
   templateId: string
-  label: string
   fields: FieldDef[]
 }
 
@@ -29,94 +27,87 @@ interface EntityConfig {
 export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   character: {
     templateId: TEMPLATES.CHARACTER,
-    label: 'Character',
     fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Character name', autoCreateTermIn: TERMINOLOGIES.CHARACTERS },
-      { name: 'role', label: 'Role', type: 'select', required: true, terminologyId: TERMINOLOGIES.CHARACTER_ROLE },
-      { name: 'age', label: 'Age', type: 'text', placeholder: 'e.g. Late 20s, 42' },
-      { name: 'description', label: 'Description', type: 'textarea', placeholder: 'Physical appearance, distinguishing features' },
-      { name: 'personality', label: 'Personality', type: 'textarea', placeholder: 'Key personality traits' },
-      { name: 'backstory', label: 'Backstory', type: 'textarea', placeholder: 'Background and history' },
-      { name: 'goals', label: 'Goals', type: 'textarea', placeholder: 'What drives this character?' },
-      { name: 'flaws', label: 'Flaws', type: 'textarea', placeholder: 'Weaknesses, blind spots' },
-      { name: 'voice_notes', label: 'Voice Notes', type: 'textarea', placeholder: 'How they speak, verbal tics' },
+      { name: 'name', type: 'text', required: true, autoCreateTermIn: TERMINOLOGIES.CHARACTERS },
+      { name: 'role', type: 'select', required: true, terminologyId: TERMINOLOGIES.CHARACTER_ROLE },
+      { name: 'age', type: 'text' },
+      { name: 'description', type: 'textarea' },
+      { name: 'personality', type: 'textarea' },
+      { name: 'backstory', type: 'textarea' },
+      { name: 'goals', type: 'textarea' },
+      { name: 'flaws', type: 'textarea' },
+      { name: 'voice_notes', type: 'textarea' },
     ],
   },
   location: {
     templateId: TEMPLATES.LOCATION,
-    label: 'Location',
     fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Location name', autoCreateTermIn: TERMINOLOGIES.LOCATIONS },
-      { name: 'type', label: 'Type', type: 'select', terminologyId: TERMINOLOGIES.LOCATION_TYPE },
-      { name: 'description', label: 'Description', type: 'textarea', placeholder: 'What does it look like?' },
-      { name: 'atmosphere', label: 'Atmosphere', type: 'textarea', placeholder: 'Mood, sounds, smells' },
-      { name: 'rules', label: 'Rules', type: 'textarea', placeholder: 'What rules apply here?' },
-      { name: 'significance', label: 'Significance', type: 'textarea', placeholder: 'Why does this place matter?' },
+      { name: 'name', type: 'text', required: true, autoCreateTermIn: TERMINOLOGIES.LOCATIONS },
+      { name: 'type', type: 'select', terminologyId: TERMINOLOGIES.LOCATION_TYPE },
+      { name: 'description', type: 'textarea' },
+      { name: 'atmosphere', type: 'textarea' },
+      { name: 'rules', type: 'textarea' },
+      { name: 'significance', type: 'textarea' },
     ],
   },
   chapter: {
     templateId: TEMPLATES.CHAPTER,
-    label: 'Chapter',
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Chapter title' },
-      { name: 'summary', label: 'Summary', type: 'textarea', placeholder: 'What happens in this chapter?' },
-      { name: 'status', label: 'Status', type: 'select', terminologyId: TERMINOLOGIES.CHAPTER_STATUS },
-      { name: 'pov_character', label: 'POV Character', type: 'select', terminologyId: TERMINOLOGIES.CHARACTERS },
-      { name: 'themes', label: 'Themes', type: 'tags', placeholder: 'Add theme...' },
-      { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Chapter notes' },
+      { name: 'title', type: 'text', required: true },
+      { name: 'summary', type: 'textarea' },
+      { name: 'status', type: 'select', terminologyId: TERMINOLOGIES.CHAPTER_STATUS },
+      { name: 'pov_character', type: 'select', terminologyId: TERMINOLOGIES.CHARACTERS },
+      { name: 'themes', type: 'tags' },
+      { name: 'notes', type: 'textarea' },
     ],
   },
   scene: {
     templateId: TEMPLATES.EVENT,
-    label: 'Scene',
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Scene title' },
-      { name: 'event_type', label: 'Event Type', type: 'select', required: true, terminologyId: TERMINOLOGIES.EVENT_TYPE },
-      { name: 'story_time_raw', label: 'Story Time', type: 'text', placeholder: 'e.g. Day 1, Morning after the battle' },
-      { name: 'story_time_sort', label: 'Sort Order (numeric)', type: 'number', required: true, placeholder: '10' },
-      { name: 'location', label: 'Location', type: 'select', terminologyId: TERMINOLOGIES.LOCATIONS },
-      { name: 'characters', label: 'Characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
-      { name: 'summary', label: 'Summary', type: 'textarea', required: true, placeholder: 'What happens in this scene?' },
-      { name: 'plot_threads', label: 'Plot Threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
-      { name: 'emotional_beat', label: 'Emotional Beat', type: 'text', placeholder: 'The emotional tone' },
+      { name: 'title', type: 'text', required: true },
+      { name: 'event_type', type: 'select', required: true, terminologyId: TERMINOLOGIES.EVENT_TYPE },
+      { name: 'story_time_raw', type: 'text' },
+      { name: 'story_time_sort', type: 'number', required: true },
+      { name: 'location', type: 'select', terminologyId: TERMINOLOGIES.LOCATIONS },
+      { name: 'characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
+      { name: 'summary', type: 'textarea', required: true },
+      { name: 'plot_threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
+      { name: 'emotional_beat', type: 'text' },
     ],
   },
   plot_thread: {
     templateId: TEMPLATES.PLOT_THREAD,
-    label: 'Plot Thread',
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Thread title', autoCreateTermIn: TERMINOLOGIES.PLOT_THREADS },
-      { name: 'status', label: 'Status', type: 'select', required: true, terminologyId: TERMINOLOGIES.PLOT_THREAD_STATUS },
-      { name: 'description', label: 'Description', type: 'textarea', placeholder: 'What is this thread about?' },
-      { name: 'opened_chapter', label: 'Opened In Chapter', type: 'number', placeholder: '1' },
-      { name: 'characters', label: 'Characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
-      { name: 'notes', label: 'Notes', type: 'textarea', placeholder: 'Notes about this thread' },
+      { name: 'title', type: 'text', required: true, autoCreateTermIn: TERMINOLOGIES.PLOT_THREADS },
+      { name: 'status', type: 'select', required: true, terminologyId: TERMINOLOGIES.PLOT_THREAD_STATUS },
+      { name: 'description', type: 'textarea' },
+      { name: 'opened_chapter', type: 'number' },
+      { name: 'characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
+      { name: 'notes', type: 'textarea' },
     ],
   },
   note: {
     templateId: TEMPLATES.NOTE,
-    label: 'Note',
     fields: [
-      { name: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Note title' },
-      { name: 'note_type', label: 'Type', type: 'select', required: true, terminologyId: TERMINOLOGIES.NOTE_TYPE },
-      { name: 'content', label: 'Content', type: 'textarea', required: true, placeholder: 'Note content...' },
-      { name: 'tags', label: 'Tags', type: 'tags', placeholder: 'Add tag...' },
-      { name: 'linked_characters', label: 'Linked Characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
-      { name: 'linked_locations', label: 'Linked Locations', type: 'multi-select', terminologyId: TERMINOLOGIES.LOCATIONS },
-      { name: 'linked_plot_threads', label: 'Linked Plot Threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
+      { name: 'title', type: 'text', required: true },
+      { name: 'note_type', type: 'select', required: true, terminologyId: TERMINOLOGIES.NOTE_TYPE },
+      { name: 'content', type: 'textarea', required: true },
+      { name: 'tags', type: 'tags' },
+      { name: 'linked_characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
+      { name: 'linked_locations', type: 'multi-select', terminologyId: TERMINOLOGIES.LOCATIONS },
+      { name: 'linked_plot_threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
     ],
   },
   world_rule: {
     templateId: TEMPLATES.WORLD_RULE,
-    label: 'World Rule',
     fields: [
-      { name: 'name', label: 'Name', type: 'text', required: true, placeholder: 'Rule name' },
-      { name: 'domain', label: 'Domain', type: 'text', placeholder: 'e.g. Magic, Physics, Social' },
-      { name: 'rule', label: 'Rule', type: 'textarea', required: true, placeholder: 'Describe the rule' },
-      { name: 'implications', label: 'Implications', type: 'textarea', placeholder: 'What does this mean for the story?' },
-      { name: 'exceptions', label: 'Exceptions', type: 'textarea', placeholder: 'When does this rule not apply?' },
-      { name: 'related_characters', label: 'Related Characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
-      { name: 'related_locations', label: 'Related Locations', type: 'multi-select', terminologyId: TERMINOLOGIES.LOCATIONS },
+      { name: 'name', type: 'text', required: true },
+      { name: 'domain', type: 'text' },
+      { name: 'rule', type: 'textarea', required: true },
+      { name: 'implications', type: 'textarea' },
+      { name: 'exceptions', type: 'textarea' },
+      { name: 'related_characters', type: 'multi-select', terminologyId: TERMINOLOGIES.CHARACTERS },
+      { name: 'related_locations', type: 'multi-select', terminologyId: TERMINOLOGIES.LOCATIONS },
     ],
   },
 }
@@ -136,6 +127,7 @@ function TermSelect({
   placeholder?: string
   multiple?: boolean
 }) {
+  const { t } = useTranslation()
   const { data: terms } = useTerms(terminologyId, { page_size: 100, namespace: NAMESPACE } as any)
 
   const options = useMemo(
@@ -180,7 +172,7 @@ function TermSelect({
           }}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-text focus:outline-none focus:border-primary"
         >
-          <option value="">{placeholder ?? 'Add...'}</option>
+          <option value="">{placeholder || t('common.add')}</option>
           {options
             .filter((o) => !selected.includes(o.value))
             .map((o) => (
@@ -199,7 +191,7 @@ function TermSelect({
       onChange={(e) => onChange(e.target.value)}
       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-text focus:outline-none focus:border-primary"
     >
-      <option value="">{placeholder ?? '— None —'}</option>
+      <option value="">{placeholder || t('common.none_dash')}</option>
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}
@@ -292,6 +284,7 @@ export default function CreateEntityModal({
   mode?: 'create' | 'edit'
   existingData?: Record<string, unknown>
 }) {
+  const { t } = useTranslation()
   const config = ENTITY_CONFIGS[entityType]!
   const wipClient = useWipClient()
   const createDoc = useCreateDocument()
@@ -391,7 +384,7 @@ export default function CreateEntityModal({
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-text">
-            {mode === 'edit' ? `Edit ${config.label}` : `New ${config.label}`}
+            {mode === 'edit' ? t('entities.edit_title', { entity: t(`entities.${entityType}.label`) }) : t('entities.new_title', { entity: t(`entities.${entityType}.label`) })}
           </h2>
           <button
             onClick={onClose}
@@ -406,7 +399,7 @@ export default function CreateEntityModal({
           {config.fields.map((field) => (
             <div key={field.name}>
               <label className="block text-sm font-medium text-text mb-1">
-                {field.label}
+                {t(`entities.${entityType}.fields.${field.name}.label`)}
                 {field.required ? <span className="text-danger ml-0.5">*</span> : null}
               </label>
 
@@ -415,7 +408,7 @@ export default function CreateEntityModal({
                   type="text"
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
-                  placeholder={field.placeholder}
+                  placeholder={t(`entities.${entityType}.fields.${field.name}.placeholder`, { defaultValue: '' })}
                   required={field.required}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
                 />
@@ -426,7 +419,7 @@ export default function CreateEntityModal({
                   type="number"
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
-                  placeholder={field.placeholder}
+                  placeholder={t(`entities.${entityType}.fields.${field.name}.placeholder`, { defaultValue: '' })}
                   required={field.required}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
                 />
@@ -436,7 +429,7 @@ export default function CreateEntityModal({
                 <textarea
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
-                  placeholder={field.placeholder}
+                  placeholder={t(`entities.${entityType}.fields.${field.name}.placeholder`, { defaultValue: '' })}
                   required={field.required}
                   rows={3}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary resize-y"
@@ -448,7 +441,6 @@ export default function CreateEntityModal({
                   terminologyId={field.terminologyId}
                   value={formData[field.name] as string}
                   onChange={(val) => setField(field.name, val)}
-                  placeholder={field.placeholder}
                 />
               ) : null}
 
@@ -459,7 +451,7 @@ export default function CreateEntityModal({
                   required={field.required}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-text focus:outline-none focus:border-primary"
                 >
-                  <option value="">Select...</option>
+                  <option value="">{t('common.select')}</option>
                   {field.options.map((o) => (
                     <option key={o} value={o}>{o}</option>
                   ))}
@@ -471,7 +463,6 @@ export default function CreateEntityModal({
                   terminologyId={field.terminologyId}
                   value={formData[field.name] as string[]}
                   onChange={(val) => setField(field.name, val)}
-                  placeholder={field.placeholder}
                   multiple
                 />
               ) : null}
@@ -480,7 +471,7 @@ export default function CreateEntityModal({
                 <TagsInput
                   value={formData[field.name] as string[]}
                   onChange={(val) => setField(field.name, val)}
-                  placeholder={field.placeholder}
+                  placeholder={t(`entities.${entityType}.fields.${field.name}.placeholder`, { defaultValue: '' })}
                 />
               ) : null}
             </div>
@@ -501,7 +492,7 @@ export default function CreateEntityModal({
             onClick={onClose}
             className="px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleSubmit as any}
@@ -509,8 +500,8 @@ export default function CreateEntityModal({
             className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
           >
             {submitting || createDoc.isPending
-              ? (mode === 'edit' ? 'Saving...' : 'Creating...')
-              : (mode === 'edit' ? 'Save Changes' : `Create ${config.label}`)}
+              ? t(mode === 'edit' ? 'common.saving' : 'common.creating')
+              : (mode === 'edit' ? t('common.save_changes') : t('entities.create_btn', { entity: t(`entities.${entityType}.label`) }))}
           </button>
         </div>
       </div>

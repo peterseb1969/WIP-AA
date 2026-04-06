@@ -1,3 +1,4 @@
+import './i18n'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { WipProvider } from '@wip/react'

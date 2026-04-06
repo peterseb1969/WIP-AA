@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { AlertTriangle, X, Trash2 } from 'lucide-react'
 
@@ -54,6 +55,7 @@ function scanDrafts(): DraftEntry[] {
 }
 
 export default function UnsavedDraftBanner() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const location = useLocation()
   const [drafts, setDrafts] = useState<DraftEntry[]>(scanDrafts)
@@ -119,22 +121,22 @@ export default function UnsavedDraftBanner() {
             onClick={() => handleResume(d.sceneId)}
             className="flex items-center gap-2 flex-1 min-w-0 text-left hover:underline"
           >
-            <span className="text-sm font-semibold text-red-700">Unsaved draft:</span>
+            <span className="text-sm font-semibold text-red-700">{t('draft_banner.unsaved_draft')}</span>
             <span className="text-sm text-red-700 truncate">{d.title}</span>
-            <span className="text-xs text-red-400 flex-shrink-0">Click to resume</span>
+            <span className="text-xs text-red-400 flex-shrink-0">{t('draft_banner.click_resume')}</span>
           </button>
           <button
             onClick={(e) => handleDiscard(d.sceneId, e)}
             className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:text-red-700 hover:bg-red-100 rounded transition-colors flex-shrink-0"
-            title="Discard draft and revert to saved version"
+            title={t('draft_banner.discard_title')}
           >
             <Trash2 className="w-3 h-3" />
-            Discard
+            {t('draft_banner.discard')}
           </button>
           <button
             onClick={(e) => handleDismiss(d.sceneId, e)}
             className="p-1 text-red-400 hover:text-red-700 hover:bg-red-100 rounded transition-colors flex-shrink-0"
-            title="Hide this warning"
+            title={t('draft_banner.hide_title')}
           >
             <X className="w-3.5 h-3.5" />
           </button>

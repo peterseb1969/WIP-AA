@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
 import {
@@ -81,6 +82,7 @@ function SceneCard({
   event: { document_id: string; data: EventData }
   colorClass: string
 }) {
+  const { t } = useTranslation()
   const wc = wordCount(event.data.prose)
 
   return (
@@ -101,11 +103,11 @@ function SceneCard({
           {event.data.summary}
         </p>
       ) : (
-        <p className="text-xs text-text-light italic mb-2">No synopsis</p>
+        <p className="text-xs text-text-light italic mb-2">{t('corkboard.no_synopsis')}</p>
       )}
 
       <div className="flex items-center justify-between text-[10px] text-text-light">
-        <span>{wc > 0 ? `${wc} words` : 'empty'}</span>
+        <span>{wc > 0 ? t('common.words', { count: wc }) : t('common.words_zero')}</span>
         {event.data.event_type && event.data.event_type !== 'SCENE' ? (
           <StatusBadge
             label={event.data.event_type}
@@ -139,6 +141,7 @@ function SceneCard({
 // ── Main Corkboard ───────────────────────────────────────
 
 export default function CorkboardPage() {
+  const { t } = useTranslation()
   const [groupBy, setGroupBy] = useState<GroupBy>('chapter')
   const [colorBy, setColorBy] = useState<ColorBy>('chapter_status')
   const [filterChapter, setFilterChapter] = useState<number | null>(null)
@@ -243,7 +246,7 @@ export default function CorkboardPage() {
   // Group events
   const groups = useMemo(() => {
     if (groupBy === 'none') {
-      return [{ label: 'All Scenes', events: sortByStructure(filtered) }]
+      return [{ label: t('corkboard.all_scenes'), events: sortByStructure(filtered) }]
     }
 
     if (groupBy === 'chapter') {
@@ -261,7 +264,7 @@ export default function CorkboardPage() {
           const chapterId = structure?.raw.chapters[num - 1]?.chapter_id
           const ch = chapterId ? chapterMap.get(chapterId) : undefined
           return {
-            label: `Chapter ${num}${ch?.title ? `: ${ch.title}` : ''}`,
+            label: `${t('corkboard.group_chapter')} ${num}${ch?.title ? `: ${ch.title}` : ''}`,
             status: ch?.status,
             events: sortByStructure(evts),
           }
@@ -310,7 +313,7 @@ export default function CorkboardPage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading corkboard...</div>
+        <div className="text-text-muted">{t('corkboard.loading')}</div>
       </div>
     )
   }
@@ -321,15 +324,15 @@ export default function CorkboardPage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <LayoutGrid className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Corkboard</h1>
-        <span className="text-sm text-text-muted">({allEvents.length} scenes)</span>
+        <h1 className="text-2xl font-semibold text-text">{t('corkboard.title')}</h1>
+        <span className="text-sm text-text-muted">({t('common.scene_count', { count: allEvents.length })})</span>
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
         {/* Group by */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-text-muted">Group:</span>
+          <span className="text-xs font-medium text-text-muted">{t('corkboard.group_label')}</span>
           {(['chapter', 'character', 'thread', 'none'] as GroupBy[]).map((g) => (
             <button
               key={g}
@@ -340,7 +343,7 @@ export default function CorkboardPage() {
                   : 'bg-gray-100 text-text-muted hover:bg-gray-200'
               }`}
             >
-              {g === 'none' ? 'Flat' : g.charAt(0).toUpperCase() + g.slice(1)}
+              {{ chapter: t('corkboard.group_chapter'), character: t('corkboard.group_character'), thread: t('corkboard.group_thread'), none: t('corkboard.group_flat') }[g]}
             </button>
           ))}
         </div>
@@ -348,11 +351,11 @@ export default function CorkboardPage() {
         {/* Color by */}
         <div className="flex items-center gap-2">
           <Palette className="w-3.5 h-3.5 text-text-muted" />
-          <span className="text-xs font-medium text-text-muted">Color:</span>
+          <span className="text-xs font-medium text-text-muted">{t('corkboard.color_label')}</span>
           {([
-            { key: 'chapter_status' as ColorBy, label: 'Status' },
-            { key: 'event_type' as ColorBy, label: 'Type' },
-            { key: 'pov' as ColorBy, label: 'POV' },
+            { key: 'chapter_status' as ColorBy, label: t('corkboard.color_status') },
+            { key: 'event_type' as ColorBy, label: t('corkboard.color_type') },
+            { key: 'pov' as ColorBy, label: t('corkboard.color_pov') },
           ]).map((c) => (
             <button
               key={c.key}
@@ -378,7 +381,7 @@ export default function CorkboardPage() {
             }
             className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-text"
           >
-            <option value="">All chapters</option>
+            <option value="">{t('corkboard.all_chapters')}</option>
             {sortedChapters.map((ch) => (
               <option key={ch.document_id} value={'structureNumber' in ch ? (ch.structureNumber as number) : 0}>
                 Ch. {'structureNumber' in ch ? String(ch.structureNumber) : '?'}{ch.data.title ? `: ${ch.data.title}` : ''}
@@ -402,7 +405,7 @@ export default function CorkboardPage() {
                   />
                 ) : null}
                 <span className="text-xs text-text-muted">
-                  ({group.events.length} scene{group.events.length !== 1 ? 's' : ''})
+                  ({t('common.scene_count', { count: group.events.length })})
                 </span>
               </div>
 
@@ -419,7 +422,7 @@ export default function CorkboardPage() {
           ))}
         </div>
       ) : (
-        <p className="text-text-muted">No scenes to display.</p>
+        <p className="text-text-muted">{t('corkboard.empty')}</p>
       )}
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { GitBranch, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS } from '../lib/constants'
@@ -18,6 +19,7 @@ interface PlotThreadData {
 }
 
 export default function PlotThreadsPage() {
+  const { t } = useTranslation()
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -32,7 +34,7 @@ export default function PlotThreadsPage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading plot threads...</div>
+        <div className="text-text-muted">{t('plot_threads.loading')}</div>
       </div>
     )
   }
@@ -53,14 +55,14 @@ export default function PlotThreadsPage() {
       <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <GitBranch className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Plot Threads</h1>
+        <h1 className="text-2xl font-semibold text-text">{t('plot_threads.title')}</h1>
         <span className="text-sm text-text-muted">({threads?.total ?? 0})</span>
         <button
           onClick={() => setShowCreate(true)}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Plus className="w-4 h-4" />
-          New Thread
+          {t('plot_threads.new')}
         </button>
       </div>
 
@@ -89,23 +91,23 @@ export default function PlotThreadsPage() {
                             className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
                           >
                             <Pencil className="w-3 h-3" />
-                            Edit
+                            {t('common.edit')}
                           </button>
                           {confirmDelete === thread.id ? (
                             <span className="inline-flex items-center gap-1">
-                              <span className="text-xs text-red-600">Delete?</span>
+                              <span className="text-xs text-red-600">{t('plot_threads.delete_confirm')}</span>
                               <button
                                 onClick={() => deleteDoc.mutate({ id: thread.id }, { onSuccess: () => setConfirmDelete(null) })}
                                 disabled={deleteDoc.isPending}
                                 className="px-1.5 py-0.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
                               >
-                                Yes
+                                {t('common.yes')}
                               </button>
                               <button
                                 onClick={() => setConfirmDelete(null)}
                                 className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
                               >
-                                No
+                                {t('common.no')}
                               </button>
                             </span>
                           ) : (
@@ -125,10 +127,10 @@ export default function PlotThreadsPage() {
                       <AliasManager terminologyValue={TERMINOLOGIES.PLOT_THREADS} entityTermValue={thread.data.title} />
                       <div className="flex items-center gap-4 text-xs text-text-light">
                         {thread.data.opened_chapter != null ? (
-                          <span>Opened: Ch. {thread.data.opened_chapter}</span>
+                          <span>{t('plot_threads.opened_ch', { number: thread.data.opened_chapter })}</span>
                         ) : null}
                         {thread.data.resolved_chapter != null ? (
-                          <span>Resolved: Ch. {thread.data.resolved_chapter}</span>
+                          <span>{t('plot_threads.resolved_ch', { number: thread.data.resolved_chapter })}</span>
                         ) : null}
                         {thread.data.characters?.length ? (
                           <span>{thread.data.characters.map(String).join(', ')}</span>
@@ -142,7 +144,7 @@ export default function PlotThreadsPage() {
           })}
         </div>
       ) : (
-        <p className="text-text-muted">No plot threads yet. Click "New Thread" to create one.</p>
+        <p className="text-text-muted">{t('plot_threads.empty')}</p>
       )}
 
       {showCreate ? (

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -9,6 +10,7 @@ interface Message {
 const BASE_PATH = import.meta.env.BASE_URL || '/'
 
 export default function AskBar() {
+  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
@@ -44,7 +46,7 @@ export default function AskBar() {
       const data = await res.json()
 
       if (!res.ok) {
-        setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${data.error}` }])
+        setMessages(prev => [...prev, { role: 'assistant', content: t('ask_bar.error_prefix', { message: data.error }) }])
       } else {
         setSessionId(data.sessionId)
         setMessages(prev => [...prev, {
@@ -54,7 +56,7 @@ export default function AskBar() {
         }])
       }
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: `Connection error: ${err.message}` }])
+      setMessages(prev => [...prev, { role: 'assistant', content: t('ask_bar.connection_error', { message: err.message }) }])
     } finally {
       setLoading(false)
     }
@@ -71,7 +73,7 @@ export default function AskBar() {
       <button
         onClick={() => setOpen(true)}
         className="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 flex items-center justify-center z-50"
-        aria-label="Open chat"
+        aria-label={t('ask_bar.open_chat')}
       >
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
@@ -85,11 +87,11 @@ export default function AskBar() {
     <div className="fixed bottom-6 right-6 w-[420px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col z-50" style={{ maxHeight: 'calc(100vh - 6rem)' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-blue-600 text-white rounded-t-2xl">
-        <span className="font-semibold text-sm">Ask</span>
+        <span className="font-semibold text-sm">{t('ask_bar.title')}</span>
         <div className="flex items-center gap-2">
           {messages.length > 0 && (
             <button onClick={handleNew} className="text-xs bg-blue-500 hover:bg-blue-400 px-2 py-1 rounded">
-              New
+              {t('ask_bar.new_chat')}
             </button>
           )}
           <button onClick={() => setOpen(false)} className="text-white/80 hover:text-white text-lg leading-none">&times;</button>
@@ -100,7 +102,7 @@ export default function AskBar() {
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px]">
         {messages.length === 0 && (
           <div className="text-gray-400 text-sm text-center py-8">
-            Ask a question about your data...
+            {t('ask_bar.placeholder')}
           </div>
         )}
         {messages.map((msg, i) => (
@@ -112,7 +114,7 @@ export default function AskBar() {
             }`}>
               <div className="whitespace-pre-wrap">{msg.content}</div>
               {msg.toolCalls ? (
-                <div className="text-xs mt-1 opacity-60">{msg.toolCalls} tool call{msg.toolCalls > 1 ? 's' : ''}</div>
+                <div className="text-xs mt-1 opacity-60">{t('ask_bar.tool_calls', { count: msg.toolCalls })}</div>
               ) : null}
             </div>
           </div>
@@ -120,7 +122,7 @@ export default function AskBar() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-gray-100 rounded-lg px-3 py-2 text-sm text-gray-500">
-              Thinking...
+              {t('ask_bar.thinking')}
             </div>
           </div>
         )}
@@ -135,7 +137,7 @@ export default function AskBar() {
           value={input}
           onChange={e => setInput(e.target.value)}
           disabled={loading}
-          placeholder="Type your question..."
+          placeholder={t('ask_bar.input_placeholder')}
           className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-400"
         />
         <button
@@ -143,7 +145,7 @@ export default function AskBar() {
           disabled={loading || !input.trim()}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50"
         >
-          Send
+          {t('common.send')}
         </button>
       </form>
     </div>

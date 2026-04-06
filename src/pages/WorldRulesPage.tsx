@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { Globe, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
@@ -16,6 +17,7 @@ interface WorldRuleData {
 }
 
 export default function WorldRulesPage() {
+  const { t } = useTranslation()
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
@@ -30,7 +32,7 @@ export default function WorldRulesPage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading world rules...</div>
+        <div className="text-text-muted">{t('world_rules.loading')}</div>
       </div>
     )
   }
@@ -39,7 +41,7 @@ export default function WorldRulesPage() {
   const byDomain = new Map<string, Array<{ id: string; data: WorldRuleData }>>()
   rules?.items?.forEach((r) => {
     const d = r.data as unknown as WorldRuleData
-    const domain = d.domain || 'General'
+    const domain = d.domain || t('world_rules.general')
     if (!byDomain.has(domain)) byDomain.set(domain, [])
     byDomain.get(domain)!.push({ id: r.document_id, data: d })
   })
@@ -49,14 +51,14 @@ export default function WorldRulesPage() {
       <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <Globe className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">World Rules</h1>
+        <h1 className="text-2xl font-semibold text-text">{t('world_rules.title')}</h1>
         <span className="text-sm text-text-muted">({rules?.total ?? 0})</span>
         <button
           onClick={() => setShowCreate(true)}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Plus className="w-4 h-4" />
-          New Rule
+          {t('world_rules.new')}
         </button>
       </div>
 
@@ -78,23 +80,23 @@ export default function WorldRulesPage() {
                           className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
                         >
                           <Pencil className="w-3 h-3" />
-                          Edit
+                          {t('common.edit')}
                         </button>
                         {confirmDelete === rule.id ? (
                           <span className="inline-flex items-center gap-1">
-                            <span className="text-xs text-red-600">Delete?</span>
+                            <span className="text-xs text-red-600">{t('world_rules.delete_confirm')}</span>
                             <button
                               onClick={() => deleteDoc.mutate({ id: rule.id }, { onSuccess: () => setConfirmDelete(null) })}
                               disabled={deleteDoc.isPending}
                               className="px-1.5 py-0.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
                             >
-                              Yes
+                              {t('common.yes')}
                             </button>
                             <button
                               onClick={() => setConfirmDelete(null)}
                               className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
                             >
-                              No
+                              {t('common.no')}
                             </button>
                           </span>
                         ) : (
@@ -112,14 +114,14 @@ export default function WorldRulesPage() {
 
                     {rule.data.implications ? (
                       <div className="mb-2">
-                        <span className="text-xs font-medium text-primary">Implications: </span>
+                        <span className="text-xs font-medium text-primary">{t('world_rules.implications')}: </span>
                         <span className="text-sm text-text-muted">{rule.data.implications}</span>
                       </div>
                     ) : null}
 
                     {rule.data.exceptions ? (
                       <div className="mb-2">
-                        <span className="text-xs font-medium text-accent">Exceptions: </span>
+                        <span className="text-xs font-medium text-accent">{t('world_rules.exceptions')}: </span>
                         <span className="text-sm text-text-muted">{rule.data.exceptions}</span>
                       </div>
                     ) : null}
@@ -145,7 +147,7 @@ export default function WorldRulesPage() {
           ))}
         </div>
       ) : (
-        <p className="text-text-muted">No world rules yet. Click "New Rule" to create one.</p>
+        <p className="text-text-muted">{t('world_rules.empty')}</p>
       )}
 
       {showCreate ? (

@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCreateDocument, useWipClient, useTerms } from '@wip/react'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -70,6 +71,7 @@ function UploadStep({
 }: {
   onParsed: (chapters: ParsedChapter[], rawText: string) => void
 }) {
+  const { t } = useTranslation()
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -112,7 +114,7 @@ function UploadStep({
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-text mb-2">
-          Paste your manuscript or upload a .txt file
+          {t('import.paste_label')}
         </label>
         <textarea
           value={text}
@@ -125,7 +127,7 @@ function UploadStep({
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary hover:text-primary-dark cursor-pointer transition-colors">
               <Upload className="w-4 h-4" />
-              Upload .txt
+              {t('import.upload_txt')}
               <input
                 type="file"
                 accept=".txt,.md"
@@ -134,7 +136,7 @@ function UploadStep({
               />
             </label>
             {wordCount > 0 ? (
-              <span className="text-xs text-text-muted">{wordCount.toLocaleString()} words</span>
+              <span className="text-xs text-text-muted">{t('common.words', { count: wordCount })}</span>
             ) : null}
           </div>
         </div>
@@ -153,7 +155,7 @@ function UploadStep({
         className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
       >
         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronRight className="w-4 h-4" />}
-        {loading ? 'Parsing...' : 'Parse Structure'}
+        {loading ? t('import.parsing') : t('import.parse_structure')}
       </button>
     </div>
   )
@@ -172,6 +174,7 @@ function StructureStep({
   onBack: () => void
   onNext: () => void
 }) {
+  const { t } = useTranslation()
   const [expandedChapter, setExpandedChapter] = useState<number | null>(0)
 
   const toggleChapter = (idx: number) => {
@@ -208,10 +211,7 @@ function StructureStep({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-text-muted">
-          Detected <strong>{totalChapters}</strong> chapters with <strong>{totalScenes}</strong> scenes.
-          Uncheck items to exclude them. Edit titles inline.
-        </p>
+        <p className="text-sm text-text-muted" dangerouslySetInnerHTML={{ __html: t('import.detected_summary', { chapters: totalChapters, scenes: totalScenes }) }} />
       </div>
 
       <div className="space-y-2 max-h-[500px] overflow-y-auto">
@@ -228,7 +228,7 @@ function StructureStep({
                 className="rounded border-gray-300"
               />
               <BookOpen className="w-4 h-4 text-primary flex-shrink-0" />
-              <span className="text-sm text-text-muted w-16 flex-shrink-0">Ch. {ch.number}</span>
+              <span className="text-sm text-text-muted w-16 flex-shrink-0">{t('dashboard.ch_short', { number: ch.number })}</span>
               <input
                 type="text"
                 value={ch.title}
@@ -239,7 +239,7 @@ function StructureStep({
                 onClick={() => setExpandedChapter(expandedChapter === chIdx ? null : chIdx)}
                 className="text-xs text-text-muted hover:text-primary"
               >
-                {ch.scenes.length} scene{ch.scenes.length !== 1 ? 's' : ''}
+                {ch.scenes.length === 1 ? t('common.scene_count', { count: ch.scenes.length }) : t('common.scene_count_plural', { count: ch.scenes.length })}
               </button>
             </div>
 
@@ -264,7 +264,7 @@ function StructureStep({
                       className="flex-1 text-sm text-text bg-transparent border-b border-transparent hover:border-gray-200 focus:border-primary focus:outline-none px-1 py-0.5"
                     />
                     <span className="text-xs text-text-muted">
-                      {scene.prose.split(/\s+/).length} words
+                      {t('common.words', { count: scene.prose.split(/\s+/).length })}
                     </span>
                   </div>
                 ))}
@@ -280,7 +280,7 @@ function StructureStep({
           className="flex items-center gap-1.5 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back
+          {t('common.back')}
         </button>
         <button
           onClick={onNext}
@@ -288,7 +288,7 @@ function StructureStep({
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
         >
           <ChevronRight className="w-4 h-4" />
-          Extract Entities
+          {t('import.extract_entities')}
         </button>
       </div>
     </div>
@@ -326,10 +326,11 @@ function EntitiesStep({
   onBack: () => void
   onNext: () => void
 }) {
+  const { t } = useTranslation()
   const { data: roleTerms } = useTerms(TERMINOLOGIES.CHARACTER_ROLE, { page_size: 50, namespace: NAMESPACE } as any)
   const { data: locationTypeTerms } = useTerms(TERMINOLOGIES.LOCATION_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
-  const roleValues = (roleTerms?.items || []).map(t => t.value)
-  const locationTypeValues = (locationTypeTerms?.items || []).map(t => t.value)
+  const roleValues = (roleTerms?.items || []).map(item => item.value)
+  const locationTypeValues = (locationTypeTerms?.items || []).map(item => item.value)
 
   const [tab, setTab] = useState<TabKey>('characters')
   const [mergeSelection, setMergeSelection] = useState<Set<number>>(new Set())
@@ -396,7 +397,7 @@ function EntitiesStep({
       <div className="flex flex-col items-center justify-center py-16 gap-4">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />
         <p className="text-sm text-text-muted">
-          Analysing chapter {extractProgress} of {extractTotal}...
+          {t('import.analysing', { current: extractProgress, total: extractTotal })}
         </p>
         <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
@@ -409,9 +410,9 @@ function EntitiesStep({
   }
 
   const tabs = [
-    { key: 'characters' as const, label: 'Characters', icon: Users, count: characters.length },
-    { key: 'locations' as const, label: 'Locations', icon: MapPin, count: locations.length },
-    { key: 'threads' as const, label: 'Plot Threads', icon: GitBranch, count: plotThreads.length },
+    { key: 'characters' as const, label: t('nav.characters'), icon: Users, count: characters.length },
+    { key: 'locations' as const, label: t('nav.locations'), icon: MapPin, count: locations.length },
+    { key: 'threads' as const, label: t('nav.plot_threads'), icon: GitBranch, count: plotThreads.length },
   ]
 
   const removeCharacter = (idx: number) => {
@@ -447,24 +448,24 @@ function EntitiesStep({
   return (
     <div className="space-y-4">
       <p className="text-sm text-text-muted">
-        Everything on this list will be imported. Remove what you don't need, merge duplicates, then continue.
+        {t('import.entity_instructions')}
       </p>
 
       {/* Tab bar */}
       <div className="flex border-b border-gray-200">
-        {tabs.map((t) => (
+        {tabs.map((tb) => (
           <button
-            key={t.key}
-            onClick={() => { setTab(t.key); cancelMerge() }}
+            key={tb.key}
+            onClick={() => { setTab(tb.key); cancelMerge() }}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === t.key
+              tab === tb.key
                 ? 'border-primary text-primary'
                 : 'border-transparent text-text-muted hover:text-text'
             }`}
           >
-            <t.icon className="w-4 h-4" />
-            {t.label}
-            <span className="text-xs opacity-60">({t.count})</span>
+            <tb.icon className="w-4 h-4" />
+            {tb.label}
+            <span className="text-xs opacity-60">({tb.count})</span>
           </button>
         ))}
       </div>
@@ -473,20 +474,20 @@ function EntitiesStep({
       <div className="flex items-center gap-2 flex-wrap">
         {merging ? (
           <>
-            <span className="text-xs text-text-muted">Select items to merge ({mergeSelection.size} selected)</span>
+            <span className="text-xs text-text-muted">{t('import.merge_selection', { count: mergeSelection.size })}</span>
             <button
               onClick={selectAllMerge}
               className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary transition-colors"
             >
               <CheckSquare className="w-3 h-3" />
-              All
+              {t('import.all_btn')}
             </button>
             <button
               onClick={deselectAllMerge}
               className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary transition-colors"
             >
               <Square className="w-3 h-3" />
-              None
+              {t('import.none_btn')}
             </button>
             <button
               onClick={handleMerge}
@@ -494,10 +495,10 @@ function EntitiesStep({
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 transition-colors"
             >
               <Merge className="w-3.5 h-3.5" />
-              Merge {mergeSelection.size > 1 ? `(${mergeSelection.size})` : ''}
+              {t('import.merge_btn')} {mergeSelection.size > 1 ? `(${mergeSelection.size})` : ''}
             </button>
             <button onClick={cancelMerge} className="text-xs text-text-muted hover:text-text">
-              Cancel
+              {t('common.cancel')}
             </button>
           </>
         ) : (
@@ -508,7 +509,7 @@ function EntitiesStep({
                 className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-primary hover:bg-primary/5 rounded-lg transition-colors"
               >
                 <Merge className="w-3.5 h-3.5" />
-                Merge Aliases
+                {t('import.merge_aliases')}
               </button>
             ) : null}
             <button
@@ -516,7 +517,7 @@ function EntitiesStep({
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-text-muted hover:text-text hover:bg-gray-100 rounded-lg transition-colors ml-auto"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Reset
+              {t('common.reset')}
             </button>
           </>
         )}
@@ -548,7 +549,7 @@ function EntitiesStep({
                       onClick={(e) => e.stopPropagation()}
                       className={`text-xs border-0 rounded px-2 py-1 ${roleValues.length > 0 && !roleValues.includes(c.role) ? 'bg-red-50 text-red-700' : 'bg-surface text-text-muted'}`}>
                       {roleValues.length > 0 && !roleValues.includes(c.role) && (
-                        <option value={c.role}>{c.role} (invalid)</option>
+                        <option value={c.role}>{`${c.role} ${t('common.invalid_suffix')}`}</option>
                       )}
                       {roleValues.map(r => (
                         <option key={r} value={r}>{r}</option>
@@ -566,7 +567,7 @@ function EntitiesStep({
                 </button>
               </div>
             )
-          }) : <p className="text-sm text-text-muted py-4">No characters detected.</p>
+          }) : <p className="text-sm text-text-muted py-4">{t('import.no_characters')}</p>
         ) : null}
 
         {tab === 'locations' ? (
@@ -594,10 +595,10 @@ function EntitiesStep({
                       onClick={(e) => e.stopPropagation()}
                       className={`text-xs border-0 rounded px-2 py-1 ${locationTypeValues.length > 0 && !locationTypeValues.includes(l.type) ? 'bg-red-50 text-red-700' : 'bg-surface text-text-muted'}`}>
                       {locationTypeValues.length > 0 && !locationTypeValues.includes(l.type) && (
-                        <option value={l.type}>{l.type} (invalid)</option>
+                        <option value={l.type}>{`${l.type} ${t('common.invalid_suffix')}`}</option>
                       )}
-                      {locationTypeValues.map(t => (
-                        <option key={t} value={t}>{t}</option>
+                      {locationTypeValues.map(item => (
+                        <option key={item} value={item}>{item}</option>
                       ))}
                     </select>
                   </div>
@@ -612,7 +613,7 @@ function EntitiesStep({
                 </button>
               </div>
             )
-          }) : <p className="text-sm text-text-muted py-4">No locations detected.</p>
+          }) : <p className="text-sm text-text-muted py-4">{t('import.no_locations')}</p>
         ) : null}
 
         {tab === 'threads' ? (
@@ -648,7 +649,7 @@ function EntitiesStep({
                 </button>
               </div>
             )
-          }) : <p className="text-sm text-text-muted py-4">No plot threads detected.</p>
+          }) : <p className="text-sm text-text-muted py-4">{t('import.no_threads')}</p>
         ) : null}
       </div>
 
@@ -658,14 +659,14 @@ function EntitiesStep({
           className="flex items-center gap-1.5 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back
+          {t('common.back')}
         </button>
         <button
           onClick={onNext}
           className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Check className="w-4 h-4" />
-          Review & Import
+          {t('import.review_import')}
         </button>
       </div>
     </div>
@@ -689,6 +690,7 @@ function ConfirmStep({
   onBack: () => void
   onImport: () => void
 }) {
+  const { t } = useTranslation()
   const includedChapters = chapters.filter(ch => ch.included)
   const includedScenes = includedChapters.reduce((sum, ch) => sum + ch.scenes.filter(s => s.included).length, 0)
 
@@ -696,42 +698,40 @@ function ConfirmStep({
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-text-muted">
-        Ready to create <strong>{total}</strong> documents in WIP:
-      </p>
+      <p className="text-sm text-text-muted" dangerouslySetInnerHTML={{ __html: t('import.confirm_total', { total }) }} />
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <BookOpen className="w-6 h-6 text-primary mx-auto mb-2" />
           <div className="text-2xl font-bold text-text">{includedChapters.length}</div>
-          <div className="text-xs text-text-muted">Chapters</div>
+          <div className="text-xs text-text-muted">{t('nav.chapters')}</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <FileText className="w-6 h-6 text-primary mx-auto mb-2" />
           <div className="text-2xl font-bold text-text">{includedScenes}</div>
-          <div className="text-xs text-text-muted">Scenes</div>
+          <div className="text-xs text-text-muted">{t('common.scenes')}</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <Users className="w-6 h-6 text-primary mx-auto mb-2" />
           <div className="text-2xl font-bold text-text">{characters.length}</div>
-          <div className="text-xs text-text-muted">Characters</div>
+          <div className="text-xs text-text-muted">{t('nav.characters')}</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <MapPin className="w-6 h-6 text-primary mx-auto mb-2" />
           <div className="text-2xl font-bold text-text">{locations.length}</div>
-          <div className="text-xs text-text-muted">Locations</div>
+          <div className="text-xs text-text-muted">{t('nav.locations')}</div>
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
           <GitBranch className="w-6 h-6 text-primary mx-auto mb-2" />
           <div className="text-2xl font-bold text-text">{plotThreads.length}</div>
-          <div className="text-xs text-text-muted">Plot Threads</div>
+          <div className="text-xs text-text-muted">{t('nav.plot_threads')}</div>
         </div>
       </div>
 
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
         <p className="text-sm text-amber-700">
-          This will create new documents in WIP. If entities with the same identity fields already exist, new versions will be created.
+          {t('import.confirm_warning')}
         </p>
       </div>
 
@@ -741,14 +741,14 @@ function ConfirmStep({
           className="flex items-center gap-1.5 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
         >
           <ChevronLeft className="w-4 h-4" />
-          Back
+          {t('common.back')}
         </button>
         <button
           onClick={onImport}
           className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark font-medium transition-colors"
         >
           <Upload className="w-4 h-4" />
-          Import to WIP
+          {t('import.create_import')}
         </button>
       </div>
     </div>
@@ -758,6 +758,7 @@ function ConfirmStep({
 // ── Page Root ────────────────────────────────────────────
 
 export default function ImportPage() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const createDocument = useCreateDocument()
   const wipClient = useWipClient()
@@ -982,10 +983,10 @@ export default function ImportPage() {
   }, [originalCharacters, originalLocations, originalPlotThreads])
 
   const stepLabels: Array<{ key: Step; label: string }> = [
-    { key: 'upload', label: 'Upload' },
-    { key: 'structure', label: 'Structure' },
-    { key: 'entities', label: 'Entities' },
-    { key: 'confirm', label: 'Import' },
+    { key: 'upload', label: t('import.step_upload') },
+    { key: 'structure', label: t('import.step_structure') },
+    { key: 'entities', label: t('import.step_entities') },
+    { key: 'confirm', label: t('import.step_confirm') },
   ]
 
   const stepIndex = stepLabels.findIndex(s => s.key === step)
@@ -995,7 +996,7 @@ export default function ImportPage() {
       <BackLink />
       <div className="flex items-center gap-3 mb-6">
         <Upload className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Import Book</h1>
+        <h1 className="text-2xl font-semibold text-text">{t('import.title')}</h1>
       </div>
 
       {/* Step indicator */}
@@ -1069,7 +1070,7 @@ export default function ImportPage() {
         <div className="flex flex-col items-center justify-center py-16 gap-4">
           <Loader2 className="w-8 h-8 text-primary animate-spin" />
           <p className="text-sm text-text-muted">
-            Creating document {importProgress} of {importTotal}...
+            {t('import.importing_progress', { current: importProgress, total: importTotal })}
           </p>
           <div className="w-64 h-2 bg-gray-100 rounded-full overflow-hidden">
             <div
@@ -1093,8 +1094,8 @@ export default function ImportPage() {
               <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
                 <Check className="w-6 h-6 text-green-600" />
               </div>
-              <p className="text-text font-medium">Import complete!</p>
-              <p className="text-sm text-text-muted">{importedCount} documents created in WIP.</p>
+              <p className="text-text font-medium">{t('import.done_title')}</p>
+              <p className="text-sm text-text-muted">{t('import.done_message')}</p>
             </>
           )}
           <div className="flex items-center gap-3 mt-4">
@@ -1102,13 +1103,13 @@ export default function ImportPage() {
               onClick={() => navigate('/scenes')}
               className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
             >
-              Go to Scene Editor
+              {t('nav.scenes')}
             </button>
             <button
               onClick={() => navigate('/')}
               className="flex items-center gap-2 px-4 py-2 text-sm text-text-muted hover:text-text transition-colors"
             >
-              Dashboard
+              {t('import.view_dashboard')}
             </button>
           </div>
         </div>

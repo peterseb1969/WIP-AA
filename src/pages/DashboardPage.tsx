@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
@@ -47,6 +48,7 @@ function StatCard({ icon: Icon, label, value, to }: {
 }
 
 export default function DashboardPage() {
+  const { t } = useTranslation()
   const { structure } = useBookStructure()
 
   const { data: projects, isLoading: loadingProject } = useDocuments({
@@ -100,7 +102,7 @@ export default function DashboardPage() {
   if (loadingProject) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading project...</div>
+        <div className="text-text-muted">{t('dashboard.loading_project')}</div>
       </div>
     )
   }
@@ -112,11 +114,11 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-text">{String(projectData.title)}</h1>
           <div className="flex items-center gap-3 mt-1 text-sm text-text-muted">
-            {projectData.author ? <span>by {String(projectData.author)}</span> : null}
+            {projectData.author ? <span>{t('dashboard.by_author', { author: String(projectData.author) })}</span> : null}
             {projectData.genre ? (
               <StatusBadge label={String(projectData.genre)} colorClass="bg-accent/10 text-accent" />
             ) : null}
-            {projectData.time_system ? <span>Time: {String(projectData.time_system)}</span> : null}
+            {projectData.time_system ? <span>{t('dashboard.time_label', { system: String(projectData.time_system) })}</span> : null}
           </div>
           {projectData.description ? (
             <p className="mt-3 text-text-muted text-sm max-w-2xl">{String(projectData.description)}</p>
@@ -126,19 +128,19 @@ export default function DashboardPage() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-text flex items-center gap-2">
             <LayoutDashboard className="w-6 h-6 text-primary" />
-            Dashboard
+            {t('dashboard.title')}
           </h1>
-          <p className="text-text-muted mt-1">No project created yet. Use the AskBar to create one.</p>
+          <p className="text-text-muted mt-1">{t('dashboard.no_project')}</p>
         </div>
       )}
 
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-        <StatCard icon={Users} label="Characters" value={characters?.total ?? 0} to="/characters" />
-        <StatCard icon={MapPin} label="Locations" value={locations?.total ?? 0} to="/locations" />
-        <StatCard icon={BookOpen} label="Chapters" value={structure?.chapterCount ?? 0} to="/chapters" />
-        <StatCard icon={PenTool} label="Scenes" value={structure?.sceneCount ?? 0} to="/scenes" />
-        <StatCard icon={GitBranch} label="Plot Threads" value={threads?.total ?? 0} to="/plot-threads" />
+        <StatCard icon={Users} label={t('characters.title')} value={characters?.total ?? 0} to="/characters" />
+        <StatCard icon={MapPin} label={t('locations.title')} value={locations?.total ?? 0} to="/locations" />
+        <StatCard icon={BookOpen} label={t('chapters_page.title')} value={structure?.chapterCount ?? 0} to="/chapters" />
+        <StatCard icon={PenTool} label={t('common.scenes')} value={structure?.sceneCount ?? 0} to="/scenes" />
+        <StatCard icon={GitBranch} label={t('plot_threads.title')} value={threads?.total ?? 0} to="/plot-threads" />
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -146,7 +148,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h2 className="font-semibold text-text mb-3 flex items-center gap-2">
             <PenTool className="w-4 h-4 text-primary" />
-            Recent Scenes
+            {t('dashboard.recent_scenes')}
           </h2>
           {events?.items?.length ? (
             <div className="space-y-2">
@@ -161,7 +163,7 @@ export default function DashboardPage() {
                   >
                     <div className="font-medium text-sm text-text">{String(d.title)}</div>
                     <div className="text-xs text-text-muted mt-0.5">
-                      {chNum != null && `Ch. ${chNum}`}
+                      {chNum != null && t('dashboard.ch_short', { number: chNum })}
                       {d.location != null && ` — ${String(d.location)}`}
                     </div>
                   </Link>
@@ -169,7 +171,7 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-text-light">No scenes yet.</p>
+            <p className="text-sm text-text-light">{t('dashboard.no_scenes')}</p>
           )}
         </div>
 
@@ -177,7 +179,7 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg border border-gray-200 p-4">
           <h2 className="font-semibold text-text mb-3 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-accent" />
-            Open Plot Threads
+            {t('dashboard.open_threads')}
           </h2>
           {openThreads.length ? (
             <div className="space-y-2">
@@ -204,7 +206,7 @@ export default function DashboardPage() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-text-light">No open threads.</p>
+            <p className="text-sm text-text-light">{t('dashboard.no_open_threads')}</p>
           )}
         </div>
 
@@ -213,7 +215,7 @@ export default function DashboardPage() {
           <div className="bg-white rounded-lg border border-gray-200 p-4 md:col-span-2">
             <h2 className="font-semibold text-text mb-3 flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-primary" />
-              Chapter Progress
+              {t('dashboard.chapter_progress')}
             </h2>
             <div className="flex flex-wrap gap-2">
               {orderedChapters.map((ch) => {
@@ -224,7 +226,7 @@ export default function DashboardPage() {
                     to="/chapters"
                     className="flex items-center gap-1.5 p-2 rounded border border-gray-100 hover:border-primary/30 transition-colors"
                   >
-                    <span className="text-sm font-medium text-text">Ch. {ch.chapterNumber}</span>
+                    <span className="text-sm font-medium text-text">{t('dashboard.ch_short', { number: ch.chapterNumber })}</span>
                     <StatusBadge label={status} colorClass={CHAPTER_STATUS_COLORS[status]} />
                   </Link>
                 )
@@ -240,16 +242,17 @@ export default function DashboardPage() {
   )
 }
 
-const DELETE_OPTIONS: Array<{ key: string; label: string; templates: string[]; description: string }> = [
-  { key: 'chapters', label: 'Chapters & Scenes', templates: ['AA_CHAPTER', 'AA_EVENT', 'AA_BOOK_STRUCTURE'], description: 'Chapters, scenes, prose, and book structure' },
-  { key: 'characters', label: 'Characters', templates: ['AA_CHARACTER'], description: 'Character profiles' },
-  { key: 'locations', label: 'Locations', templates: ['AA_LOCATION'], description: 'Location entries' },
-  { key: 'plots', label: 'Plot Threads', templates: ['AA_PLOT_THREAD'], description: 'Plot thread entries' },
-  { key: 'notes', label: 'Notes', templates: ['AA_NOTE'], description: 'Freeform notes' },
-  { key: 'rules', label: 'World Rules', templates: ['AA_WORLD_RULE'], description: 'World-building rules' },
+const DELETE_OPTIONS: Array<{ key: string; labelKey: string; templates: string[]; descKey: string }> = [
+  { key: 'chapters', labelKey: 'dashboard.chapters_scenes', templates: ['AA_CHAPTER', 'AA_EVENT', 'AA_BOOK_STRUCTURE'], descKey: 'dashboard.chapters_scenes_desc' },
+  { key: 'characters', labelKey: 'dashboard.characters_label', templates: ['AA_CHARACTER'], descKey: 'dashboard.characters_desc' },
+  { key: 'locations', labelKey: 'dashboard.locations_label', templates: ['AA_LOCATION'], descKey: 'dashboard.locations_desc' },
+  { key: 'plots', labelKey: 'dashboard.plots_label', templates: ['AA_PLOT_THREAD'], descKey: 'dashboard.plots_desc' },
+  { key: 'notes', labelKey: 'dashboard.notes_label', templates: ['AA_NOTE'], descKey: 'dashboard.notes_desc' },
+  { key: 'rules', labelKey: 'dashboard.rules_label', templates: ['AA_WORLD_RULE'], descKey: 'dashboard.rules_desc' },
 ]
 
 function DangerZone() {
+  const { t } = useTranslation()
   const [showConfirm, setShowConfirm] = useState(false)
   const [selected, setSelected] = useState<Set<string>>(() => new Set(DELETE_OPTIONS.map(o => o.key)))
   const [clearNames, setClearNames] = useState(true)
@@ -314,23 +317,23 @@ function DangerZone() {
     <div className="mt-10 border border-red-200 rounded-lg p-4 bg-red-50/50">
       <h2 className="text-sm font-semibold text-red-700 mb-2 flex items-center gap-2">
         <Trash2 className="w-4 h-4" />
-        Danger Zone
+        {t('dashboard.danger_zone')}
       </h2>
       {result ? (
         <p className="text-sm text-text-muted">
-          Deleted {result.deletedDocs} document{result.deletedDocs !== 1 ? 's' : ''}{result.deletedTerms > 0 ? ` and ${result.deletedTerms} name registr${result.deletedTerms !== 1 ? 'ies' : 'y'}` : ''}. You can now reimport.
+          {t('dashboard.deleted_result', { docs: result.deletedDocs, terms: result.deletedTerms })}
         </p>
       ) : (
         <div className="flex items-center justify-between">
           <p className="text-sm text-text-muted">
-            Delete book data to start fresh or reimport.
+            {t('dashboard.reset_description')}
           </p>
           <button
             onClick={() => setShowConfirm(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-100 transition-colors flex-shrink-0 ml-4"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            Reset Book
+            {t('dashboard.reset_book')}
           </button>
         </div>
       )}
@@ -338,9 +341,9 @@ function DangerZone() {
       {showConfirm ? (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-text mb-3">Reset book data</h3>
+            <h3 className="text-lg font-semibold text-text mb-3">{t('dashboard.reset_title')}</h3>
             <p className="text-sm text-text-muted mb-4">
-              Select what to delete. Templates and fixed terminologies are never affected.
+              {t('dashboard.reset_instructions')}
             </p>
 
             <div className="space-y-2 mb-4">
@@ -352,7 +355,7 @@ function DangerZone() {
                   onChange={toggleAll}
                   className="accent-red-600"
                 />
-                <span className="text-sm font-medium text-text">Select all</span>
+                <span className="text-sm font-medium text-text">{t('dashboard.select_all')}</span>
               </label>
 
               {DELETE_OPTIONS.map(opt => (
@@ -364,8 +367,8 @@ function DangerZone() {
                     className="accent-red-600"
                   />
                   <div>
-                    <span className="text-sm text-text">{opt.label}</span>
-                    <span className="text-xs text-text-muted ml-2">{opt.description}</span>
+                    <span className="text-sm text-text">{t(opt.labelKey)}</span>
+                    <span className="text-xs text-text-muted ml-2">{t(opt.descKey)}</span>
                   </div>
                 </label>
               ))}
@@ -379,8 +382,8 @@ function DangerZone() {
                   className="accent-red-600"
                 />
                 <div>
-                  <span className="text-sm text-text">Name registries</span>
-                  <span className="text-xs text-text-muted ml-2">Character, location & plot thread names from dropdowns</span>
+                  <span className="text-sm text-text">{t('dashboard.name_registries')}</span>
+                  <span className="text-xs text-text-muted ml-2">{t('dashboard.name_registries_desc')}</span>
                 </div>
               </label>
             </div>
@@ -391,7 +394,7 @@ function DangerZone() {
                 disabled={deleting}
                 className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleDelete}
@@ -399,7 +402,7 @@ function DangerZone() {
                 className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {deleting ? 'Deleting...' : 'Delete Selected'}
+                {deleting ? t('common.deleting') : t('dashboard.delete_selected')}
               </button>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { MapPin, ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
@@ -29,10 +30,11 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
+  const { t } = useTranslation()
   const sections = [
-    { label: 'Atmosphere', value: data.atmosphere },
-    { label: 'Rules', value: data.rules },
-    { label: 'Significance', value: data.significance },
+    { label: t('locations.atmosphere'), value: data.atmosphere },
+    { label: t('locations.rules'), value: data.rules },
+    { label: t('locations.significance'), value: data.significance },
   ].filter((s) => s.value)
 
   return (
@@ -42,7 +44,7 @@ function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData
         className="flex items-center gap-1 text-sm text-text-muted hover:text-primary mb-4 transition-colors"
       >
         <ArrowLeft className="w-4 h-4" />
-        All locations
+        {t('locations.all')}
       </button>
 
       <div className="flex items-center gap-3 mb-4">
@@ -58,14 +60,14 @@ function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
               >
                 <Pencil className="w-3.5 h-3.5" />
-                Edit
+                {t('common.edit')}
               </button>
               <button
                 onClick={onDelete}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-red-300 hover:text-red-600 transition-colors"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                Delete
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -96,6 +98,7 @@ function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData
 }
 
 export default function LocationsPage() {
+  const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
@@ -115,7 +118,7 @@ export default function LocationsPage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading locations...</div>
+        <div className="text-text-muted">{t('locations.loading')}</div>
       </div>
     )
   }
@@ -134,23 +137,21 @@ export default function LocationsPage() {
           {confirmDelete ? (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
-                <h3 className="text-lg font-semibold text-text mb-2">Delete location?</h3>
-                <p className="text-sm text-text-muted mb-4">
-                  This will permanently delete <strong>{selectedData.name}</strong>. This cannot be undone.
-                </p>
+                <h3 className="text-lg font-semibold text-text mb-2">{t('locations.delete_title')}</h3>
+                <p className="text-sm text-text-muted mb-4" dangerouslySetInnerHTML={{ __html: t('locations.delete_confirm', { name: selectedData.name }) }} />
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setConfirmDelete(false)}
                     className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
                   >
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     onClick={() => deleteDoc.mutate({ id: selectedId! }, { onSuccess: () => { setConfirmDelete(false); setSelectedId(null) } })}
                     disabled={deleteDoc.isPending}
                     className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                   >
-                    {deleteDoc.isPending ? 'Deleting...' : 'Delete'}
+                    {deleteDoc.isPending ? t('common.deleting') : t('common.delete')}
                   </button>
                 </div>
               </div>
@@ -170,14 +171,14 @@ export default function LocationsPage() {
         <>
           <div className="flex items-center gap-3 mb-6">
             <MapPin className="w-6 h-6 text-primary" />
-            <h1 className="text-2xl font-semibold text-text">Locations</h1>
+            <h1 className="text-2xl font-semibold text-text">{t('locations.title')}</h1>
             <span className="text-sm text-text-muted">({locations?.total ?? 0})</span>
             <button
               onClick={() => setShowCreate(true)}
               className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
             >
               <Plus className="w-4 h-4" />
-              New Location
+              {t('locations.new')}
             </button>
           </div>
 
@@ -208,7 +209,7 @@ export default function LocationsPage() {
               })}
             </div>
           ) : (
-            <p className="text-text-muted">No locations yet. Click "New Location" to create one.</p>
+            <p className="text-text-muted">{t('locations.empty')}</p>
           )}
 
           {showCreate ? (

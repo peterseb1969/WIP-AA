@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
 import {
@@ -106,6 +107,7 @@ function TimelineEvent({ event }: { event: { document_id: string; data: EventDat
 // ── Main Timeline ────────────────────────────────────────
 
 export default function TimelinePage() {
+  const { t } = useTranslation()
   const [filterCharacter, setFilterCharacter] = useState<string | null>(null)
   const [filterLocation, setFilterLocation] = useState<string | null>(null)
   const [zoomLevel, setZoomLevel] = useState<'story' | 'chapter'>('story')
@@ -221,7 +223,7 @@ export default function TimelinePage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading timeline...</div>
+        <div className="text-text-muted">{t('timeline.loading')}</div>
       </div>
     )
   }
@@ -232,15 +234,15 @@ export default function TimelinePage() {
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
         <Clock className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Timeline</h1>
-        <span className="text-sm text-text-muted">({allEvents.length} events)</span>
+        <h1 className="text-2xl font-semibold text-text">{t('timeline.title')}</h1>
+        <span className="text-sm text-text-muted">({t('common.event_count', { count: allEvents.length })})</span>
       </div>
 
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-4 mb-6">
         {/* Zoom */}
         <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-text-muted">View:</span>
+          <span className="text-xs font-medium text-text-muted">{t('timeline.view_label')}</span>
           <button
             onClick={() => setZoomLevel('story')}
             className={`flex items-center gap-1 px-2 py-1 text-xs rounded font-medium transition-colors ${
@@ -250,7 +252,7 @@ export default function TimelinePage() {
             }`}
           >
             <ZoomOut className="w-3 h-3" />
-            By Time
+            {t('timeline.by_time')}
           </button>
           <button
             onClick={() => setZoomLevel('chapter')}
@@ -261,7 +263,7 @@ export default function TimelinePage() {
             }`}
           >
             <ZoomIn className="w-3 h-3" />
-            By Chapter
+            {t('timeline.by_chapter')}
           </button>
         </div>
 
@@ -273,7 +275,7 @@ export default function TimelinePage() {
             onChange={(e) => setFilterCharacter(e.target.value || null)}
             className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-text"
           >
-            <option value="">All characters</option>
+            <option value="">{t('timeline.all_characters')}</option>
             {allCharacters.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -283,7 +285,7 @@ export default function TimelinePage() {
             onChange={(e) => setFilterLocation(e.target.value || null)}
             className="text-xs border border-gray-200 rounded px-2 py-1 bg-white text-text"
           >
-            <option value="">All locations</option>
+            <option value="">{t('timeline.all_locations')}</option>
             {allLocations.map((l) => (
               <option key={l} value={l}>{l}</option>
             ))}
@@ -322,13 +324,13 @@ export default function TimelinePage() {
                     <div>
                       <span className="text-sm font-semibold text-text">
                         {zoomLevel === 'chapter'
-                          ? `Chapter ${key}${chapterTitle ? `: ${chapterTitle}` : ''}`
-                          : groupEvents[0]?.data.story_time_raw ?? `Time point ${key}`
+                          ? `${t('corkboard.group_chapter')} ${key}${chapterTitle ? `: ${chapterTitle}` : ''}`
+                          : groupEvents[0]?.data.story_time_raw ?? t('timeline.time_point', { number: key })
                         }
                       </span>
                       {groupEvents.length > 1 ? (
                         <span className="text-xs text-text-muted ml-2">
-                          ({groupEvents.length} events — parallel)
+                          {t('timeline.parallel_events', { count: groupEvents.length })}
                         </span>
                       ) : null}
                     </div>
@@ -348,8 +350,8 @@ export default function TimelinePage() {
       ) : (
         <p className="text-text-muted">
           {filterCharacter || filterLocation
-            ? 'No events match the current filters.'
-            : 'No events yet. Use the AskBar to create chapters and scenes.'}
+            ? t('timeline.empty_filtered')
+            : t('timeline.empty')}
         </p>
       )}
     </div>

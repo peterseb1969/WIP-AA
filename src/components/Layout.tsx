@@ -1,8 +1,10 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import UnsavedDraftBanner from './UnsavedDraftBanner'
+import LanguageSwitcher from './LanguageSwitcher'
 import {
   PenTool,
   LayoutGrid,
@@ -20,20 +22,21 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { to: '/scenes', label: 'Scene Editor', icon: PenTool },
-  { to: '/corkboard', label: 'Corkboard', icon: LayoutGrid },
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/characters', label: 'Characters', icon: Users },
-  { to: '/chapters', label: 'Chapters', icon: BookOpen },
-  { to: '/timeline', label: 'Timeline', icon: Clock },
-  { to: '/locations', label: 'Locations', icon: MapPin },
-  { to: '/plot-threads', label: 'Plot Threads', icon: GitBranch },
-  { to: '/notes', label: 'Notes', icon: StickyNote },
-  { to: '/world-rules', label: 'World Rules', icon: Globe },
-  { to: '/import', label: 'Import Book', icon: Upload },
+  { to: '/scenes', labelKey: 'nav.scenes', icon: PenTool },
+  { to: '/corkboard', labelKey: 'nav.corkboard', icon: LayoutGrid },
+  { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
+  { to: '/characters', labelKey: 'nav.characters', icon: Users },
+  { to: '/chapters', labelKey: 'nav.chapters', icon: BookOpen },
+  { to: '/timeline', labelKey: 'nav.timeline', icon: Clock },
+  { to: '/locations', labelKey: 'nav.locations', icon: MapPin },
+  { to: '/plot-threads', labelKey: 'nav.plot_threads', icon: GitBranch },
+  { to: '/notes', labelKey: 'nav.notes', icon: StickyNote },
+  { to: '/world-rules', labelKey: 'nav.world_rules', icon: Globe },
+  { to: '/import', labelKey: 'nav.import', icon: Upload },
 ] as const
 
 export default function Layout() {
+  const { t } = useTranslation()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active', namespace: NAMESPACE })
   const projectTitle = (projects?.items?.[0]?.data as Record<string, unknown> | undefined)?.title as string | undefined
@@ -61,7 +64,7 @@ export default function Layout() {
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto py-2">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+          {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -76,10 +79,13 @@ export default function Layout() {
               }
             >
               <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
+              {t(labelKey)}
             </NavLink>
           ))}
         </nav>
+        <div className="px-4 py-3 border-t border-primary-light">
+          <LanguageSwitcher />
+        </div>
       </aside>
 
       {/* Main area */}

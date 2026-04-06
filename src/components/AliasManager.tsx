@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useTerminologies, useTerms, useWipClient, wipKeys } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { X, Plus, Tag } from 'lucide-react'
@@ -10,6 +11,7 @@ interface AliasManagerProps {
 }
 
 export default function AliasManager({ terminologyValue, entityTermValue }: AliasManagerProps) {
+  const { t } = useTranslation()
   const [newAlias, setNewAlias] = useState('')
   const [saving, setSaving] = useState(false)
   const wipClient = useWipClient()
@@ -73,7 +75,7 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
       <div className="flex items-center gap-1.5 mb-2">
         <Tag className="w-3 h-3 text-text-light" />
         <span className="text-xs font-medium text-text-light uppercase tracking-wide">
-          Also known as
+          {t('alias_manager.also_known_as')}
         </span>
       </div>
       <div className="flex flex-wrap gap-1.5 items-center">
@@ -87,7 +89,7 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
               onClick={() => handleRemove(alias)}
               disabled={saving}
               className="hover:text-red-500 transition-colors disabled:opacity-50"
-              title={`Remove "${alias}"`}
+              title={t('alias_manager.remove_title', { alias })}
             >
               <X className="w-3 h-3" />
             </button>
@@ -103,7 +105,7 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
           <input
             value={newAlias}
             onChange={(e) => setNewAlias(e.target.value)}
-            placeholder="Add alias..."
+            placeholder={t('alias_manager.add_placeholder')}
             disabled={saving}
             className="w-28 px-2.5 py-0.5 text-sm border border-gray-200 rounded-full focus:border-primary focus:outline-none disabled:opacity-50"
           />
@@ -112,7 +114,7 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
               type="submit"
               disabled={saving}
               className="text-primary hover:text-primary-dark transition-colors disabled:opacity-50"
-              title="Add alias"
+              title={t('alias_manager.add_title')}
             >
               <Plus className="w-4 h-4" />
             </button>

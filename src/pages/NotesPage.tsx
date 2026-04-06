@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
 import { StickyNote, Filter, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
@@ -27,6 +28,7 @@ const NOTE_TYPE_COLORS: Record<string, string> = {
 }
 
 export default function NotesPage() {
+  const { t } = useTranslation()
   const [filterType, setFilterType] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
@@ -49,7 +51,7 @@ export default function NotesPage() {
   if (isLoading) {
     return (
       <div className="p-6 flex items-center justify-center h-64">
-        <div className="text-text-muted">Loading notes...</div>
+        <div className="text-text-muted">{t('notes.loading')}</div>
       </div>
     )
   }
@@ -59,14 +61,14 @@ export default function NotesPage() {
       <BackLink />
       <div className="flex items-center gap-3 mb-4">
         <StickyNote className="w-6 h-6 text-primary" />
-        <h1 className="text-2xl font-semibold text-text">Notes</h1>
+        <h1 className="text-2xl font-semibold text-text">{t('notes.title')}</h1>
         <span className="text-sm text-text-muted">({notes?.total ?? 0})</span>
         <button
           onClick={() => setShowCreate(true)}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Plus className="w-4 h-4" />
-          New Note
+          {t('notes.new')}
         </button>
       </div>
 
@@ -79,7 +81,7 @@ export default function NotesPage() {
             filterType === null ? 'bg-primary text-white' : 'bg-gray-100 text-text-muted hover:bg-gray-200'
           }`}
         >
-          All
+          {t('notes.all')}
         </button>
         {noteTypes.map((type) => (
           <button
@@ -108,23 +110,23 @@ export default function NotesPage() {
                       className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
                     >
                       <Pencil className="w-3 h-3" />
-                      Edit
+                      {t('common.edit')}
                     </button>
                     {confirmDelete === note.document_id ? (
                       <span className="inline-flex items-center gap-1">
-                        <span className="text-xs text-red-600">Delete?</span>
+                        <span className="text-xs text-red-600">{t('notes.delete_confirm')}</span>
                         <button
                           onClick={() => deleteDoc.mutate({ id: note.document_id }, { onSuccess: () => setConfirmDelete(null) })}
                           disabled={deleteDoc.isPending}
                           className="px-1.5 py-0.5 text-xs font-medium bg-red-600 text-white rounded hover:bg-red-700 transition-colors disabled:opacity-50"
                         >
-                          Yes
+                          {t('common.yes')}
                         </button>
                         <button
                           onClick={() => setConfirmDelete(null)}
                           className="px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-text-muted rounded hover:bg-gray-200 transition-colors"
                         >
-                          No
+                          {t('common.no')}
                         </button>
                       </span>
                     ) : (
@@ -168,7 +170,7 @@ export default function NotesPage() {
         </div>
       ) : (
         <p className="text-text-muted">
-          {filterType ? `No ${filterType.toLowerCase()} notes.` : 'No notes yet. Click "New Note" to create one.'}
+          {filterType ? t('notes.empty_filtered', { type: filterType.toLowerCase() }) : t('notes.empty')}
         </p>
       )}
 
