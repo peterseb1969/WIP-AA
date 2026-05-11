@@ -3,6 +3,7 @@
   "label": "Locations",
   "description": "Location name registry with aliases",
   "extensible": true,
+  "mutable": true,
   "ontology": "part_of",
   "terms": []
 }
