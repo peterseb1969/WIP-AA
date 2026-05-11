@@ -6,4 +6,4 @@ dist/
 .claude-context-pct
 .claude/projects/
 .ruff_cache/
-yac-discussions/
+yac-discussions
