@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Page -->
+  <rect x="6" y="2" width="16" height="22" rx="2" fill="#f0f0f0" stroke="#4a5568" stroke-width="1.5"/>
+  <line x1="9" y1="7" x2="19" y2="7" stroke="#a0aec0" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="9" y1="11" x2="19" y2="11" stroke="#a0aec0" stroke-width="1.2" stroke-linecap="round"/>
+  <line x1="9" y1="15" x2="16" y2="15" stroke="#a0aec0" stroke-width="1.2" stroke-linecap="round"/>
+  <!-- Pen nib -->
+  <g transform="translate(16,10) rotate(35)">
+    <path d="M0,0 L3,-2 L3,-14 Q1.5,-16 0,-14 L0,0Z" fill="#5b6abf" stroke="#3d4580" stroke-width="0.8"/>
+    <path d="M0,0 L3,-2 L1.5,-4Z" fill="#e8c547"/>
+  </g>
+</svg>
