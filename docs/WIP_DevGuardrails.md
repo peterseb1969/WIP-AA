@@ -30,7 +30,7 @@ These are opinionated conventions. They exist to reduce the AI’s decision surf
 
 # Guide 1: Gateway & Portal
 
-> **Status: Partially implemented.** The **API reverse proxy already exists** — Caddy routes `/api/def-store/*`, `/api/template-store/*`, `/api/document-store/*`, `/api/registry/*`, and `/api/reporting-sync/*` to the correct service ports. Apps should always use Caddy for WIP API access (e.g., `baseUrl: ''` in browser, `baseUrl: 'https://hostname:8443'` in Node.js) — never direct service ports. What is **not yet implemented** is the app gateway and portal described below: app manifest registration, automatic routing of `/apps/*` paths to app containers, and the portal landing page.
+> **Status: Partially implemented.** The **API reverse proxy already exists** — Caddy routes `/api/def-store/*`, `/api/template-store/*`, `/api/document-store/*`, `/api/registry/*`, and `/api/reporting-sync/*` to the correct service ports. Apps should always use Caddy for WIP API access (e.g., `baseUrl: '/wip'` in browser behind Vite proxy, `baseUrl: ''` for direct Caddy access, `baseUrl: 'https://hostname:8443'` in Node.js) — never direct service ports. What is **not yet implemented** is the app gateway and portal described below: app manifest registration, automatic routing of `/apps/*` paths to app containers, and the portal landing page.
 
 > **Priority: Critical — deploy before the second app**
 > On a Raspberry Pi with a single IP address, every containerised app needs its own port. Without a gateway, users must remember that the Statement Manager is on port 8081, the Receipt Scanner is on 8082, WIP Console is on 8443, and so on. This is unworkable beyond two apps. The gateway solves port management, TLS termination, and app discovery in a single container.
@@ -119,7 +119,7 @@ Importantly, the WIP Console would be one of the apps listed on the portal — n
 > **Priority: High — needed before any user-facing UI**
 > Without a shared UI convention, every app the AI builds will make independent choices about framework, components, and visual style. The result: an ecosystem that looks like it was built by ten different teams. These constraints ensure visual and behavioural consistency across all constellation apps.
 
-## Relationship to the WIP Console stack
+## Relation to the WIP Console stack
 
 The WIP Console — itself built by Claude — uses a different frontend stack: Vue 3 with PrimeVue, Pinia for state management, and the same Vite build tool. This is a deliberate divergence, not an inconsistency.
 
@@ -240,6 +240,23 @@ app-name/
 │ └── unit/ \# Unit tests
 
 └── README.md \# App-specific documentation
+
+## TLS in development
+
+WIP uses a self-signed TLS certificate on `https://localhost:8443`. Node.js `fetch()` rejects self-signed certs by default, causing silent proxy failures.
+
+**In dev scripts only**, set `NODE_TLS_REJECT_UNAUTHORIZED=0`:
+
+```json
+{
+  "scripts": {
+    "dev:server": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx watch server/index.ts",
+    "start": "tsx server/index.ts"
+  }
+}
+```
+
+Do NOT set this in `start` (production). Production deployments should use proper CA-signed certificates — Caddy handles this automatically with real domains.
 
 ## Environment variables
 
@@ -364,43 +381,6 @@ if (e instanceof WipResolutionError) showTermError(e.field, e.value);
 
 The full specification — including all service methods, the error hierarchy, the BulkResult type, the type generation pipeline, and the React hooks — is documented in the companion design specification: @wip/client TypeScript Client Library.
 
-## Known Gotchas
-
-### 1. `baseUrl` must be a full URL (not a relative path)
-
-`@wip/client`'s `FetchTransport.buildUrl` uses `new URL(path, baseUrl)`. The JavaScript `URL` constructor requires `baseUrl` to include protocol and host — a relative path like `'/wip'` throws `TypeError: Invalid URL`.
-
-**Wrong:**
-```typescript
-const client = createWipClient({ baseUrl: '/wip' })
-// → new URL('/api/document-store/documents', '/wip') → THROWS
-```
-
-**Right:**
-```typescript
-const client = createWipClient({ baseUrl: window.location.origin + '/wip' })
-// → new URL('/api/document-store/documents', 'http://localhost:5173/wip') → OK
-```
-
-If mounting `@wip/proxy` at a sub-path (e.g. `app.use('/wip', wipProxy(...))`), the client must use a full URL including the mount path. If mounting at root (`app.use(wipProxy(...))`), use `baseUrl: window.location.origin` or `baseUrl: ''` (empty string works if the browser resolves it to the current origin).
-
-**Why this is silent:** TanStack Query catches the error after `retry` attempts, then sets `error` on the query. If no component checks the `error` field, the UI shows "Loading..." forever with zero network requests visible in DevTools.
-
-### 2. Self-signed TLS in local development
-
-The local WIP instance serves on `https://localhost:8443` with a self-signed certificate. Node.js `fetch()` (used by `@wip/proxy`) rejects self-signed certs by default.
-
-**Fix:** Set `NODE_TLS_REJECT_UNAUTHORIZED=0` in the server start script:
-```json
-"dev:server": "NODE_TLS_REJECT_UNAUTHORIZED=0 tsx watch server/index.ts"
-```
-
-**Symptom:** All proxy requests return `{"error":"Upstream request failed"}` with no further detail. The browser sees 502s from the proxy.
-
-### 3. Port conflicts between constellation apps
-
-Each app's Express server defaults to a port (usually 3001). When running multiple apps simultaneously, the second app fails to bind. Choose unique ports per app and update both `server/index.ts` (default port) and `vite.config.ts` (proxy target).
-
 # Guide 5: Data Entry Patterns
 
 > **Priority: Medium — needed before user-facing data entry**
@@ -465,7 +445,7 @@ Several constellation apps need bulk import for historical data: past bank state
 | **400**         | Validation     | "\[Field\] is invalid: \[reason\]"                                      | Highlight the specific field(s). Show inline validation messages. Do not clear the form.                                  |
 | **401 / 403**   | Authentication | "Session expired. Please log in again."                                 | Redirect to login or prompt for re-authentication. Preserve form state so the user doesn’t lose work.                     |
 | **404**         | Not found      | "\[Entity\] not found. It may have been removed."                       | Show a clear message with a link to go back. Do not show a raw 404 page.                                                  |
-| **409**         | Conflict       | "This record was updated by someone else. Please review and try again." | Show the conflicting version if possible. Offer to reload.                                                                |
+| **200 (per-item error)** | BulkResponse | Check each item's `status` field: `"created"`, `"already_exists"`, `"error"` | WIP write endpoints always return HTTP 200 with per-item results. Parse `results[]` and show errors inline per item.       |
 | **422**         | Unprocessable  | "Could not process: \[specific reason\]"                                | Common for term resolution failures or reference resolution failures. Show which value could not be resolved.             |
 | **500+**        | Server error   | "Something went wrong. Please try again in a moment."                   | Show a non-technical message. Log the full error to console. Offer a retry button.                                        |
 | **Network**     | Connectivity   | "Cannot reach the server. Check your network connection."               | Relevant for Raspberry Pi on local network — the Pi may be off, or the user may be on the wrong WiFi. Retry with backoff. |

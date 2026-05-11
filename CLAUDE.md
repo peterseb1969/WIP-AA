@@ -1,8 +1,10 @@
-# WIP-AuthorAssist
+# AuthorAssist
+
+<!-- last reviewed: 2026-05-07 / CASE-301 -->
 
 ## What This App Does
 
-AuthorAssist is a novel writing assistant built on WIP. Authors import a manuscript (plain text), and the app extracts structure (chapters, scenes) and entities (characters, locations, plot threads) using AI. The app then provides 11 pages for managing the novel: a prose editor with context panels, a visual corkboard, a timeline, and CRUD pages for characters, locations, chapters, plot threads, notes, and world rules. All data lives in WIP's `aa` namespace across 9 templates and 12 terminologies.
+> AuthorAssist — TODO: replace this line with what this app does.
 
 ## The Golden Rule
 
@@ -10,9 +12,52 @@ AuthorAssist is a novel writing assistant built on WIP. Authors import a manuscr
 
 WIP is the backend. This app is a frontend that maps a domain onto WIP's primitives (terminologies, templates, documents) and presents them to users.
 
+**Verify before asserting any factual claim.** Any factual claim a cheap check could falsify — a file's contents, a function's location, a date, a count, a previous case's content — must be checked, not asserted from memory. "I'm pretty sure" is fabrication if you haven't run the check. The pattern has been observed in BE-YAC (CASE-141, CASE-290) and FRanC (CASE-300); it is agent-agnostic.
+
+## Dev Namespace
+
+Your development namespace is `dev-authorassist`. Use it for all data modeling during development.
+
+**Why:** Terminologies and templates are hard to delete cleanly once documents reference them. A dev namespace lets you iterate freely — create, modify, delete, start over — without polluting production data.
+
+**Workflow:**
+1. Use `dev-authorassist` for all `/design-model` and `/implement` work
+2. Create terminologies, templates, and test documents in this namespace
+3. Iterate until the data model is stable
+4. When ready for production, create a new namespace (e.g., `authorassist`) and recreate the finalized model there
+5. Retire the dev namespace via the API when the data model is finalised:
+   ```
+   mcp__wip__delete_namespace(prefix="dev-authorassist")
+   ```
+   (or `DELETE /api/registry/namespaces/dev-authorassist`). The API
+   honours each namespace's deletion mode (`retain` vs `full`) — no
+   `--force` flag needed.
+
+**Important:** MCP tool calls use the privileged admin key, so always pass `namespace=dev-authorassist` explicitly. Your app's runtime key (scoped to one namespace) gets automatic namespace derivation — no `namespace` parameter needed in app code.
+
+## API Key
+
+The MCP server uses a privileged admin key (from WIP's `.env`). This is fine for data modeling via MCP tools.
+
+**For your app's runtime API calls**, use the namespace-scoped key in `.env`.
+No key was auto-provisioned by this script. If WIP is running locally and you have an admin key, create a runtime key via `mcp__wip__create_api_key` (or `POST /api/registry/api-keys`). If a key was already provisioned out-of-band (e.g. for a non-localhost target like `wip-kb.local`), check `.env` and `~/.wip-deploy/<deployment>/secrets/`.
+
+Save the `plaintext_key` from the response to `.env`:
+```bash
+WIP_API_KEY=<plaintext_key from response>
+```
+
+Because this key is scoped to a single namespace (`dev-authorassist`), WIP derives the namespace automatically when you omit the `namespace` parameter. This means synonym resolution works without passing `namespace` on every API call.
+
+**Key management:** Runtime keys can be listed, updated, and revoked via the Registry API. See WIP's `docs/api-key-management.md` for details.
+
 ## Process
 
-Follow the 4-phase development process. Start with:
+Follow the 4-phase development process.
+
+If a `KICKOFF.md` exists in this directory, read it first — the kickoff supersedes the standard `/explore` start for special-case apps (e.g. design-package-driven apps like APP-KB).
+
+Otherwise start with:
 
 ```
 /explore
@@ -35,26 +80,56 @@ Follow the 4-phase development process. Start with:
 - `/add-app` — Add a second app that cross-references the first
 - `/resume` — Recover context after compaction or at start of a new session
 - `/report` — Capture fireside chat or trigger session summary
+- `/deploy redeploy|verify` — Redeploy this YAC's own source to the running dev install (or smoke-only). Subset of BE-YAC's `/deploy` — install is BE-YAC's territory (CASE-300)
+- `/case file|list|read|respond|comment|close|implement` — Cross-agent case management. **Filing must use `bash yac-discussions/case-helper.sh claim <slug>`** (atomic, race-safe; CASE-67 + CASE-301 collisions made this discipline mandatory — see CASE-306). After writing the body, mirror into the `kb` namespace via `python3 ../FR-YAC/tools/add-to-kb.py yac-discussions/CASE-NN-...md` (CASE-307). The dual-write is the canonical KB population path; not optional.
 
 **Context management:** When context reaches ~70-80%, the human should tell you to run `/resume` or save state (DESIGN.md, memory files) before compaction hits.
+
+## Namespace Bootstrap on Launch
+
+Every WIP-consuming app must follow the **offer-on-empty / use-on-exists** discipline at runtime. Three rules:
+
+1. **Namespace missing on launch** → show the user an explicit bootstrap offer. Do **not** auto-bootstrap silently. The user can either (a) confirm bootstrap or (b) restore from a backup via the WIP console / `wip-deploy` first and reload.
+2. **Namespace exists on launch** → use it as-is. **No** schema reconciliation, **no** "templates differ" check, **no** merge logic. Rolling redeploys against an existing namespace must come up clean. A partially-bootstrapped namespace is the user's signal to use the console, not the app's signal to silently re-bootstrap.
+3. **On user-initiated bootstrap** → write one **`BOOTSTRAP_RECORD`** audit doc capturing: `bootstrap_id`, `app_version`, `bootstrapped_at`, `commit_sha`, `templates_created`, `edge_types_created`, `terminologies_created`. This is the provenance trail any future YAC reading the namespace can rely on.
+
+**Restore is not an app concern.** The bootstrap UI mentions restore as an alternative the user may prefer; it does not provide UI for it. Restore is console-initiated.
+
+**Starting point — three template files** are copied into `templates/bootstrap/` of every new app project:
+- `bootstrap.server.ts.template` — `checkStatus()` and `runBootstrap()` library functions, with the §3.4 deltas (post-rename term-relations API, BOOTSTRAP_RECORD writing) already applied
+- `bootstrap.routes.ts.template` — Express `GET /server-api/bootstrap/status` and `POST /server-api/bootstrap/run` (SSE streaming for progress)
+- `BootstrapGate.tsx.template` — React component that wraps the app and renders the four states (checking / unreachable / needs-bootstrap / bootstrapping / error / ready)
+
+Read each template's header comment, fill in the TODO markers (namespace, app title), drop a `BOOTSTRAP_RECORD` template into `server/seed/templates/`, and you're done. The seed-file convention (`server/seed/terminologies/<VALUE>.json`, `server/seed/templates/<NN>_<VALUE>.json`) is documented in the server template's header.
 
 ## Reference Documentation
 
 Read these before starting:
 - `docs/AI-Assisted-Development.md` — 4-phase process, data model design guide, PoNIFs quick reference
-- `docs/WIP_PoNIFs.md` — Full guide to WIP's 6 non-intuitive behaviours
+- `docs/WIP_PoNIFs.md` — Full guide to WIP's 8 non-intuitive behaviours
 - `docs/WIP_DevGuardrails.md` — UI stack, app skeleton, testing conventions
-- `docs/ontology-support.md` — Term relationships, polyhierarchy, typed relationships, traversal queries
-- `docs/dev-delete.md` — Hard-delete entities during development (modes, backends, remote usage)
+- `docs/wip-guide.md` — Operator-facing guide: install, deploy, harden, run alongside an app (consolidates 10 prior docs incl. containerization, auth, networking, storage)
+- `docs/technology-stack.md` — **Canonical** v1 stack (React 19 + TS + Vite + TanStack Query + Tailwind 3 + Inter); required @wip/* libraries; forbidden choices. Read before any architecture call.
+- `docs/ui-guidance.md` — **Canonical** v1 visual anchor: brand palette tokens (primary/accent/success/danger), typography hierarchy (text-2xl page titles, NOT text-3xl), component shapes (cards, modals, tinted callouts), accessibility floor. `tailwind.config.js` ships pre-extended with these tokens — use the named classes (`bg-primary`, `text-text-muted`), not inline hex.
+- `docs/ontology-support.md` — Term relations, polyhierarchy, typed relations, traversal queries
+- `templates/bootstrap/*.template` — Bootstrap pattern starting points (see "Namespace Bootstrap on Launch" above)
+
+## Key Identity Concepts
+
+- **Identity hash ≠ canonical ID.** Identity hash = uniqueness key for upsert *within a specific template* — same field values under two different templates are two different documents. Canonical ID / synonyms = deterministic identification of exactly one entity across the entire system (Registry-resolved). When calling `createDocumentsBulk`, the identity hash is scoped to the template you pass — never assume it is unique across templates.
+- **The Registry is the identity authority.** All identity resolution goes through the Registry. Do not implement app-side identity resolution by hash lookups — use the document_id returned by the API.
+- **`metadata.*` is caller-attached context, never logic-driving data.** `metadata.custom.<field>` is for loader hints, source-system tags, audit traces — anything your app stashes for later introspection. It is NOT a home for fields the platform commits to a meaning for: identity, sortable axes, FTS-indexed text, dedup keys. Logic-driving fields live in `data.<field>` declared on the template's schema, with `identity_fields` / `full_text_indexed` / etc. referencing them. If a field your app needs has no home in `data`, file a case asking the template owner (often APP-KB-YAC for the kb namespace, BE-YAC for shared templates) to update the schema — do not stash in `metadata.custom` as a workaround. The platform will hard-reject `metadata.*` in declarative slots once CASE-317 lands. Filters on `POST /documents/query` stay free — those are ad-hoc reads, not declarative commitments.
+- **Empty `identity_fields` is a first-class append-only mode**, not a degenerate config. The schema declares the contract: empty list = "every doc is its own logical entity, version-by-document_id-only." Use this deliberately for event logs and audit traces where every write is a fresh entity. Don't use it as a way to skip thinking about identity — if your records have a stable atomic identifier (case_number, ISBN, lot_id, tracking_id), declare it in `data` and reference it in `identity_fields`.
 
 ## MCP
 
-WIP is accessed exclusively via MCP tools (69 tools, 4 resources). Before starting:
+WIP is accessed exclusively via MCP tools (88 tools, 5 resources). Before starting:
 - Read `wip://conventions` — bulk-first API, identity hashing, versioning
-- Read `wip://data-model` — terminologies, templates, documents, fields, relationships
-- Read `wip://ponifs` — 6 behaviours that trip up every new developer
+- Read `wip://data-model` — terminologies, templates, documents, fields, term-relations
+- Read `wip://ponifs` — 8 behaviours that trip up every new developer
 
 `wip://development-guide` provides the full 4-phase workflow reference if needed.
+`wip://query-assistant-prompt` provides a complete system prompt for NL query agents (used by --preset query apps).
 
 ## Client Libraries
 
@@ -63,10 +138,24 @@ For Phase 4 (app building), use @wip/client, @wip/react, and @wip/proxy:
 - `libs/wip-react-README.md` — React hooks (TanStack Query, 30+ hooks)
 - `libs/wip-proxy-README.md` — Express middleware for WIP API proxying with auth injection
 
-Install from tarballs in `libs/`:
+**Phase 4 begins with:**
 ```bash
-npm install ./libs/wip-client-*.tgz ./libs/wip-react-*.tgz ./libs/wip-proxy-*.tgz
+npm install ./libs/wip-client-*.tgz ./libs/wip-react-*.tgz ./libs/wip-proxy-*.tgz @tanstack/react-query
 ```
+The WIP libs are tarballs in `libs/`. `@tanstack/react-query` is the peer dependency that powers `@wip/react`'s hooks — install it explicitly; the scaffold's `package.json` does not pre-declare it.
+
+## Dev Setup Gotchas
+
+**TLS:** WIP uses a self-signed cert on whichever hostname the install runs at — `https://localhost:8443` for compose dev, `https://<ingress-hostname>` for k8s (e.g. `https://wip-kb.local`). Node.js `fetch()` rejects self-signed certs; add `NODE_TLS_REJECT_UNAUTHORIZED=0` to your `dev:server` script (NOT `start`/production). The python wip_mcp client uses `WIP_VERIFY_TLS=false` (already set in `.mcp.json`). Production with proper certs needs no workaround.
+
+**@wip/client baseUrl:** In browser apps behind a Vite proxy, use `baseUrl: '/wip'` (resolved to `window.location.origin + '/wip'`). Do NOT use a bare relative path without the client resolving it — `new URL('/wip/...')` throws without a protocol.
+
+**@wip/react providers:** Hooks require BOTH `QueryClientProvider` (from `@tanstack/react-query`) AND `WipProvider` (from `@wip/react`). Missing either causes silent failure — hooks mount but never fetch, no errors.
+
+## Tool use — Bash timeouts and waits
+
+- **Never set Bash `timeout > 60000` ms.** Use `run_in_background: true` for any command that may exceed 60 s. Use `Monitor` for streaming output, or wait for the auto-completion notification when the background task finishes. A user-scoped PreToolUse hook (`~/.claude/hooks/block-long-bash-timeout.sh`) mechanically rejects calls with `timeout > 60000` — the discipline rule still applies even if the hook is disabled or absent. *Origin: CASE-319, where this rule lived in feedback memory and failed to prevent recurrence twice in 90 minutes within one session.*
+- **Verify-before-wait.** Before scheduling any wait on a long-running command, verify the prerequisites that command depends on can succeed. For npm/test runs that hit a backend cluster: check the host-bound port (e.g., `nc -z localhost 8443`) before kicking the wait off. The class of failure is *waiting on an action that depends on unverified state* — the wait then can't complete and burns wall time on a hang. *Origin: CASE-319 / CASE-320 — agent waited 10 minutes for tests that couldn't finish because the deployer no longer exposed the relevant port.*
 
 ## WIP Toolkit
 
@@ -83,25 +172,38 @@ Key commands:
 
 Remote WIP instances:
 ```bash
-wip-toolkit --host pi-poe-8gb.local --proxy export wip /tmp/backup.zip
+wip-toolkit --host wip-kb.local --proxy export kb /tmp/kb-backup.zip
 ```
 
-## Dev Delete
+## Session Awareness
 
-`tools/dev-delete.py` hard-deletes entities during iterative development. See `docs/dev-delete.md` for full usage.
+You will be replaced. This session — including everything you learn, every correction Peter makes, every insight you gain — ends when your context fills or the task completes. The next agent starts from scratch with no memory of this conversation.
 
+**Consequence:** Anything worth knowing must be encoded into a durable artifact before this session ends. If Peter corrects your approach, consider whether the correction belongs in:
+- A `/lesson` entry (quick, structured, for future gene pool review)
+- A session report "Dead Ends" section (for the next YAC continuing this work)
+- A CLAUDE.md update (if Peter agrees it's universal)
+
+Do not say "got it, won't happen again" unless you have written the lesson down. The next agent will make the same mistake unless you leave a trace.
+
+## Scope Budget
+
+Most tasks should complete within a predictable number of commits. If you find yourself significantly exceeding expectations, something is wrong — a misunderstanding, a rabbit hole, or a task that needs decomposition.
+
+**Commit heuristics:**
+- A bug fix: 1-3 commits. If you're past 5, stop and report what's blocking you.
+- A feature addition: 3-7 commits. If you're past 10, stop and reassess scope with Peter.
+- A refactor: 2-5 commits. If you're past 8, you're probably changing too much at once.
+
+**Context window awareness:** You can check your own context usage:
 ```bash
-# Dry run (default)
-python tools/dev-delete.py --namespace myapp
-
-# Actually delete
-python tools/dev-delete.py --namespace myapp --force
-
-# Remote MongoDB
-python tools/dev-delete.py --mongo-uri mongodb://remote-host:27017/ --namespace myapp --force
+cat .claude-context-pct
 ```
+This file is written to your project directory by the status line. Check it periodically — especially before starting a new subtask.
+- **Past 50%:** Ensure your session report and dead ends section are written. You are halfway to replacement.
+- **Past 75%:** Stop working and write your session summary. Do not push through hoping to finish — the next YAC picks up faster from a clean summary than from a half-finished sprawl.
 
-Requires `pymongo`. For file/reporting cleanup also install `boto3` and `psycopg2-binary`.
+When stopping for any reason, write a clear status report: what's done, what's left, what's blocking, and what didn't work (dead ends).
 
 ## YAC Reporting
 
@@ -117,10 +219,11 @@ At the start of every session, run `date '+%Y%m%d-%H%M'` and assign yourself a s
 
 | App | Prefix |
 |-----|--------|
-| Statement Manager | `APP-SM` |
-| Receipt Scanner | `APP-RS` |
-| D&D Compendium | `APP-DND` |
+| AuthorAssist | `APP-AA` |
 | ClinTrial Explorer | `APP-CT` |
+| D&D Compendium | `APP-DND` |
+| KB | `APP-KB` |
+| React Console | `APP-RC` |
 | New apps | `APP-<SHORT>` (pick a 2-4 letter code, tell the user) |
 
 Format: `<PREFIX>-YYYYMMDD-HHMM`. Example: `APP-CT-20260331-2015`.
@@ -142,6 +245,13 @@ ls -d /Users/peter/Development/FR-YAC/reports/<PREFIX>-* 2>/dev/null | tail -1
 ```
 
 If a previous session exists, read its `session.md` to recover context from the previous agent's work. This is faster and richer than reconstructing from git alone.
+
+If you are continuing work from that session (e.g., after context compaction), add this to your
+`session.md` frontmatter:
+
+```
+continues: <PREVIOUS-SESSION-ID>
+```
 
 ### Session Start
 
@@ -203,3 +313,19 @@ Update (overwrite) the summary section — don't append multiple summaries.
 ### Fireside Chats
 
 When Peter initiates a design discussion, architecture debate, or scope conversation, use the `/report` slash command to capture it. These are the high-value narrative moments — not just what was decided, but why, what alternatives were considered, and what Peter said.
+
+### Running Log
+
+For session-meaningful work that is **neither a change, an end-state, nor a fireside-grade decision**, append to `session-updates.md` via `/report update-session [terse note]`. Three trigger categories:
+
+1. **Discoveries without a commit anchor** — e.g., "scaffold imports `./wip-api.js` which doesn't exist anywhere."
+2. **Scope-trim decisions mid-session** — why you're doing less than originally pitched, when the rationale matters for reading the resulting commit but isn't architectural enough for a fireside.
+3. **Block/unblock state and pre-`/compact` snapshots** — written when context is filling so the post-compaction same-agent self has more than just the last commit message and a stale session.md.
+
+**`/compact` vs `/clear`:** before `/compact` (same agent continues, conversation just summarized) write a running-log entry — this mode. Before `/clear` or end-of-day (next agent starts cold from durable artifacts) run `/report session-end`. The two events look similar but have different recovery semantics.
+
+Append-only — distinct from `session.md` (overwritten at end) and `report-<slug>.md` (per-decision). Each entry is **timestamp + short headline + one paragraph**.
+
+Discipline test before writing: *"Would future-me, after a compaction, want to know this in 6 hours?"* If yes, write. If "this is just thinking out loud," don't.
+
+The four files together — `session.md` + `commits.md` + `session-updates.md` + any `report-*.md` — are what `/resume` reads to rebuild context.
