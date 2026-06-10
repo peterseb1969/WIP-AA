@@ -17,11 +17,17 @@ import NotesPage from './pages/NotesPage'
 import WorldRulesPage from './pages/WorldRulesPage'
 import ImportPage from './pages/ImportPage'
 
+// CASE-370 surface #10: when the app is mounted under a path prefix
+// (e.g. /apps/aa behind the wip-deploy gateway), the router must know the
+// prefix or every client-side route 404s. Vite's BASE_URL mirrors
+// config.base (always ends with '/'); strip the trailing slash.
+const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <WipProvider client={wipClient}>
-        <BrowserRouter>
+        <BrowserRouter basename={BASENAME}>
           <Routes>
             <Route element={<Layout />}>
               <Route path="/" element={<DashboardPage />} />

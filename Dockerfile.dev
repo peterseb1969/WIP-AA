@@ -1,20 +1,39 @@
+# Dockerfile.dev — development image for wip-deploy's --app-source override.
+#
+# Built by wip-deploy when invoked with:
+#   wip-deploy add-app wip-aa --app-source ~/Development/WIP-AA
+#
+# Mirrors the canonical CASE-58 pattern (CT-YAC's design, RC's reference impl,
+# adopted verbatim from WIP-KB). The entrypoint script populates the named
+# /app/node_modules volume on first start and re-runs npm ci when the host's
+# package-lock.json hash changes. Baking npm ci into the image would be
+# useless here: --app-source bind-mounts the host source over /app and a
+# named volume masks /app/node_modules, shadowing anything built in.
+#
+# After install the CMD runs `npm run dev` — concurrently runs:
+#   - dev:server: tsx watch server/index.ts → Express on PORT (3014)
+#   - dev:client: vite → dev server + HMR on VITE_PORT (5180)
+# Vite is configured with `host: '0.0.0.0'` so the container accepts
+# connections from Caddy. See vite.config.ts.
+#
+# CHOKIDAR_USEPOLLING: reliable file-change detection on macOS bind mounts.
+# NODE_ENV=development: belt-and-suspenders; the wip-deploy renderer also sets
+# this, but keeping it in the image means a bare `docker run` still works.
+# VITE_PORT=5180: must match the manifest's `dev` port. 5173/5174 are taken
+# by wip-kb and react-console on multi-app dev installs.
 FROM node:20-alpine
 WORKDIR /app
 
-# curl for healthchecks; the dev_simple renderer probes /api/health on the
-# http port to mark the app healthy.
-RUN apk add --no-cache curl
+COPY docker-entrypoint-dev.sh /entrypoint-dev.sh
+RUN chmod +x /entrypoint-dev.sh
 
-# node_modules is pre-populated at image build, then masked at runtime by
-# the named volume the dev_simple renderer mounts at /app/node_modules.
-# First boot: container's npm ci populates the empty volume.
-# Subsequent boots: the volume is already populated, lib tarballs are
-# resolved from the bind-mounted /app/libs.
-COPY package.json package-lock.json ./
-COPY libs/ libs/
-RUN npm ci
+ENV CHOKIDAR_USEPOLLING=1 \
+    NODE_ENV=development \
+    PORT=3014 \
+    VITE_PORT=5180
 
-# CMD runs the host's `dev` script (concurrent server + Vite) once the
-# bind mount has provided the rest of the source. PORT and VITE_PORT
-# are injected by the renderer based on the manifest's port declarations.
+# 3014 = Express (tsx watch), 5180 = Vite dev server + HMR WebSocket
+EXPOSE 3014 5180
+
+ENTRYPOINT ["/entrypoint-dev.sh"]
 CMD ["npm", "run", "dev"]

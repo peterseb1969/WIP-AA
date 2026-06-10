@@ -10,10 +10,13 @@ describes what AuthorAssist commits to so the manifest is creatable.
 | File | Role |
 |---|---|
 | `Dockerfile` | Prod image. Multi-stage build → `dist/` + server, runs `npx tsx server/index.ts` on port 3014. Used by `compose` and `k8s` targets. |
-| `Dockerfile.dev` | Bind-mount-friendly dev image for `wip-deploy --target dev --app-source authorassist=PATH`. Just `npm ci` and `npm run dev`. |
+| `Dockerfile.dev` | Bind-mount-friendly dev image for `wip-deploy add-app wip-aa --app-source ~/Development/WIP-AA`. Canonical CASE-58 entrypoint pattern (same as WIP-KB / react-console). |
+| `docker-entrypoint-dev.sh` | Populates the named `/app/node_modules` volume on first start; re-runs `npm ci` when the host's package-lock.json hash changes. |
 | `.dockerignore` | Excludes node_modules, dist, .git, .claude, .env, *.md, tests, docs, data-model, yac-discussions, tools, .DS_Store. |
 | `vite.config.ts` | Threads `VITE_BASE_PATH` / `APP_BASE_PATH` into Vite's `base` so emitted asset URLs match the gateway path. Binds 0.0.0.0 so the container dev server accepts external connections. |
 | `server/index.ts` | Mounts all routes (including `/wip` proxy) under `APP_BASE_PATH`. In production, serves `dist/` statically from inside Express; in dev-with-app-source the renderer forces `NODE_ENV=development` and Caddy routes to the Vite port instead. |
+| `src/App.tsx` | `BrowserRouter basename` derived from Vite's `BASE_URL` (CASE-370 surface #10) so client-side routes work under `/apps/aa`. |
+| `src/lib/wip.ts` | Browser WIP client `baseUrl` = `${BASE_URL}wip` so proxy calls stay on the app's own path prefix. |
 
 ## Ports
 
@@ -26,36 +29,64 @@ The numbering avoids `wip-kb` (3012) and `clintrial` (3013).
 
 ## What the WIP repo's `apps/wip-aa/wip-app.yaml` needs
 
-Copying the shape from `apps/clintrial/wip-app.yaml` and `apps/react-console/wip-app.yaml`:
+Mirroring `apps/wip-kb/wip-app.yaml` (the working reference — same Express +
+Vite + MCP-agent shape as AuthorAssist):
 
 ```yaml
+api_version: wip.dev/v1
+kind: App
+metadata:
+  name: wip-aa
+  category: optional
+  description: |
+    AuthorAssist — novel-writing workspace over the aa namespace.
+    Vite SPA + Express server (tsx).
+
 spec:
+  image:
+    name: wip-aa
+    tag: <date-suffixed, bump on rebuild — pull_policy caches by tag>
+
   ports:
     - {name: http, container_port: 3014}
-    # CASE-55: Vite dev server. Active only with --app-source.
-    # The dev_simple renderer routes /apps/aa/* here instead of 3014
-    # (which serves the API only in dev). Ignored on compose/k8s.
+    # CASE-375: Vite dev-server. Used only when --app-source is active.
+    # 5180 avoids wip-kb (5173) and react-console (5174) on multi-app
+    # dev installs.
     - {name: dev, container_port: 5180}
 
   env:
+    required:
+      - {name: WIP_BASE_URL, source: {from_component: router}}
+      - {name: WIP_API_KEY, source: {from_secret: api-key}}
+      - {name: PORT, source: {literal: "3014"}}
+      - {name: APP_BASE_PATH, source: {literal: /apps/aa}}
+      - {name: NODE_ENV, source: {literal: production}}
+      - {name: WIP_NAMESPACE, source: {literal: "aa"}}
     optional:
-      # AuthorAssist's agent.ts uses MCP over HTTP. When the deployer
-      # includes mcp-server as a module, MCP_URL points at it; when
-      # absent, the agent skips MCP tools.
+      # AskBar + import extraction use Anthropic; degrade gracefully unset.
+      - {name: ANTHROPIC_API_KEY, source: {from_secret: anthropic-api-key}}
+      # CASE-375: the query agent uses MCP over HTTP; without MCP_URL it
+      # falls back to spawning `python -m wip_mcp` via stdio, which fails
+      # inside a Node container (no Python).
       - {name: MCP_URL, source: {literal: "http://wip-mcp-server:8007/mcp"}}
       - {name: MCP_TRANSPORT, source: {literal: "http"}}
-      # ANTHROPIC_API_KEY needed for /api/ask and /api/import/extract.
-      # Source from the install's secrets backend.
-      - {name: ANTHROPIC_API_KEY, source: {secret: anthropic-api-key}}
-      # WIP runtime key. For dev this is the namespace-scoped key (see
-      # CASE-351 for the current scoped-key authz limitation). For prod
-      # use a dedicated runtime key with read+write grants on `aa`.
-      - {name: WIP_API_KEY, source: {secret: api-key-aa}}
-      - {name: WIP_NAMESPACE, source: {literal: "aa"}}
+
+  depends_on: [document-store]
+
+  healthcheck:
+    endpoint: /apps/aa/api/health
+    probe: auto
+    start_period_seconds: 15
+
+app_metadata:
+  display_name: AuthorAssist
+  route_prefix: /apps/aa
+  ui_only: false
 ```
 
-The `APP_BASE_PATH` and `VITE_BASE_PATH` env vars are injected by the
-renderer based on the manifest's `path`. AuthorAssist reads both.
+The `APP_BASE_PATH` / `VITE_BASE_PATH` envs feed Vite's `base`, the Express
+router mount, the SPA router basename, and the browser client's `/wip`
+prefix — all four read the same value.
 
 ## Local verification
 
