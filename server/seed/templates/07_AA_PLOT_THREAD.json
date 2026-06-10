@@ -1,0 +1,55 @@
+{
+  "value": "AA_PLOT_THREAD",
+  "label": "Plot Thread",
+  "description": "Narrative arc or subplot",
+  "identity_fields": [
+    "title"
+  ],
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_PLOT_THREADS"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_PLOT_THREAD_STATUS"
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "opened_chapter",
+      "label": "Opened Chapter",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "resolved_chapter",
+      "label": "Resolved Chapter",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "characters",
+      "label": "Characters",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

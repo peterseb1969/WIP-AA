@@ -1,0 +1,49 @@
+{
+  "value": "AA_CHAPTER",
+  "label": "Chapter",
+  "description": "Chapter structure. Ordering comes from AA_BOOK_STRUCTURE.",
+  "identity_fields": [
+    "title"
+  ],
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "summary",
+      "label": "Summary",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "themes",
+      "label": "Themes",
+      "type": "array",
+      "mandatory": false,
+      "array_item_type": "string"
+    },
+    {
+      "name": "status",
+      "label": "Status",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_CHAPTER_STATUS"
+    },
+    {
+      "name": "pov_character",
+      "label": "POV Character",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

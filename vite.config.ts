@@ -23,6 +23,7 @@ export default defineConfig({
     port: CLIENT_PORT,
     proxy: {
       [`${BASE_PATH}/api`]: SERVER_URL,
+      [`${BASE_PATH}/server-api`]: SERVER_URL,
       [`${BASE_PATH}/wip`]: {
         target: SERVER_URL,
         changeOrigin: true,

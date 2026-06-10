@@ -1,0 +1,54 @@
+{
+  "value": "AA_WORLD_RULE",
+  "label": "World Rule",
+  "description": "Law or constraint of the story universe",
+  "identity_fields": [
+    "name"
+  ],
+  "fields": [
+    {
+      "name": "name",
+      "label": "Name",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "domain",
+      "label": "Domain",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "rule",
+      "label": "Rule",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "implications",
+      "label": "Implications",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "exceptions",
+      "label": "Exceptions",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "related_characters",
+      "label": "Related Characters",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "related_locations",
+      "label": "Related Locations",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_LOCATIONS"
+    }
+  ]
+}

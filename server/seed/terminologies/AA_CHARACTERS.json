@@ -1,0 +1,8 @@
+{
+  "value": "AA_CHARACTERS",
+  "label": "Characters",
+  "description": "Character name registry with aliases",
+  "extensible": true,
+  "mutable": true,
+  "terms": []
+}

@@ -1,0 +1,68 @@
+{
+  "value": "AA_GENRE",
+  "label": "Genre",
+  "description": "Project genre classification",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "FANTASY",
+      "label": "Fantasy",
+      "aliases": []
+    },
+    {
+      "value": "SCI_FI",
+      "label": "Science Fiction",
+      "aliases": []
+    },
+    {
+      "value": "THRILLER",
+      "label": "Thriller",
+      "aliases": []
+    },
+    {
+      "value": "MYSTERY",
+      "label": "Mystery",
+      "aliases": []
+    },
+    {
+      "value": "ROMANCE",
+      "label": "Romance",
+      "aliases": []
+    },
+    {
+      "value": "HISTORICAL",
+      "label": "Historical Fiction",
+      "aliases": []
+    },
+    {
+      "value": "LITERARY",
+      "label": "Literary Fiction",
+      "aliases": []
+    },
+    {
+      "value": "HORROR",
+      "label": "Horror",
+      "aliases": []
+    },
+    {
+      "value": "ADVENTURE",
+      "label": "Adventure",
+      "aliases": []
+    },
+    {
+      "value": "DYSTOPIAN",
+      "label": "Dystopian",
+      "aliases": []
+    },
+    {
+      "value": "MEMOIR",
+      "label": "Memoir/Autobiographical",
+      "aliases": []
+    },
+    {
+      "value": "OTHER",
+      "label": "Other",
+      "aliases": []
+    }
+  ]
+}

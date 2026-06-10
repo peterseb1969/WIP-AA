@@ -1,0 +1,53 @@
+{
+  "value": "AA_LOCATION_TYPE",
+  "label": "Location Type",
+  "description": "Kind of place or setting",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "CITY",
+      "label": "City",
+      "aliases": []
+    },
+    {
+      "value": "TOWN",
+      "label": "Town/Village",
+      "aliases": []
+    },
+    {
+      "value": "BUILDING",
+      "label": "Building",
+      "aliases": []
+    },
+    {
+      "value": "ROOM",
+      "label": "Room/Interior",
+      "aliases": []
+    },
+    {
+      "value": "OUTDOOR",
+      "label": "Outdoor/Landscape",
+      "aliases": []
+    },
+    {
+      "value": "VEHICLE",
+      "label": "Vehicle/Transport",
+      "aliases": []
+    },
+    {
+      "value": "REALM",
+      "label": "Realm/World",
+      "aliases": []
+    },
+    {
+      "value": "VIRTUAL",
+      "label": "Virtual/Abstract",
+      "aliases": []
+    },
+    {
+      "value": "OTHER",
+      "label": "Other",
+      "aliases": []
+    }
+  ]
+}

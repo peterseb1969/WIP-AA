@@ -1,0 +1,32 @@
+{
+  "value": "AA_CHAPTER_STATUS",
+  "label": "Chapter Status",
+  "description": "Chapter writing progress",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "OUTLINE",
+      "label": "Outline",
+      "aliases": [],
+      "sort_order": 1
+    },
+    {
+      "value": "DRAFT",
+      "label": "Draft",
+      "aliases": [],
+      "sort_order": 2
+    },
+    {
+      "value": "REVISED",
+      "label": "Revised",
+      "aliases": [],
+      "sort_order": 3
+    },
+    {
+      "value": "FINAL",
+      "label": "Final",
+      "aliases": [],
+      "sort_order": 4
+    }
+  ]
+}

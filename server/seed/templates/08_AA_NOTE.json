@@ -1,0 +1,57 @@
+{
+  "value": "AA_NOTE",
+  "label": "Note",
+  "description": "Freeform scratchpad note",
+  "identity_fields": [
+    "title"
+  ],
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "note_type",
+      "label": "Note Type",
+      "type": "term",
+      "mandatory": true,
+      "terminology_ref": "AA_NOTE_TYPE"
+    },
+    {
+      "name": "content",
+      "label": "Content",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "tags",
+      "label": "Tags",
+      "type": "array",
+      "mandatory": false,
+      "array_item_type": "string"
+    },
+    {
+      "name": "linked_characters",
+      "label": "Linked Characters",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "linked_events",
+      "label": "Linked Events",
+      "type": "array",
+      "mandatory": false,
+      "array_item_type": "string"
+    },
+    {
+      "name": "linked_locations",
+      "label": "Linked Locations",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_LOCATIONS"
+    }
+  ]
+}

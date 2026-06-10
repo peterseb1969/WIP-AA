@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { WipProvider } from '@wip/react'
 import { wipClient, queryClient } from './lib/wip'
+import { BootstrapGate } from './components/BootstrapGate'
 import Layout from './components/Layout'
 import AskBar from './components/AskBar'
 import DashboardPage from './pages/DashboardPage'
@@ -25,27 +26,29 @@ const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <WipProvider client={wipClient}>
-        <BrowserRouter basename={BASENAME}>
-          <Routes>
-            <Route element={<Layout />}>
-              <Route path="/" element={<DashboardPage />} />
-              <Route path="/scenes" element={<ScenesPage />} />
-              <Route path="/corkboard" element={<CorkboardPage />} />
-              <Route path="/characters" element={<CharactersPage />} />
-              <Route path="/chapters" element={<ChaptersPage />} />
-              <Route path="/timeline" element={<TimelinePage />} />
-              <Route path="/locations" element={<LocationsPage />} />
-              <Route path="/plot-threads" element={<PlotThreadsPage />} />
-              <Route path="/notes" element={<NotesPage />} />
-              <Route path="/world-rules" element={<WorldRulesPage />} />
-              <Route path="/import" element={<ImportPage />} />
-            </Route>
-          </Routes>
-          <AskBar />
-        </BrowserRouter>
-      </WipProvider>
-    </QueryClientProvider>
+    <BootstrapGate>
+      <QueryClientProvider client={queryClient}>
+        <WipProvider client={wipClient}>
+          <BrowserRouter basename={BASENAME}>
+            <Routes>
+              <Route element={<Layout />}>
+                <Route path="/" element={<DashboardPage />} />
+                <Route path="/scenes" element={<ScenesPage />} />
+                <Route path="/corkboard" element={<CorkboardPage />} />
+                <Route path="/characters" element={<CharactersPage />} />
+                <Route path="/chapters" element={<ChaptersPage />} />
+                <Route path="/timeline" element={<TimelinePage />} />
+                <Route path="/locations" element={<LocationsPage />} />
+                <Route path="/plot-threads" element={<PlotThreadsPage />} />
+                <Route path="/notes" element={<NotesPage />} />
+                <Route path="/world-rules" element={<WorldRulesPage />} />
+                <Route path="/import" element={<ImportPage />} />
+              </Route>
+            </Routes>
+            <AskBar />
+          </BrowserRouter>
+        </WipProvider>
+      </QueryClientProvider>
+    </BootstrapGate>
   )
 }

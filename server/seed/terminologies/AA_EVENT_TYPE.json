@@ -1,0 +1,52 @@
+{
+  "value": "AA_EVENT_TYPE",
+  "label": "Event Type",
+  "description": "Scene or event classification",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "SCENE",
+      "label": "Scene",
+      "aliases": []
+    },
+    {
+      "value": "BACKSTORY",
+      "label": "Backstory",
+      "aliases": [
+        "history"
+      ]
+    },
+    {
+      "value": "FLASHBACK",
+      "label": "Flashback",
+      "aliases": []
+    },
+    {
+      "value": "FLASH_FORWARD",
+      "label": "Flash-forward",
+      "aliases": []
+    },
+    {
+      "value": "DREAM",
+      "label": "Dream/Vision",
+      "aliases": [
+        "vision"
+      ]
+    },
+    {
+      "value": "PROLOGUE",
+      "label": "Prologue",
+      "aliases": []
+    },
+    {
+      "value": "EPILOGUE",
+      "label": "Epilogue",
+      "aliases": []
+    },
+    {
+      "value": "INTERLUDE",
+      "label": "Interlude",
+      "aliases": []
+    }
+  ]
+}

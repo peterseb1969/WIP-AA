@@ -1,0 +1,87 @@
+{
+  "value": "AA_EVENT",
+  "label": "Event/Scene",
+  "description": "Scene or event \u2014 the hub entity linking characters, locations, chapters, and plot threads. Ordering comes from AA_BOOK_STRUCTURE.",
+  "identity_fields": [
+    "title"
+  ],
+  "fields": [
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "event_type",
+      "label": "Event Type",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_EVENT_TYPE"
+    },
+    {
+      "name": "story_time_raw",
+      "label": "Story Time (display)",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "story_time_sort",
+      "label": "Story Time (sort key)",
+      "type": "integer",
+      "mandatory": true
+    },
+    {
+      "name": "location",
+      "label": "Location",
+      "type": "term",
+      "mandatory": false,
+      "terminology_ref": "AA_LOCATIONS"
+    },
+    {
+      "name": "characters",
+      "label": "Characters",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_CHARACTERS"
+    },
+    {
+      "name": "summary",
+      "label": "Summary",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "prose",
+      "label": "Prose",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "plot_threads",
+      "label": "Plot Threads",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_PLOT_THREADS"
+    },
+    {
+      "name": "emotional_beat",
+      "label": "Emotional Beat",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "notes",
+      "label": "Notes",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "suppressed_suggestions",
+      "label": "Suppressed Suggestions",
+      "type": "array",
+      "mandatory": false,
+      "description": "Entity term values the user intentionally excluded from this scene's annotations. Used by ValidateSceneAnnotations to avoid re-suggesting dismissed entities."
+    }
+  ]
+}

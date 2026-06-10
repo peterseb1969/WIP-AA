@@ -17,6 +17,8 @@ describes what AuthorAssist commits to so the manifest is creatable.
 | `server/index.ts` | Mounts all routes (including `/wip` proxy) under `APP_BASE_PATH`. In production, serves `dist/` statically from inside Express; in dev-with-app-source the renderer forces `NODE_ENV=development` and Caddy routes to the Vite port instead. |
 | `src/App.tsx` | `BrowserRouter basename` derived from Vite's `BASE_URL` (CASE-370 surface #10) so client-side routes work under `/apps/aa`. |
 | `src/lib/wip.ts` | Browser WIP client `baseUrl` = `${BASE_URL}wip` so proxy calls stay on the app's own path prefix. |
+| `server/lib/bootstrap.ts` + `server/bootstrap.routes.ts` + `src/components/BootstrapGate.tsx` | Offer-on-empty / use-on-exists runtime bootstrap (gene-pool pattern). On a fresh install the app offers to seed the `aa` namespace itself and writes a `BOOTSTRAP_RECORD` audit doc. |
+| `server/seed/` | Runtime seed files read by `runBootstrap()` — mirrors `data-model/` (the `/export-model` target) plus `00_BOOTSTRAP_RECORD.json`. Keep in sync when the data model evolves. |
 
 ## Ports
 

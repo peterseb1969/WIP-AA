@@ -1,0 +1,38 @@
+{
+  "value": "AA_NOTE_TYPE",
+  "label": "Note Type",
+  "description": "Scratchpad note categories",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "IDEA",
+      "label": "Idea",
+      "aliases": []
+    },
+    {
+      "value": "RESEARCH",
+      "label": "Research",
+      "aliases": []
+    },
+    {
+      "value": "VOICE",
+      "label": "Voice Note",
+      "aliases": []
+    },
+    {
+      "value": "THEME",
+      "label": "Theme/Motif",
+      "aliases": []
+    },
+    {
+      "value": "REVISION",
+      "label": "Revision Note",
+      "aliases": []
+    },
+    {
+      "value": "BRAINSTORM",
+      "label": "Brainstorm",
+      "aliases": []
+    }
+  ]
+}

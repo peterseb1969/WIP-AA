@@ -1,0 +1,9 @@
+{
+  "value": "AA_PLOT_THREADS",
+  "label": "Plot Threads",
+  "description": "Plot thread title registry",
+  "extensible": true,
+  "mutable": true,
+  "ontology": "part_of",
+  "terms": []
+}

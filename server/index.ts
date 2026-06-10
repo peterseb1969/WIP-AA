@@ -7,6 +7,7 @@ import { wipProxy } from '@wip/proxy'
 import { createWipClient } from '@wip/client'
 import { initAgent, ask } from './agent.js'
 import { parseText, extractEntities } from './import.js'
+import bootstrapRoutes from './bootstrap.routes.js'
 
 const PORT = parseInt(process.env.PORT || '3002')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -42,6 +43,9 @@ router.use((req, res, next) => {
 router.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'authorassist' })
 })
+
+// Bootstrap (offer-on-empty / use-on-exists for the aa namespace)
+router.use('/server-api', bootstrapRoutes)
 
 // --- Ask endpoint ---
 router.post('/api/ask', async (req, res) => {
