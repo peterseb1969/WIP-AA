@@ -1,0 +1,13 @@
+node_modules
+dist
+.git
+.claude
+.env
+*.md
+tests
+docs
+data-model
+yac-discussions
+tools
+public/.DS_Store
+.DS_Store

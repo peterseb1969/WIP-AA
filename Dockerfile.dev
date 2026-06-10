@@ -1,0 +1,20 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# curl for healthchecks; the dev_simple renderer probes /api/health on the
+# http port to mark the app healthy.
+RUN apk add --no-cache curl
+
+# node_modules is pre-populated at image build, then masked at runtime by
+# the named volume the dev_simple renderer mounts at /app/node_modules.
+# First boot: container's npm ci populates the empty volume.
+# Subsequent boots: the volume is already populated, lib tarballs are
+# resolved from the bind-mounted /app/libs.
+COPY package.json package-lock.json ./
+COPY libs/ libs/
+RUN npm ci
+
+# CMD runs the host's `dev` script (concurrent server + Vite) once the
+# bind mount has provided the rest of the source. PORT and VITE_PORT
+# are injected by the renderer based on the manifest's port declarations.
+CMD ["npm", "run", "dev"]

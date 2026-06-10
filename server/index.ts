@@ -1,6 +1,8 @@
 import 'dotenv/config'
-import express from 'express'
+import express, { Router } from 'express'
 import cors from 'cors'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import { wipProxy } from '@wip/proxy'
 import { createWipClient } from '@wip/client'
 import { initAgent, ask } from './agent.js'
@@ -11,27 +13,38 @@ const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const WIP_API_KEY = process.env.WIP_API_KEY || 'dev_master_key_for_testing'
 const WIP_NAMESPACE = process.env.WIP_NAMESPACE || 'aa'
 
+// APP_BASE_PATH — external path prefix when behind a reverse proxy.
+// E.g. /apps/aa when Caddy routes https://host/apps/aa/* to this app.
+// The reverse proxy does NOT strip the prefix; the app mounts every route
+// under APP_BASE_PATH so asset URLs and proxied paths match.
+const BASE_PATH = (process.env.APP_BASE_PATH || '').replace(/\/$/, '') || '/'
+
 // Cached term enums for AI extraction prompt
 let termEnums: { roles: string[], locationTypes: string[] } | undefined
 const app = express()
+const router = Router()
 
 app.use(cors())
 
 // WIP API proxy — must be before express.json() (uses raw body forwarding)
-app.use('/wip', wipProxy({
+router.use('/wip', wipProxy({
   baseUrl: WIP_BASE_URL,
   apiKey: WIP_API_KEY,
 }))
 
-app.use(express.json({ limit: '5mb' }))
+// JSON body parsing for our own routes (skips /wip, already handled above).
+router.use((req, res, next) => {
+  if (req.path.startsWith('/wip')) return next()
+  express.json({ limit: '5mb' })(req, res, next)
+})
 
 // --- Health ---
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok' })
+router.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', service: 'authorassist' })
 })
 
 // --- Ask endpoint ---
-app.post('/api/ask', async (req, res) => {
+router.post('/api/ask', async (req, res) => {
   const { question, sessionId } = req.body
   if (!question) {
     res.status(400).json({ error: 'question is required' })
@@ -47,7 +60,7 @@ app.post('/api/ask', async (req, res) => {
 })
 
 // --- Import: parse text into chapters/scenes ---
-app.post('/api/import/parse', (req, res) => {
+router.post('/api/import/parse', (req, res) => {
   const { text } = req.body
   if (!text) {
     res.status(400).json({ error: 'text is required' })
@@ -63,7 +76,7 @@ app.post('/api/import/parse', (req, res) => {
 })
 
 // --- Import: extract entities from a chapter ---
-app.post('/api/import/extract', async (req, res) => {
+router.post('/api/import/extract', async (req, res) => {
   const { text, title } = req.body
   if (!text) {
     res.status(400).json({ error: 'text is required' })
@@ -87,7 +100,7 @@ const TEMPLATE_VALUES = [
   'AA_PLOT_THREAD', 'AA_NOTE', 'AA_WORLD_RULE', 'AA_BOOK_STRUCTURE',
 ] as const
 
-app.delete('/api/book/reset', async (req, res) => {
+router.delete('/api/book/reset', async (req, res) => {
   try {
     const { templates = [], clearNames = false } = req.body || {}
     const templateSet = new Set(templates as string[])
@@ -180,12 +193,30 @@ async function loadTermEnums() {
   }
 }
 
+// In production (compose / k8s targets), serve the built frontend from dist/.
+// Dev-with-app-source forces NODE_ENV=development, so this block is skipped
+// and the dev_simple renderer routes /apps/aa/* to the Vite dev port instead.
+if (process.env.NODE_ENV === 'production') {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url))
+  const distPath = path.resolve(__dirname, '..', 'dist')
+  router.use(express.static(distPath))
+  const indexHtml = path.join(distPath, 'index.html')
+  router.get('/', (_req, res) => { res.sendFile(indexHtml) })
+  router.get('{*path}', (_req, res) => { res.sendFile(indexHtml) })
+}
+
+// Mount router at BASE_PATH
+app.use(BASE_PATH, router)
+
 // --- Start ---
 async function main() {
   await initAgent()
   await loadTermEnums()
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`)
+    if (BASE_PATH !== '/') {
+      console.log(`  base path: ${BASE_PATH}`)
+    }
   })
 }
 
