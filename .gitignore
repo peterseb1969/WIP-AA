@@ -1,7 +1,12 @@
 node_modules/
 dist/
 .env
+# Versioned lib tarballs accumulate locally (CASE-441); only the maintained
+# -latest.tgz per lib is tracked — CI builds need them in the repo.
 *.tgz
+!libs/wip-client-latest.tgz
+!libs/wip-react-latest.tgz
+!libs/wip-proxy-latest.tgz
 .DS_Store
 .claude-context-pct
 .claude/projects/
