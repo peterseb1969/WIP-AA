@@ -1,12 +1,20 @@
 node_modules/
 dist/
 .env
-# Versioned lib tarballs accumulate locally (CASE-441); only the maintained
-# -latest.tgz per lib is tracked — CI builds need them in the repo.
+# Lib tarballs are ignored by default, EXCEPT the pinned versioned ones the
+# CI image build needs in-repo (CASE-442: versioned filenames are immutable,
+# so package-lock integrity hashes can never silently mismatch — unlike the
+# retired -latest.tgz convention, which broke with EINTEGRITY on every lib
+# rebuild).
+#
+# Refresh procedure (run by scripts/create-app-project.sh --refresh):
+#   1. The script drops new versioned tarballs + syncs package.json/lockfile.
+#   2. git rm the old versioned .tgz; git add -f the new ones.
+#   3. Update the three exception lines below to the new filenames.
 *.tgz
-!libs/wip-client-latest.tgz
-!libs/wip-react-latest.tgz
-!libs/wip-proxy-latest.tgz
+!libs/wip-client-0.21.0.tgz
+!libs/wip-react-0.13.0.tgz
+!libs/wip-proxy-0.2.0.tgz
 .DS_Store
 .claude-context-pct
 .claude/projects/
