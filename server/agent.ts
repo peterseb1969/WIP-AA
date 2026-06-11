@@ -23,6 +23,7 @@ const env = () => ({
   MCP_CWD: process.env.MCP_CWD || '',
   MCP_MODULE: process.env.MCP_MODULE || 'wip_mcp',
   ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
+  WIP_API_KEY: process.env.WIP_API_KEY || '',
   CLAUDE_MODEL: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
   WIP_NAMESPACE: process.env.WIP_NAMESPACE || '',
   MAX_TURNS: parseInt(process.env.MAX_TURNS || '15'),
@@ -82,11 +83,18 @@ function createTransport() {
   const e = env()
   if (e.MCP_URL) {
     const url = new URL(e.MCP_URL)
+    // The platform MCP endpoint requires X-API-Key on every request
+    // (CASE-451) — a transport without it dies at initialize with 401.
+    const authHeaders = { 'X-API-Key': e.WIP_API_KEY }
     if (e.MCP_TRANSPORT === 'sse' || e.MCP_URL.endsWith('/sse')) {
-      return new SSEClientTransport(url)
+      return new SSEClientTransport(url, {
+        requestInit: { headers: authHeaders },
+      })
     }
     // Default to Streamable HTTP for remote URLs
-    return new StreamableHTTPClientTransport(url)
+    return new StreamableHTTPClientTransport(url, {
+      requestInit: { headers: authHeaders },
+    })
   }
 
   // Stdio: spawn local MCP server process
