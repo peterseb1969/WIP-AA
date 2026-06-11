@@ -18,5 +18,6 @@ dist/
 .DS_Store
 .claude-context-pct
 .claude/projects/
+.claude/.session-id
 .ruff_cache/
 yac-discussions
