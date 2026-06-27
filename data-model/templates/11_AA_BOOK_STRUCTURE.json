@@ -17,7 +17,8 @@
       "label": "Chapters",
       "type": "array",
       "mandatory": false,
-      "array_template_ref": "AA_CHAPTER_SLOT"
+      "array_template_ref": "AA_CHAPTER_SLOT",
+      "array_template_ref_version": 1
     }
   ]
 }

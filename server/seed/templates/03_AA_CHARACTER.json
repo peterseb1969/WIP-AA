@@ -73,7 +73,8 @@
       "label": "Relationships",
       "type": "array",
       "mandatory": false,
-      "array_template_ref": "AA_CHAR_REL"
+      "array_template_ref": "AA_CHAR_REL",
+      "array_template_ref_version": 1
     }
   ]
 }

@@ -18,7 +18,9 @@ import { fileURLToPath } from 'node:url'
 import { createWipClient } from '@wip/client'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const NS = 'aa'
+// Default namespace 'aa'; override with WIP_NAMESPACE to bootstrap a dev/test
+// namespace (e.g. dev-authorassist) without touching production data.
+const NS = process.env.WIP_NAMESPACE || 'aa'
 const BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const API_KEY = process.env.WIP_API_KEY
 if (!API_KEY) { console.error('WIP_API_KEY not set'); process.exit(1) }

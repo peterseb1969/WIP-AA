@@ -309,7 +309,9 @@ async function writeBootstrapRecord(meta: {
  *
  * AA addition over the gene-pool template: forwards `array_template_ref`
  * and derives `array_item_type` when the seed omits it — AA's data-model
- * seeds predate the explicit array_item_type convention.
+ * seeds predate the explicit array_item_type convention. CASE-493: nested
+ * template refs now carry a mandatory pinned version; forward
+ * `array_template_ref_version` / `template_ref_version`.
  */
 function mapField(f: AnyObj): AnyObj {
   const field: AnyObj = {
@@ -327,6 +329,9 @@ function mapField(f: AnyObj): AnyObj {
   // Reference fields
   if (f.reference_type) field.reference_type = f.reference_type
   if (f.target_templates) field.target_templates = f.target_templates
+  // CASE-493: object template_ref carries a mandatory pinned version.
+  if (f.template_ref) field.template_ref = f.template_ref
+  if (f.template_ref_version !== undefined) field.template_ref_version = f.template_ref_version
 
   // Array fields
   if (f.type === 'array') {
@@ -336,7 +341,12 @@ function mapField(f: AnyObj): AnyObj {
       f.items?.type || f.array_item_type ||
       (terminologyRef ? 'term' : templateRef ? 'object' : 'string')
     if (terminologyRef) field.array_terminology_ref = terminologyRef
-    if (templateRef) field.array_template_ref = templateRef
+    if (templateRef) {
+      field.array_template_ref = templateRef
+      // CASE-493: mandatory pinned version for the nested array template.
+      field.array_template_ref_version =
+        f.items?.template_ref_version ?? f.array_template_ref_version ?? 1
+    }
   }
 
   // Validation
