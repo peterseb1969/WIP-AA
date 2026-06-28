@@ -17,6 +17,7 @@ import {
   StickyNote,
   Globe,
   Upload,
+  Settings,
   Menu,
   X,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { to: '/notes', labelKey: 'nav.notes', icon: StickyNote },
   { to: '/world-rules', labelKey: 'nav.world_rules', icon: Globe },
   { to: '/import', labelKey: 'nav.import', icon: Upload },
+  { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ] as const
 
 export default function Layout() {

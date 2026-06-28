@@ -17,6 +17,7 @@ import PlotThreadsPage from './pages/PlotThreadsPage'
 import NotesPage from './pages/NotesPage'
 import WorldRulesPage from './pages/WorldRulesPage'
 import ImportPage from './pages/ImportPage'
+import SettingsPage from './pages/SettingsPage'
 
 // CASE-370 surface #10: when the app is mounted under a path prefix
 // (e.g. /apps/aa behind the wip-deploy gateway), the router must know the
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="/notes" element={<NotesPage />} />
                 <Route path="/world-rules" element={<WorldRulesPage />} />
                 <Route path="/import" element={<ImportPage />} />
+                <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Routes>
             <AskBar />

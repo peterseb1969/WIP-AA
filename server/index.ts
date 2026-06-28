@@ -8,6 +8,7 @@ import { createWipClient } from '@wip/client'
 import { initAgent, ask } from './agent.js'
 import { parseText, extractEntities } from './import.js'
 import bootstrapRoutes from './bootstrap.routes.js'
+import configRoutes from './config.routes.js'
 
 const PORT = parseInt(process.env.PORT || '3002')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -46,6 +47,9 @@ router.get('/api/health', (_req, res) => {
 
 // Bootstrap (offer-on-empty / use-on-exists for the aa namespace)
 router.use('/server-api', bootstrapRoutes)
+
+// Runtime config (Anthropic key set/rotate from the Settings UI)
+router.use('/server-api', configRoutes)
 
 // --- Ask endpoint ---
 router.post('/api/ask', async (req, res) => {

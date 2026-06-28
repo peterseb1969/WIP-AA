@@ -14,7 +14,7 @@
     "saving": "Saving...",
     "send": "Send",
     "reset": "Reset",
-    "none_dash": "— None —",
+    "none_dash": "\u2014 None \u2014",
     "add": "Add...",
     "select": "Select...",
     "no_prose": "(No prose yet)",
@@ -29,7 +29,6 @@
     "scenes": "Scenes",
     "chapter_prefix": "Chapter {{number}}"
   },
-
   "nav": {
     "scenes": "Scene Editor",
     "corkboard": "Corkboard",
@@ -41,14 +40,13 @@
     "plot_threads": "Plot Threads",
     "notes": "Notes",
     "world_rules": "World Rules",
-    "import": "Import Book"
+    "import": "Import Book",
+    "settings": "Settings"
   },
-
   "language": {
     "label": "Language",
     "en": "English"
   },
-
   "dashboard": {
     "title": "Dashboard",
     "no_project": "No project created yet. Use the AskBar to create one.",
@@ -85,7 +83,6 @@
     "deleted_result": "Deleted {{docs}} document(s) and {{terms}} name registry/ies. You can now reimport.",
     "reimport_ready": "You can now reimport."
   },
-
   "characters": {
     "title": "Characters",
     "new": "New Character",
@@ -105,7 +102,6 @@
     "voice_notes": "Voice Notes",
     "arc_summary": "Arc Summary"
   },
-
   "locations": {
     "title": "Locations",
     "new": "New Location",
@@ -118,7 +114,6 @@
     "rules": "Rules",
     "significance": "Significance"
   },
-
   "chapters_page": {
     "title": "Chapters",
     "new_chapter": "New Chapter",
@@ -129,7 +124,6 @@
     "delete_confirm": "This will permanently delete this chapter. Scenes will remain but become unassigned.",
     "pov_label": "POV: {{character}}"
   },
-
   "plot_threads": {
     "title": "Plot Threads",
     "new": "New Thread",
@@ -139,7 +133,6 @@
     "opened_ch": "Opened: Ch. {{number}}",
     "resolved_ch": "Resolved: Ch. {{number}}"
   },
-
   "notes": {
     "title": "Notes",
     "new": "New Note",
@@ -149,7 +142,6 @@
     "delete_confirm": "Delete?",
     "all": "All"
   },
-
   "world_rules": {
     "title": "World Rules",
     "new": "New Rule",
@@ -160,7 +152,6 @@
     "implications": "Implications",
     "exceptions": "Exceptions"
   },
-
   "scenes": {
     "title": "Scene Editor",
     "new": "New Scene",
@@ -172,7 +163,7 @@
     "no_scenes_in_chapter": "No scenes in this chapter yet.",
     "flow_view": "Flow view",
     "exit_flow": "Exit Flow view",
-    "flow_subtitle": "Flow view — continuous reading",
+    "flow_subtitle": "Flow view \u2014 continuous reading",
     "composition_mode": "Composition Mode",
     "maximize": "Maximize",
     "minimize": "Minimize",
@@ -196,42 +187,37 @@
     "metadata_characters": "Characters",
     "metadata_summary": "Summary",
     "metadata_notes": "Notes",
-
     "panel_characters": "Characters",
     "panel_location": "Location",
     "panel_threads": "Threads",
     "panel_rules": "Rules",
     "panel_notes": "Notes",
     "panel_validate": "Validate",
-
     "no_characters": "No characters in this scene.",
     "no_location_set": "No location set for this scene.",
-    "no_location_doc": "\"{{name}}\" — no location document found.",
+    "no_location_doc": "\"{{name}}\" \u2014 no location document found.",
     "no_threads": "No plot threads linked to this scene.",
     "no_rules": "No world rules defined.",
     "no_notes": "No notes.",
-
     "validation_empty": "No validation results. Click Validate to scan prose.",
     "validation_confirmed": "{{count}} confirmed",
     "validation_attention": "{{count}} need attention",
     "state_confirmed": "Confirmed",
     "state_missing": "Missing from prose",
-    "state_detected": "Detected — not listed",
+    "state_detected": "Detected \u2014 not listed",
     "state_suppressed": "Intentionally excluded",
     "action_add": "Add to scene",
-    "action_dismiss": "Exclude — don't suggest again",
+    "action_dismiss": "Exclude \u2014 don't suggest again",
     "action_remove": "Remove stale annotation",
-    "action_restore": "Restore — allow suggestions again",
+    "action_restore": "Restore \u2014 allow suggestions again",
     "category_character": "Characters",
     "category_location": "Locations",
     "category_plot_thread": "Plot Threads",
-
     "char_personality": "Personality",
     "char_goals": "Goals",
     "loc_atmosphere": "Atmosphere",
     "loc_rules": "Rules"
   },
-
   "corkboard": {
     "title": "Corkboard",
     "loading": "Loading corkboard...",
@@ -249,7 +235,6 @@
     "all_chapters": "All chapters",
     "all_scenes": "All Scenes"
   },
-
   "timeline": {
     "title": "Timeline",
     "loading": "Loading timeline...",
@@ -261,9 +246,8 @@
     "all_characters": "All characters",
     "all_locations": "All locations",
     "time_point": "Time point {{number}}",
-    "parallel_events": "({{count}} events — parallel)"
+    "parallel_events": "({{count}} events \u2014 parallel)"
   },
-
   "import": {
     "title": "Import Book",
     "step_upload": "Upload",
@@ -272,15 +256,12 @@
     "step_confirm": "Confirm",
     "step_importing": "Importing",
     "step_done": "Done",
-
     "paste_label": "Paste your manuscript or upload a .txt file",
     "upload_txt": "Upload .txt",
     "parse_structure": "Parse Structure",
     "parsing": "Parsing...",
-
     "detected_summary": "Detected <strong>{{chapters}}</strong> chapters with <strong>{{scenes}}</strong> scenes. Uncheck items to exclude them. Edit titles inline.",
     "extract_entities": "Extract Entities",
-
     "entity_instructions": "Everything on this list will be imported. Remove what you don't need, merge duplicates, then continue.",
     "analysing": "Analysing chapter {{current}} of {{total}}...",
     "merge_aliases": "Merge Aliases",
@@ -292,20 +273,16 @@
     "no_characters": "No characters detected.",
     "no_locations": "No locations detected.",
     "no_threads": "No plot threads detected.",
-
     "confirm_total": "Ready to create <strong>{{total}}</strong> documents in WIP:",
     "confirm_warning": "This will create new documents in WIP. If entities with the same identity fields already exist, new versions will be created.",
     "create_import": "Create & Import",
-
     "importing_progress": "Importing... ({{current}}/{{total}})",
     "importing_step": "Creating {{type}}...",
-
     "done_title": "Import Complete",
     "done_message": "Successfully imported your manuscript.",
     "view_dashboard": "View Dashboard",
     "view_chapters": "View Chapters"
   },
-
   "ask_bar": {
     "title": "Ask",
     "new_chat": "New",
@@ -318,7 +295,6 @@
     "error_prefix": "Error: {{message}}",
     "connection_error": "Connection error: {{message}}"
   },
-
   "draft_banner": {
     "unsaved_draft": "Unsaved draft:",
     "click_resume": "Click to resume",
@@ -326,102 +302,259 @@
     "discard_title": "Discard draft and revert to saved version",
     "hide_title": "Hide this warning"
   },
-
   "alias_manager": {
     "also_known_as": "Also known as",
     "add_placeholder": "Add alias...",
     "add_title": "Add alias",
     "remove_title": "Remove \"{{alias}}\""
   },
-
   "entities": {
     "character": {
       "label": "Character",
       "fields": {
-        "name": { "label": "Name", "placeholder": "Character name" },
-        "role": { "label": "Role" },
-        "age": { "label": "Age", "placeholder": "e.g. Late 20s, 42" },
-        "description": { "label": "Description", "placeholder": "Physical appearance, distinguishing features" },
-        "personality": { "label": "Personality", "placeholder": "Key personality traits" },
-        "backstory": { "label": "Backstory", "placeholder": "Background and history" },
-        "goals": { "label": "Goals", "placeholder": "What drives this character?" },
-        "flaws": { "label": "Flaws", "placeholder": "Weaknesses, blind spots" },
-        "voice_notes": { "label": "Voice Notes", "placeholder": "How they speak, verbal tics" }
+        "name": {
+          "label": "Name",
+          "placeholder": "Character name"
+        },
+        "role": {
+          "label": "Role"
+        },
+        "age": {
+          "label": "Age",
+          "placeholder": "e.g. Late 20s, 42"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "Physical appearance, distinguishing features"
+        },
+        "personality": {
+          "label": "Personality",
+          "placeholder": "Key personality traits"
+        },
+        "backstory": {
+          "label": "Backstory",
+          "placeholder": "Background and history"
+        },
+        "goals": {
+          "label": "Goals",
+          "placeholder": "What drives this character?"
+        },
+        "flaws": {
+          "label": "Flaws",
+          "placeholder": "Weaknesses, blind spots"
+        },
+        "voice_notes": {
+          "label": "Voice Notes",
+          "placeholder": "How they speak, verbal tics"
+        }
       }
     },
     "location": {
       "label": "Location",
       "fields": {
-        "name": { "label": "Name", "placeholder": "Location name" },
-        "type": { "label": "Type" },
-        "description": { "label": "Description", "placeholder": "What does it look like?" },
-        "atmosphere": { "label": "Atmosphere", "placeholder": "Mood, sounds, smells" },
-        "rules": { "label": "Rules", "placeholder": "What rules apply here?" },
-        "significance": { "label": "Significance", "placeholder": "Why does this place matter?" }
+        "name": {
+          "label": "Name",
+          "placeholder": "Location name"
+        },
+        "type": {
+          "label": "Type"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "What does it look like?"
+        },
+        "atmosphere": {
+          "label": "Atmosphere",
+          "placeholder": "Mood, sounds, smells"
+        },
+        "rules": {
+          "label": "Rules",
+          "placeholder": "What rules apply here?"
+        },
+        "significance": {
+          "label": "Significance",
+          "placeholder": "Why does this place matter?"
+        }
       }
     },
     "chapter": {
       "label": "Chapter",
       "fields": {
-        "title": { "label": "Title", "placeholder": "Chapter title" },
-        "summary": { "label": "Summary", "placeholder": "What happens in this chapter?" },
-        "status": { "label": "Status" },
-        "pov_character": { "label": "POV Character" },
-        "themes": { "label": "Themes", "placeholder": "Add theme..." },
-        "notes": { "label": "Notes", "placeholder": "Chapter notes" }
+        "title": {
+          "label": "Title",
+          "placeholder": "Chapter title"
+        },
+        "summary": {
+          "label": "Summary",
+          "placeholder": "What happens in this chapter?"
+        },
+        "status": {
+          "label": "Status"
+        },
+        "pov_character": {
+          "label": "POV Character"
+        },
+        "themes": {
+          "label": "Themes",
+          "placeholder": "Add theme..."
+        },
+        "notes": {
+          "label": "Notes",
+          "placeholder": "Chapter notes"
+        }
       }
     },
     "scene": {
       "label": "Scene",
       "fields": {
-        "title": { "label": "Title", "placeholder": "Scene title" },
-        "event_type": { "label": "Event Type" },
-        "story_time_raw": { "label": "Story Time", "placeholder": "e.g. Day 1, Morning after the battle" },
-        "story_time_sort": { "label": "Sort Order (numeric)", "placeholder": "10" },
-        "location": { "label": "Location" },
-        "characters": { "label": "Characters" },
-        "summary": { "label": "Summary", "placeholder": "What happens in this scene?" },
-        "plot_threads": { "label": "Plot Threads" },
-        "emotional_beat": { "label": "Emotional Beat", "placeholder": "The emotional tone" }
+        "title": {
+          "label": "Title",
+          "placeholder": "Scene title"
+        },
+        "event_type": {
+          "label": "Event Type"
+        },
+        "story_time_raw": {
+          "label": "Story Time",
+          "placeholder": "e.g. Day 1, Morning after the battle"
+        },
+        "story_time_sort": {
+          "label": "Sort Order (numeric)",
+          "placeholder": "10"
+        },
+        "location": {
+          "label": "Location"
+        },
+        "characters": {
+          "label": "Characters"
+        },
+        "summary": {
+          "label": "Summary",
+          "placeholder": "What happens in this scene?"
+        },
+        "plot_threads": {
+          "label": "Plot Threads"
+        },
+        "emotional_beat": {
+          "label": "Emotional Beat",
+          "placeholder": "The emotional tone"
+        }
       }
     },
     "plot_thread": {
       "label": "Plot Thread",
       "fields": {
-        "title": { "label": "Title", "placeholder": "Thread title" },
-        "status": { "label": "Status" },
-        "description": { "label": "Description", "placeholder": "What is this thread about?" },
-        "opened_chapter": { "label": "Opened In Chapter", "placeholder": "1" },
-        "characters": { "label": "Characters" },
-        "notes": { "label": "Notes", "placeholder": "Notes about this thread" }
+        "title": {
+          "label": "Title",
+          "placeholder": "Thread title"
+        },
+        "status": {
+          "label": "Status"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "What is this thread about?"
+        },
+        "opened_chapter": {
+          "label": "Opened In Chapter",
+          "placeholder": "1"
+        },
+        "characters": {
+          "label": "Characters"
+        },
+        "notes": {
+          "label": "Notes",
+          "placeholder": "Notes about this thread"
+        }
       }
     },
     "note": {
       "label": "Note",
       "fields": {
-        "title": { "label": "Title", "placeholder": "Note title" },
-        "note_type": { "label": "Type" },
-        "content": { "label": "Content", "placeholder": "Note content..." },
-        "tags": { "label": "Tags", "placeholder": "Add tag..." },
-        "linked_characters": { "label": "Linked Characters" },
-        "linked_locations": { "label": "Linked Locations" },
-        "linked_plot_threads": { "label": "Linked Plot Threads" }
+        "title": {
+          "label": "Title",
+          "placeholder": "Note title"
+        },
+        "note_type": {
+          "label": "Type"
+        },
+        "content": {
+          "label": "Content",
+          "placeholder": "Note content..."
+        },
+        "tags": {
+          "label": "Tags",
+          "placeholder": "Add tag..."
+        },
+        "linked_characters": {
+          "label": "Linked Characters"
+        },
+        "linked_locations": {
+          "label": "Linked Locations"
+        },
+        "linked_plot_threads": {
+          "label": "Linked Plot Threads"
+        }
       }
     },
     "world_rule": {
       "label": "World Rule",
       "fields": {
-        "name": { "label": "Name", "placeholder": "Rule name" },
-        "domain": { "label": "Domain", "placeholder": "e.g. Magic, Physics, Social" },
-        "rule": { "label": "Rule", "placeholder": "Describe the rule" },
-        "implications": { "label": "Implications", "placeholder": "What does this mean for the story?" },
-        "exceptions": { "label": "Exceptions", "placeholder": "When does this rule not apply?" },
-        "related_characters": { "label": "Related Characters" },
-        "related_locations": { "label": "Related Locations" }
+        "name": {
+          "label": "Name",
+          "placeholder": "Rule name"
+        },
+        "domain": {
+          "label": "Domain",
+          "placeholder": "e.g. Magic, Physics, Social"
+        },
+        "rule": {
+          "label": "Rule",
+          "placeholder": "Describe the rule"
+        },
+        "implications": {
+          "label": "Implications",
+          "placeholder": "What does this mean for the story?"
+        },
+        "exceptions": {
+          "label": "Exceptions",
+          "placeholder": "When does this rule not apply?"
+        },
+        "related_characters": {
+          "label": "Related Characters"
+        },
+        "related_locations": {
+          "label": "Related Locations"
+        }
       }
     },
     "new_title": "New {{entity}}",
     "edit_title": "Edit {{entity}}",
     "create_btn": "Create {{entity}}"
+  },
+  "settings": {
+    "title": "Settings",
+    "saved_persisted": "API key saved and persisted \u2014 it will survive a restart.",
+    "saved_session": "API key set for this session.",
+    "anthropic": {
+      "description": "The Anthropic API key powers the Ask bar and AI manuscript import. Set or rotate it here without redeploying.",
+      "status": "Current key",
+      "configured": "Configured",
+      "yes_last4": "Yes (\u2026{{last4}})",
+      "source": "Source",
+      "source_override": "Set at runtime (this session)",
+      "source_file": "Key file",
+      "source_env": "Environment variable",
+      "source_none": "Not configured",
+      "agent": "Ask agent",
+      "agent_ready": "Ready",
+      "agent_not_ready": "Not initialised",
+      "set_title": "Set or rotate key",
+      "key_label": "Anthropic API key",
+      "persist": "Persist to the key file (survives restart)",
+      "persist_unavailable": "Persistence unavailable (set ANTHROPIC_API_KEY_FILE to enable) \u2014 key applies to this session only",
+      "validating": "Validating\u2026",
+      "set_button": "Set key"
+    }
   }
 }

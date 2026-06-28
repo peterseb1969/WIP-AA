@@ -4,6 +4,7 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'fs'
+import { anthropicKey } from './lib/anthropic-key.js'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -22,7 +23,6 @@ const env = () => ({
   MCP_PYTHON: process.env.MCP_PYTHON || '',
   MCP_CWD: process.env.MCP_CWD || '',
   MCP_MODULE: process.env.MCP_MODULE || 'wip_mcp',
-  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || '',
   WIP_API_KEY: process.env.WIP_API_KEY || '',
   CLAUDE_MODEL: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
   WIP_NAMESPACE: process.env.WIP_NAMESPACE || '',
@@ -113,11 +113,17 @@ function createTransport() {
   })
 }
 
+/** True once the MCP client is connected and the agent can answer /api/ask. */
+export function isAgentReady(): boolean {
+  return mcpClient !== null
+}
+
 export async function initAgent() {
-  if (!env().ANTHROPIC_API_KEY) {
-    console.warn('⚠ ANTHROPIC_API_KEY not set — /api/ask will be unavailable')
+  if (!anthropicKey()) {
+    console.warn('⚠ No Anthropic key (override/file/env) — /api/ask unavailable until one is set via Settings')
     return
   }
+  if (mcpClient) return // already initialised
 
   const transport = createTransport()
   mcpClient = new Client({ name: 'wip-query-agent', version: '0.1.0' })
@@ -163,7 +169,7 @@ export async function ask(
   sessionId?: string,
 ): Promise<{ answer: string; toolCalls: number; sessionId: string }> {
   if (!mcpClient) {
-    throw new Error('Agent not initialised — is ANTHROPIC_API_KEY set?')
+    throw new Error('Agent not initialised — set an Anthropic API key in Settings')
   }
 
   const id = sessionId || crypto.randomUUID()
@@ -178,7 +184,7 @@ export async function ask(
   session.messages.push({ role: 'user', content: question })
 
   const e = env()
-  const anthropic = new Anthropic({ apiKey: e.ANTHROPIC_API_KEY })
+  const anthropic = new Anthropic({ apiKey: anthropicKey() })
   let totalToolCalls = 0
 
   for (let turn = 0; turn < e.MAX_TURNS; turn++) {
