@@ -898,6 +898,14 @@ export default function ImportPage() {
         try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
 
+      // Character term values that survived review. Merge/delete/rename edits
+      // mutate `characters` but not `chapterCharacters` (frozen at extraction),
+      // so a scene can tag a character that was merged away or removed and whose
+      // term was therefore never created. Filter scene tags to created terms
+      // only — otherwise the import strands on
+      // "Value 'X' is not valid for terminology AA_CHARACTERS".
+      const validCharTerms = new Set(characters.map(c => toTermValue(c.name)))
+
       // Create chapters and collect document IDs (ordered)
       const chapterDocIds: string[] = []
       for (const ch of includedChapters) {
@@ -922,7 +930,7 @@ export default function ImportPage() {
             story_time_sort: (ci + 1) * 1000 + scene.sceneOrder,
             prose: scene.prose,
             summary: chapterSummaries.get(ch.number) || '',
-            characters: chapterCharacters.get(ch.number) || [],
+            characters: (chapterCharacters.get(ch.number) || []).filter(tv => validCharTerms.has(tv)),
           })
           sceneIds.push(docId)
         }
