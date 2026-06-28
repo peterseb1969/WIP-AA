@@ -281,7 +281,12 @@
     "done_title": "Import Complete",
     "done_message": "Successfully imported your manuscript.",
     "view_dashboard": "View Dashboard",
-    "view_chapters": "View Chapters"
+    "view_chapters": "View Chapters",
+    "not_fresh_title": "This book space already contains an imported book",
+    "not_fresh_body": "Re-importing on top of existing data can't merge characters that already exist, so duplicates and failed merges result. Reset this book's data first, then import fresh.",
+    "reset_and_reimport": "Reset & import fresh",
+    "resetting": "Resetting\u2026",
+    "reset_failed": "Reset failed: {{error}}"
   },
   "ask_bar": {
     "title": "Ask",

@@ -282,7 +282,12 @@
     "done_title": "Import abgeschlossen",
     "done_message": "Dein Manuskript wurde erfolgreich importiert.",
     "view_dashboard": "Zur \u00dcbersicht",
-    "view_chapters": "Zu den Kapiteln"
+    "view_chapters": "Zu den Kapiteln",
+    "not_fresh_title": "Dieser Buchbereich enth\u00e4lt bereits ein importiertes Buch",
+    "not_fresh_body": "Ein erneuter Import \u00fcber vorhandene Daten kann bereits existierende Charaktere nicht zusammenf\u00fchren \u2014 es entstehen Duplikate und fehlgeschlagene Merges. Setze zuerst die Buchdaten zur\u00fcck und importiere dann neu.",
+    "reset_and_reimport": "Zur\u00fccksetzen & neu importieren",
+    "resetting": "Wird zur\u00fcckgesetzt\u2026",
+    "reset_failed": "Zur\u00fccksetzen fehlgeschlagen: {{error}}"
   },
   "ask_bar": {
     "title": "Fragen",

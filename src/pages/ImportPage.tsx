@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateDocument, useWipClient, useTerms } from '@wip/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   Upload,
@@ -809,6 +810,42 @@ export default function ImportPage() {
   const [importTotal, setImportTotal] = useState(0)
   const [importError, setImportError] = useState('')
   const [importedCount, setImportedCount] = useState(0)
+  const [resetting, setResetting] = useState(false)
+  const queryClient = useQueryClient()
+
+  // Freshness guard. Re-importing into a namespace that already holds a book
+  // can't consolidate existing character terms — term creation is create-only,
+  // so review-step merges silently fail to apply against terms that already
+  // exist. Detect existing characters and require a reset before a fresh
+  // import rather than letting the user hit that footgun.
+  const { data: existingChars } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1, namespace: NAMESPACE } as any)
+  const checkingFreshness = existingChars === undefined
+  const hasExistingBook = (((existingChars as any)?.items?.length) ?? 0) > 0
+
+  const handleResetBook = useCallback(async () => {
+    setResetting(true)
+    try {
+      const res = await fetch(`${BASE_PATH}api/book/reset`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          templates: ['AA_CHAPTER', 'AA_EVENT', 'AA_CHARACTER', 'AA_LOCATION', 'AA_PLOT_THREAD', 'AA_NOTE', 'AA_WORLD_RULE', 'AA_BOOK_STRUCTURE'],
+          clearNames: true,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.status !== 'ok') {
+        alert(t('import.reset_failed', { error: data.error || res.statusText }))
+        return
+      }
+      await queryClient.invalidateQueries()
+      await queryClient.refetchQueries()
+    } catch (err: any) {
+      alert(t('import.reset_failed', { error: err.message }))
+    } finally {
+      setResetting(false)
+    }
+  }, [queryClient, t])
 
   const handleParsed = (chs: ParsedChapter[], text: string) => {
     setChapters(chs)
@@ -1065,7 +1102,40 @@ export default function ImportPage() {
 
       {/* Steps */}
       {step === 'upload' ? (
-        <UploadStep onParsed={handleParsed} />
+        checkingFreshness ? (
+          <div className="flex items-center gap-3 text-text-muted py-8">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            {t('common.loading')}
+          </div>
+        ) : hasExistingBook ? (
+          <div className="bg-white border border-amber-200 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 mt-0.5 text-amber-600 flex-shrink-0" />
+              <div className="flex-1">
+                <h2 className="text-sm font-semibold text-text">{t('import.not_fresh_title')}</h2>
+                <p className="mt-1 text-sm text-text-muted">{t('import.not_fresh_body')}</p>
+                <div className="mt-4 flex gap-3">
+                  <button
+                    onClick={handleResetBook}
+                    disabled={resetting}
+                    className="flex items-center gap-2 px-4 py-2 bg-danger text-white rounded-lg hover:bg-danger/90 disabled:opacity-50 transition-colors text-sm font-medium"
+                  >
+                    {resetting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    {resetting ? t('import.resetting') : t('import.reset_and_reimport')}
+                  </button>
+                  <button
+                    onClick={() => navigate('/')}
+                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-text rounded-lg hover:bg-gray-50 transition-colors text-sm font-medium"
+                  >
+                    {t('common.cancel')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <UploadStep onParsed={handleParsed} />
+        )
       ) : null}
 
       {step === 'structure' ? (
