@@ -27,6 +27,26 @@ import BackLink from '../components/BackLink'
 const toTermValue = (text: string): string =>
   text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
 
+// Alias list for a registry term: the entity's own display name (when it
+// differs from the term value) plus each merged-away name in BOTH display and
+// term-value form — so a reference using either ("Sunny" or "SUNNY") resolves
+// to this term instead of stranding the import.
+const buildTermAliases = (name: string, tv: string, extra?: string[]): string[] => {
+  const out = new Set<string>()
+  if (name !== tv) out.add(name)
+  for (const a of extra || []) {
+    if (a && a !== tv) out.add(a)
+    const at = toTermValue(a)
+    if (at && at !== tv) out.add(at)
+  }
+  return [...out]
+}
+
+// Union of absorbed display names + their prior aliases, excluding the
+// canonical name (case-insensitive) — what a merge carries onto the survivor.
+const collectMergeAliases = (names: string[], canonical: string): string[] =>
+  [...new Set(names)].filter(n => n.toLowerCase() !== canonical.toLowerCase())
+
 const BASE_PATH = import.meta.env.BASE_URL || '/'
 
 // ── Types ────────────────────────────────────────────────
@@ -49,17 +69,21 @@ interface ExtractedCharacter {
   name: string
   role: string
   description: string
+  /** Names absorbed via merge — written as term aliases so references resolve. */
+  aliases?: string[]
 }
 
 interface ExtractedLocation {
   name: string
   type: string
   atmosphere: string
+  aliases?: string[]
 }
 
 interface ExtractedPlotThread {
   title: string
   description: string
+  aliases?: string[]
 }
 
 type Step = 'upload' | 'structure' | 'entities' | 'confirm' | 'importing' | 'done'
@@ -374,19 +398,22 @@ function EntitiesStep({
       const bestRole = selected.map(c => c.role).sort((a, b) => roleValues.indexOf(a) - roleValues.indexOf(b))[0] || selected[0]!.role
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const descriptions = [...new Set(selected.map(c => c.description).filter(Boolean))]
-      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. ') }
+      const aliases = collectMergeAliases(selected.flatMap(c => [c.name, ...(c.aliases || [])]), canonicalName)
+      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. '), aliases }
       setCharacters([merged, ...characters.filter((_, i) => !mergeSelection.has(i))])
     } else if (tab === 'locations') {
       const selected = indices.map(i => locations[i]!)
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const atmospheres = [...new Set(selected.map(l => l.atmosphere).filter(Boolean))]
-      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: atmospheres.join('. ') }
+      const aliases = collectMergeAliases(selected.flatMap(l => [l.name, ...(l.aliases || [])]), canonicalName)
+      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: atmospheres.join('. '), aliases }
       setLocations([merged, ...locations.filter((_, i) => !mergeSelection.has(i))])
     } else if (tab === 'threads') {
       const selected = indices.map(i => plotThreads[i]!)
       const canonicalTitle = [...selected].sort((a, b) => b.title.length - a.title.length)[0]!.title
       const descriptions = [...new Set(selected.map(p => p.description).filter(Boolean))]
-      const merged: ExtractedPlotThread = { title: canonicalTitle, description: descriptions.join('. ') }
+      const aliases = collectMergeAliases(selected.flatMap(p => [p.title, ...(p.aliases || [])]), canonicalTitle)
+      const merged: ExtractedPlotThread = { title: canonicalTitle, description: descriptions.join('. '), aliases }
       setPlotThreads([merged, ...plotThreads.filter((_, i) => !mergeSelection.has(i))])
     }
     cancelMerge()
@@ -887,24 +914,28 @@ export default function ImportPage() {
       // Auto-create terms in index terminologies before creating documents
       for (const c of characters) {
         const tv = toTermValue(c.name)
-        try { await wipClient.defStore.createTerm(TERMINOLOGIES.CHARACTERS, { value: tv, label: c.name, aliases: c.name !== tv ? [c.name] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.CHARACTERS, { value: tv, label: c.name, aliases: buildTermAliases(c.name, tv, c.aliases) }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
       for (const l of locations) {
         const tv = toTermValue(l.name)
-        try { await wipClient.defStore.createTerm(TERMINOLOGIES.LOCATIONS, { value: tv, label: l.name, aliases: l.name !== tv ? [l.name] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.LOCATIONS, { value: tv, label: l.name, aliases: buildTermAliases(l.name, tv, l.aliases) }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
       for (const p of plotThreads) {
         const tv = toTermValue(p.title)
-        try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: p.title !== tv ? [p.title] : [] }, { namespace: NAMESPACE }) } catch { /* may exist */ }
+        try { await wipClient.defStore.createTerm(TERMINOLOGIES.PLOT_THREADS, { value: tv, label: p.title, aliases: buildTermAliases(p.title, tv, p.aliases) }, { namespace: NAMESPACE }) } catch { /* may exist */ }
       }
 
-      // Character term values that survived review. Merge/delete/rename edits
-      // mutate `characters` but not `chapterCharacters` (frozen at extraction),
-      // so a scene can tag a character that was merged away or removed and whose
-      // term was therefore never created. Filter scene tags to created terms
-      // only — otherwise the import strands on
+      // Character term values a scene tag may legitimately reference: each
+      // created character's term value PLUS its merge aliases (in term-value
+      // form). A merged-away character resolves via its alias and keeps its
+      // scene tag; a genuinely deleted character (no alias anywhere) is dropped
+      // rather than stranding the import on
       // "Value 'X' is not valid for terminology AA_CHARACTERS".
-      const validCharTerms = new Set(characters.map(c => toTermValue(c.name)))
+      const validCharTerms = new Set<string>()
+      for (const c of characters) {
+        validCharTerms.add(toTermValue(c.name))
+        for (const a of c.aliases || []) validCharTerms.add(toTermValue(a))
+      }
 
       // Create chapters and collect document IDs (ordered)
       const chapterDocIds: string[] = []
