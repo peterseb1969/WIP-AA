@@ -14,6 +14,8 @@ WIP is the backend. This app is a frontend that maps a domain onto WIP's primiti
 
 **Verify before asserting any factual claim.** Any factual claim a cheap check could falsify — a file's contents, a function's location, a date, a count, a previous case's content — must be checked, not asserted from memory. "I'm pretty sure" is fabrication if you haven't run the check. The pattern has been observed across BE-YAC and FRanC; it is agent-agnostic.
 
+**Case numbers in code comments are provenance, never substance.** A comment must state the constraint or invariant in full prose; a `CASE-NNN` token may prefix it as history, but the comment must survive the deletion test: remove the token — does it still explain the code? "See CASE-NNN" as the whole explanation is a dead link to every reader without KB access, and case-pointer comments rot because the pointer never gets re-verified against the code around it. Anything user-facing or generated (UI copy, served API descriptions, docs your app publishes) carries no case tokens at all — those readers have no KB.
+
 ## Dev Namespace
 
 Your development namespace is `dev-authorassist`. Use it for all data modeling during development.
@@ -41,7 +43,7 @@ Your development namespace is `dev-authorassist`. Use it for all data modeling d
 
 The MCP server resolves its key from `WIP_API_KEY_FILE` (the live wip-deploy secrets file) — see `.mcp.json`. This is fine for data modeling via MCP tools.
 
-**For your app's runtime API calls**, `.env` carries `WIP_API_KEY_FILE` pointing at that same live file. Resolve the key from the file at startup — the `@wip/proxy` `apiKeyFile` option does this for you, mirroring the MCP server — rather than baking a plaintext key. A key rotation or target-redeploy is then picked up on restart instead of stranding a stale `.env` (CASE-495). This is the deployment's admin/proxy key and spans all namespaces, which a cross-namespace console needs as-is.
+**For your app's runtime API calls**, `.env` carries `WIP_API_KEY_FILE` pointing at that same live file. Resolve the key from the file at startup — the `@wip/proxy` `apiKeyFile` option does this for you, mirroring the MCP server — rather than baking a plaintext key. A key rotation or target-redeploy is then picked up on restart instead of stranding a stale `.env`. This is the deployment's admin/proxy key and spans all namespaces, which a cross-namespace console needs as-is.
 `.env` was written with `WIP_API_KEY_FILE=/Users/peter/.wip-deploy/wip-local/secrets/api-key` — no plaintext key is baked in. The runtime reads the file at startup, so rotating the deploy key or redeploying the target needs no edit here.
 
 ```bash
@@ -56,7 +58,7 @@ curl -k -X POST https://localhost:8443/api/registry/api-keys \
   -d '{"name": "authorassist", "namespaces": ["dev-authorassist"], "grant_permission": "write"}'
 ```
 
-**Multi-namespace key → pass `namespace` explicitly.** The deploy admin/proxy key spans all namespaces, so WIP cannot derive one for you — pass `namespace=dev-authorassist` on API calls that need scoping, or set `defaultNamespace` on `@wip/proxy` to scope reads (CASE-457). A single-namespace key (the least-privilege opt-in above) gets automatic derivation instead.
+**Multi-namespace key → pass `namespace` explicitly.** The deploy admin/proxy key spans all namespaces, so WIP cannot derive one for you — pass `namespace=dev-authorassist` on API calls that need scoping, or set `defaultNamespace` on `@wip/proxy` to scope reads. A single-namespace key (the least-privilege opt-in above) gets automatic derivation instead.
 
 **Grants:** writes need an explicit namespace grant. If you provision a least-privilege key, pass `grant_permission` on `create_api_key` / `POST /api/registry/api-keys`, or add a grant afterwards (`create_grant` MCP tool, `registry.createGrants` in @wip/client, or `POST /api/registry/namespaces/<ns>/grants`). Grant subject for api keys is the bare key name.
 
@@ -64,7 +66,7 @@ curl -k -X POST https://localhost:8443/api/registry/api-keys \
 
 ## The wip-deployable app contract
 
-**Read this before scaffolding any app code:** `FR-YAC/papers/wip-deployable-app-contract.md`. Four-line summary:
+**Read this before scaffolding any app code:** `docs/wip-deployable-app-contract.md` (bundled into this project by the scaffold). Four-line summary:
 
 1. **Source repo** needs `Dockerfile.dev` + correct `vite.config.ts` (`server.host: '0.0.0.0'`, dev proxy targets *your* Express port, not 3001). Client fetches use `import.meta.env.BASE_URL`, never bare paths.
 2. **WIP repo `apps/<name>/wip-app.yaml`** declares both http and dev ports, `WIP_BASE_URL` via `from_component: router`, `APP_BASE_PATH` literal, and a healthcheck that doesn't depend on WIP being reachable.
@@ -127,6 +129,7 @@ Read each template's header comment, fill in the TODO markers (namespace, app ti
 ## Reference Documentation
 
 Read these before starting:
+- `docs/Vision.md` — WIP's theses and design principles; the drift-correction mechanism when work bends toward a use case at the expense of the generic engine. Read first.
 - `docs/AI-Assisted-Development.md` — 4-phase process, data model design guide, PoNIFs quick reference
 - `docs/WIP_PoNIFs.md` — Full guide to WIP's 8 non-intuitive behaviours
 - `docs/WIP_DevGuardrails.md` — UI stack, app skeleton, testing conventions
@@ -134,6 +137,7 @@ Read these before starting:
 - `docs/technology-stack.md` — **Canonical** v1 stack (React 19 + TS + Vite + TanStack Query + Tailwind 3 + Inter); required @wip/* libraries; forbidden choices. Read before any architecture call.
 - `docs/ui-guidance.md` — **Canonical** v1 visual anchor: brand palette tokens (primary/accent/success/danger), typography hierarchy (text-2xl page titles, NOT text-3xl), component shapes (cards, modals, tinted callouts), accessibility floor. `tailwind.config.js` ships pre-extended with these tokens — use the named classes (`bg-primary`, `text-text-muted`), not inline hex.
 - `docs/ontology-support.md` — Term relations, polyhierarchy, typed relations, traversal queries
+- `docs/wip-deployable-app-contract.md` — what your app must satisfy to ship under `wip-deploy install` (Dockerfile.dev, vite.config, `apps/<name>/wip-app.yaml` ports, WIP-independent healthcheck). Read before scaffolding.
 - `templates/bootstrap/*.template` — Bootstrap pattern starting points (see "Namespace Bootstrap on Launch" above)
 
 ## Key Identity Concepts
@@ -153,7 +157,7 @@ WIP is accessed exclusively via MCP tools (94 tools, 5 resources). Before starti
 `wip://development-guide` provides the full 4-phase workflow reference if needed.
 `wip://query-assistant-prompt` provides a complete system prompt for NL query agents (used by --preset query apps).
 
-**Query preset — runtime Anthropic key (CASE-509).** The `--preset query` agent resolves its Anthropic key in priority order: a key set at runtime via the admin `/settings` page → `ANTHROPIC_API_KEY_FILE` (0600, survives restart) → `ANTHROPIC_API_KEY` (frozen at process start). So an operator can set/rotate the key from the UI with no redeploy. Two deploy requirements for this to persist: (1) declare `ANTHROPIC_API_KEY_FILE` in `apps/<name>/wip-app.yaml` pointing at a **writable, persistent mount** (otherwise a UI-set key reverts on restart); (2) the `/settings` config endpoint is admin-gated via `ADMIN_GROUPS` (default `wip-admins`) — open only in dev mode (no `OIDC_ISSUER`). The key is a secret: never put it in a WIP document, and the server returns only configured/source/last-4, never the value.
+**Query preset — runtime Anthropic key.** The `--preset query` agent resolves its Anthropic key in priority order: a key set at runtime via the admin `/settings` page → `ANTHROPIC_API_KEY_FILE` (0600, survives restart) → `ANTHROPIC_API_KEY` (frozen at process start). So an operator can set/rotate the key from the UI with no redeploy. Two deploy requirements for this to persist: (1) declare `ANTHROPIC_API_KEY_FILE` in `apps/<name>/wip-app.yaml` pointing at a **writable, persistent mount** (otherwise a UI-set key reverts on restart); (2) the `/settings` config endpoint is admin-gated via `ADMIN_GROUPS` (default `wip-admins`) — open only in dev mode (no `OIDC_ISSUER`). The key is a secret: never put it in a WIP document, and the server returns only configured/source/last-4, never the value.
 
 ## Client Libraries
 
