@@ -1,10 +1,11 @@
 /**
  * BootstrapGate — wraps the app, gating render on namespace state.
  *
- * Adapted from templates/bootstrap/BootstrapGate.tsx.template (APP_TITLE,
- * NAMESPACE_LABEL set; serverApiUrl() helper inlined — paths prefixed with
- * Vite's BASE_URL so they resolve both at '/' in local dev and under
- * /apps/aa behind the gateway).
+ * Adapted from templates/bootstrap/BootstrapGate.tsx.template (APP_TITLE
+ * set; serverApiUrl() helper inlined — paths prefixed with Vite's BASE_URL
+ * so they resolve both at '/' in local dev and under /apps/aa behind the
+ * gateway). The namespace label is the runtime NAMESPACE, read at render:
+ * a module-level copy would capture it before main.tsx has set it.
  *
  * States: checking / wip_unreachable / needs_bootstrap / incomplete /
  * bootstrapping / error / ready. `incomplete` = the namespace exists but
@@ -18,7 +19,6 @@ import { useState, useEffect, useCallback } from 'react'
 import { Database, AlertTriangle, RefreshCw, Loader2, ServerCrash } from 'lucide-react'
 import { NAMESPACE } from '../lib/constants'
 
-const NAMESPACE_LABEL = NAMESPACE
 const APP_TITLE = 'AuthorAssist'
 
 // Vite BASE_URL always ends in `/`. In dev it's `/`; behind the gateway
@@ -145,7 +145,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
               <div>
                 <p className="font-medium text-amber-800">Namespace not found</p>
                 <p className="mt-1 text-sm text-amber-600">
-                  The <code className="rounded bg-amber-100 px-1">{NAMESPACE_LABEL}</code> namespace
+                  The <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> namespace
                   does not exist. You can bootstrap it now, or restore from a backup first
                   (via the WIP console / <code className="rounded bg-amber-100 px-1">wip-deploy</code>).
                 </p>
@@ -178,7 +178,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
               <div>
                 <p className="font-medium text-amber-800">Bootstrap incomplete</p>
                 <p className="mt-1 text-sm text-amber-600">
-                  The <code className="rounded bg-amber-100 px-1">{NAMESPACE_LABEL}</code> namespace
+                  The <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> namespace
                   exists, but an earlier bootstrap never finished. Resuming re-runs every step and
                   keeps what is already there. To start over instead, delete the namespace or restore
                   a backup via the WIP console / <code className="rounded bg-amber-100 px-1">wip-deploy</code>.
