@@ -1,0 +1,46 @@
+# Commits — APP-AA-20261017-150822
+
+## fa7ee0c — agent: default WIP_NAMESPACE to 'aa' to match the server
+**Time:** 15:45
+**Files:** 1 changed, +1/-1
+**Tests:** tsc --noEmit clean; vite build clean (no test suite)
+**What:** agent.ts WIP_NAMESPACE default '' → 'aa', matching server/index.ts.
+**Why:** Carried uncommitted from APP-AA-20260705-184654 (CASE-632 follow-up); without it the agent's reporting-schema namespace injection never fired in standalone dev.
+
+## 19bdb2b — libs: bump @wip/client 0.60.0, @wip/react 0.20.0, @wip/proxy 0.5.1
+**Time:** 15:45
+**Files:** 11 changed, +93/-39
+**Tests:** tsc --noEmit clean (src + server); vite build clean; dev container restarted, npm ci picked up new libs, @wip/proxy round-trip to WIP verified in-container (namespaces + aa terminologies); no browser click-through
+**What:** Scaffold refresh from World-in-a-Pie develop 2860f4e5 shipped new versioned tarballs; pins + lockfile synced; tarballs force-added.
+**Why:** Peter asked for the latest client libs (30 minor versions behind on client).
+**Discovered:** Libs ship no CHANGELOG — breaking changes had to be mined from `git log -- libs/wip-*`. Relevant ones (CASE-778 strict term addressing, CASE-640 input_index→index, register_synonyms removal) don't touch AA's call sites. Several AA call sites cast the client `as any` (e.g. AliasManager updateTerm), so tsc can't vouch for them. Wheel build failed during refresh (`build` module not installed) — toolkit wheel stays at 0.5.0.
+
+## 8f79aad — Gene-pool refresh: commands, docs, rollover script, settings baseline
+**Time:** 15:45
+**Files:** 16 changed, +477/-100
+**Tests:** not run (no app code)
+**What:** Slash commands, wake-rollover.py, bundled docs, .mcp.json venv path, ROLE_PREFIX in .app-meta, new .settings-baseline.json, removal of the wip_toolkit 0.2.3 wheel.
+**Why:** Residue of two refreshes (pre-July and today) that had never been committed.
+
+## 1d54c88 — deploy contract: serve /api/app-config; default to AA's ports 3014/5180
+**Time:** 15:53
+**Files:** 5 changed
+**Tests:** tsc --noEmit clean; live in dev container: /apps/aa/api/app-config → 200 {"namespace":"aa"}, Cache-Control: no-store
+**What:** appConfigHandler route; server + vite port fallbacks 3002/5173 → 3014/5180; README/ARCHITECTURE/WIP_DEPLOY port mentions.
+**Why:** Contract gap found in today's deploy checks; ports were clintrial's / collided with RC+KB.
+**Discovered:** I first claimed the vite proxy fallback mismatched the server — wrong, both defaulted to 3002. SPA still hard-codes 'aa' (55 uses / 18 files); switching it to app-config at boot is unscoped follow-up.
+
+## 5dbdbce — libs: wip_toolkit 0.5.1 wheel, add wip_archive 0.1.1 wheel
+**Time:** 15:53
+**Files:** 3 changed
+**Tests:** not run
+**What:** Wheels rebuilt by a second refresh after installing `build` into World-in-a-Pie/.venv.
+**Why:** First refresh skipped both wheels (No module named build).
+
+## bbae320 — CLAUDE.md: document the real namespace (aa); merge refresh doc pass
+**Time:** 15:53
+**Files:** 1 changed (+ untracked CLAUDE.md.refresh removed)
+**Tests:** n/a
+**What:** Namespace section rewritten for aa; What This App Does filled; four refresh hunks merged; dev-namespace hunks deliberately not merged.
+**Why:** CLAUDE.md pointed at a never-created dev-authorassist namespace.
+**Discovered:** .app-meta DEV_NAMESPACE feeds the CLAUDE.md render template, which includes a "retire dev namespace via delete_namespace" step — setting it to aa would make every refresh render a delete instruction for live data, so .app-meta was left as is. AA still uses unprefixed BOOTSTRAP_RECORD and has no "incomplete" gate state — open design decision.
