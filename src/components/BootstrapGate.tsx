@@ -6,8 +6,9 @@
  * Vite's BASE_URL so they resolve both at '/' in local dev and under
  * /apps/aa behind the gateway).
  *
- * States: checking / wip_unreachable / needs_bootstrap / bootstrapping /
- * error / ready. The "restore from backup is the user's other option"
+ * States: checking / wip_unreachable / needs_bootstrap / incomplete /
+ * bootstrapping / error / ready. `incomplete` = the namespace exists but
+ * holds no bootstrap record; it only OFFERS a resume, never runs one. The "restore from backup is the user's other option"
  * message under needs_bootstrap is load-bearing — without it the app
  * implicitly says "your only choice is a fresh namespace", which can
  * destroy data the user meant to restore.
@@ -15,15 +16,16 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Database, AlertTriangle, RefreshCw, Loader2, ServerCrash } from 'lucide-react'
+import { NAMESPACE } from '../lib/constants'
 
-const NAMESPACE_LABEL = 'aa'
+const NAMESPACE_LABEL = NAMESPACE
 const APP_TITLE = 'AuthorAssist'
 
 // Vite BASE_URL always ends in `/`. In dev it's `/`; behind the gateway
 // it's `/apps/aa/`.
 const SERVER_API = `${import.meta.env.BASE_URL}server-api`
 
-type AppStatus = 'checking' | 'wip_unreachable' | 'needs_bootstrap' | 'bootstrapping' | 'ready' | 'error'
+type AppStatus = 'checking' | 'wip_unreachable' | 'needs_bootstrap' | 'incomplete' | 'bootstrapping' | 'ready' | 'error'
 
 interface BootstrapProgress {
   step: string
@@ -166,6 +168,37 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
             <p className="text-xs text-gray-400 text-center">
               If restoring from backup, do so now and then click "Check Again".
             </p>
+          </div>
+        )}
+
+        {status === 'incomplete' && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div>
+                <p className="font-medium text-amber-800">Bootstrap incomplete</p>
+                <p className="mt-1 text-sm text-amber-600">
+                  The <code className="rounded bg-amber-100 px-1">{NAMESPACE_LABEL}</code> namespace
+                  exists, but an earlier bootstrap never finished. Resuming re-runs every step and
+                  keeps what is already there. To start over instead, delete the namespace or restore
+                  a backup via the WIP console / <code className="rounded bg-amber-100 px-1">wip-deploy</code>.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={startBootstrap}
+                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Database className="h-4 w-4" /> Resume Bootstrap
+              </button>
+              <button
+                onClick={checkStatus}
+                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium hover:bg-gray-200"
+              >
+                <RefreshCw className="h-4 w-4" /> Check Again
+              </button>
+            </div>
           </div>
         )}
 

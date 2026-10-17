@@ -3,7 +3,11 @@
  *
  * Adapted from templates/bootstrap/bootstrap.server.ts.template. APP-AA
  * additions to the gene-pool body:
- *   - NAMESPACE = 'aa'.
+ *   - NAMESPACE = WIP_NAMESPACE, default 'aa'.
+ *   - checkStatus() also accepts the legacy unprefixed BOOTSTRAP_RECORD
+ *     as proof of a finished bootstrap: the live `aa` namespace was
+ *     bootstrapped before the record template became namespace-prefixed,
+ *     and without this it would read as `incomplete`.
  *   - mapField() forwards `array_template_ref` and derives
  *     `array_item_type` when the seed omits it (AA's data-model seeds
  *     predate the explicit array_item_type convention): term when a
@@ -15,10 +19,15 @@
  *      an explicit bootstrap offer. We do NOT auto-bootstrap silently.
  *   2. If the namespace DOES exist, the app uses it as-is. No schema
  *      reconciliation, no "templates differ" check. Rolling redeploys
- *      against an existing namespace must come up clean.
- *   3. On user-initiated bootstrap, write one BOOTSTRAP_RECORD audit doc
- *      capturing app version, timestamp, what was created, and the
- *      current commit SHA.
+ *      against an existing namespace must come up clean. The one
+ *      exception: a namespace with no bootstrap record never finished
+ *      bootstrapping (the record is written last) — reported as
+ *      `incomplete`, and the gate OFFERS a resume; every step is
+ *      idempotent, so re-running keeps what is already there.
+ *   3. On user-initiated bootstrap, write one AA_BOOTSTRAP_RECORD audit
+ *      doc capturing app version, timestamp, what was created, and the
+ *      current commit SHA. The value is namespace-prefixed so merging
+ *      another app's namespace into this one never collides on it.
  *
  * Restore is NOT an app concern. The bootstrap UI just MENTIONS restore
  * as an alternative the user may prefer; it does not provide UI for it.
@@ -27,7 +36,7 @@
  *   server/seed/terminologies/<VALUE>.json
  *   server/seed/templates/<NN>_<VALUE>.json  (numeric prefix orders deps)
  * server/seed/ mirrors data-model/ (the /export-model target) plus the
- * BOOTSTRAP_RECORD template — keep the two in sync when the model evolves.
+ * AA_BOOTSTRAP_RECORD template — keep the two in sync when the model evolves.
  */
 
 import { wipGet, wipPost, wipPut } from './wip-api.js'
@@ -38,7 +47,14 @@ import { fileURLToPath } from 'url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SEED_DIR = join(__dirname, '..', 'seed')
 
-const NAMESPACE = 'aa'
+const DEFAULT_NAMESPACE = 'aa'
+const NAMESPACE = process.env.WIP_NAMESPACE || DEFAULT_NAMESPACE
+
+// Derived from the authored namespace, not the runtime one, so it always
+// matches the seed file (server/seed/templates/00_AA_BOOTSTRAP_RECORD.json).
+const BOOTSTRAP_RECORD_VALUE = `${DEFAULT_NAMESPACE.toUpperCase().replace(/-/g, '_')}_BOOTSTRAP_RECORD`
+// Written by bootstraps that ran before the value was prefixed.
+const LEGACY_BOOTSTRAP_RECORD_VALUE = 'BOOTSTRAP_RECORD'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyObj = Record<string, any>
@@ -75,7 +91,7 @@ function assertBulkSuccess(response: unknown, context: string): void {
   }
 }
 
-export type BootstrapStatus = 'unknown' | 'wip_unreachable' | 'needs_bootstrap' | 'ready'
+export type BootstrapStatus = 'unknown' | 'wip_unreachable' | 'needs_bootstrap' | 'incomplete' | 'ready'
 
 export interface BootstrapProgress {
   step: string
@@ -85,10 +101,12 @@ export interface BootstrapProgress {
 }
 
 /**
- * Check if WIP is reachable and whether the namespace exists.
+ * Check if WIP is reachable, whether the namespace exists, and whether its
+ * bootstrap finished.
  *
- * Namespace exists → ready, period. No "and has expected templates" check —
- * that's schema reconciliation, a YAC/migration concern, not a startup gate.
+ * Namespace exists with a bootstrap record → ready. No "and has expected
+ * templates" check — that's schema reconciliation, a YAC/migration concern,
+ * not a startup gate. Namespace exists without a record → incomplete.
  */
 export async function checkStatus(): Promise<BootstrapStatus> {
   let namespaces: Array<{ prefix: string }>
@@ -98,14 +116,39 @@ export async function checkStatus(): Promise<BootstrapStatus> {
     return 'wip_unreachable'
   }
 
-  return namespaces.some((ns) => ns.prefix === NAMESPACE) ? 'ready' : 'needs_bootstrap'
+  if (!namespaces.some((ns) => ns.prefix === NAMESPACE)) return 'needs_bootstrap'
+  if (await hasBootstrapRecord(BOOTSTRAP_RECORD_VALUE)) return 'ready'
+  if (await hasBootstrapRecord(LEGACY_BOOTSTRAP_RECORD_VALUE)) return 'ready'
+  return 'incomplete'
+}
+
+/**
+ * True when the namespace holds at least one document of the given
+ * bootstrap-record template. A missing template (404) or any other error
+ * counts as "no record".
+ */
+async function hasBootstrapRecord(templateValue: string): Promise<boolean> {
+  try {
+    const tmpl = (await wipGet(
+      `/api/template-store/templates/by-value/${templateValue}?namespace=${NAMESPACE}`,
+    )) as { template_id: string }
+    const docs = (await wipGet(
+      `/api/document-store/documents?namespace=${NAMESPACE}&template_id=${tmpl.template_id}&page_size=1`,
+    )) as { total?: number; items?: unknown[] }
+    return (docs.total ?? docs.items?.length ?? 0) > 0
+  } catch {
+    return false
+  }
 }
 
 /**
  * Run the full bootstrap. Calls onProgress for each step.
  *
  * Order: namespace → terminologies (terms inline) → ontology term-relations
- * → templates (filename-sorted for dependency order) → BOOTSTRAP_RECORD.
+ * → templates (filename-sorted for dependency order) → AA_BOOTSTRAP_RECORD.
+ * The record is written last on purpose: its absence is what marks a run
+ * that never finished. Every earlier step is idempotent, so the same
+ * function serves a fresh bootstrap and a resume.
  */
 export async function runBootstrap(
   onProgress: (p: BootstrapProgress) => void,
@@ -138,14 +181,26 @@ export async function runBootstrap(
     }
 
     progress('terminologies', `Creating ${terminologies.length} terminologies...`)
+    // Forward every behavioural flag the seed declares, preserving an
+    // explicit false — a whitelist or truthy spread silently drops what the
+    // seed file says (extensible was dropped this way before).
     const termBulk = terminologies.map((t) => ({
       value: t.value,
       label: t.label,
       description: t.description || '',
       namespace: NAMESPACE,
-      ...(t.mutable ? { mutable: true } : {}),
+      ...(t.mutable !== undefined ? { mutable: t.mutable } : {}),
+      ...(t.extensible !== undefined ? { extensible: t.extensible } : {}),
+      ...(t.case_sensitive !== undefined ? { case_sensitive: t.case_sensitive } : {}),
+      ...(t.allow_multiple !== undefined ? { allow_multiple: t.allow_multiple } : {}),
     }))
-    const termResult = (await wipPost('/api/def-store/terminologies', termBulk)) as {
+    // on_conflict=validate: an identical terminology from an earlier run
+    // comes back 'unchanged' with its id (a resume); a different one fails
+    // loudly with incompatible_config.
+    const termResult = (await wipPost(
+      '/api/def-store/terminologies?on_conflict=validate',
+      termBulk,
+    )) as {
       results: Array<{ status: string; id: string; error?: string }>
     }
     assertBulkSuccess(termResult, 'terminologies create')
@@ -170,7 +225,7 @@ export async function runBootstrap(
 
       progress('terms', `Creating ${terms.length} terms for ${termData.value}...`)
       const termsResult = await wipPost(
-        `/api/def-store/terminologies/${termId}/terms`,
+        `/api/def-store/terminologies/${termId}/terms?on_conflict=validate`,
         terms,
       )
       assertBulkSuccess(termsResult, `terms create for ${termData.value}`)
@@ -240,12 +295,12 @@ export async function runBootstrap(
     }
 
     // Wait for template cache to refresh (PoNIF #6). Without this, the
-    // BOOTSTRAP_RECORD write below races the just-created template.
+    // bootstrap-record write below races the just-created template.
     progress('cache', 'Waiting for template cache to refresh...')
     await new Promise((resolve) => setTimeout(resolve, 6000))
 
-    // Step 6: Write the BOOTSTRAP_RECORD audit doc.
-    progress('audit', 'Writing BOOTSTRAP_RECORD audit doc...')
+    // Step 6: Write the bootstrap-record audit doc — last, see above.
+    progress('audit', `Writing ${BOOTSTRAP_RECORD_VALUE} audit doc...`)
     await writeBootstrapRecord({
       startedAt,
       templatesCreated,
@@ -266,12 +321,12 @@ export async function runBootstrap(
 }
 
 /**
- * Write the BOOTSTRAP_RECORD audit doc.
+ * Write the AA_BOOTSTRAP_RECORD audit doc.
  *
  * Canonical fields: bootstrap_id, app_version, bootstrapped_at, commit_sha,
  * templates_created, edge_types_created, terminologies_created.
  *
- * Resolve BOOTSTRAP_RECORD's template_id first — the document-store endpoint
+ * Resolve the record template's template_id first — the document-store endpoint
  * requires `template_id` (template_value is rejected, CASE-299). Explicit
  * template_version avoids the 5s "latest" cache (PoNIF #6).
  */
@@ -282,7 +337,7 @@ async function writeBootstrapRecord(meta: {
   terminologiesCreated: string[]
 }): Promise<void> {
   const tmpl = (await wipGet(
-    `/api/template-store/templates/by-value/BOOTSTRAP_RECORD?namespace=${NAMESPACE}`,
+    `/api/template-store/templates/by-value/${BOOTSTRAP_RECORD_VALUE}?namespace=${NAMESPACE}`,
   )) as { template_id: string; version: number }
 
   const bootstrapId = `bootstrap-${meta.startedAt.replace(/[:.]/g, '-')}`
@@ -301,7 +356,7 @@ async function writeBootstrapRecord(meta: {
     },
   }
   const result = await wipPost('/api/document-store/documents', [doc])
-  assertBulkSuccess(result, 'BOOTSTRAP_RECORD write')
+  assertBulkSuccess(result, `${BOOTSTRAP_RECORD_VALUE} write`)
 }
 
 /**

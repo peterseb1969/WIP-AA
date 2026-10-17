@@ -1,5 +1,5 @@
 {
-  "value": "BOOTSTRAP_RECORD",
+  "value": "AA_BOOTSTRAP_RECORD",
   "label": "Bootstrap Record",
   "description": "Audit doc written once per user-initiated bootstrap. Provenance trail: which app version created the namespace's schema, when, from which commit.",
   "identity_fields": ["bootstrap_id"],
