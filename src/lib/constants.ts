@@ -1,5 +1,14 @@
-/** WIP namespace for this book */
-export const NAMESPACE = 'aa'
+/**
+ * WIP namespace for this book. Served by the server's /api/app-config and
+ * set by main.tsx before first render — every read happens inside a
+ * component or hook, so importers always see the configured value (ES
+ * module live binding). Empty until then.
+ */
+export let NAMESPACE = ''
+
+export function setNamespace(ns: string) {
+  NAMESPACE = ns
+}
 
 /** Template values (synonyms) — stable across bootstrap */
 export const TEMPLATES = {

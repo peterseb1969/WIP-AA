@@ -1214,7 +1214,7 @@ function SceneEditor({
     createDocument.mutate(
       {
         template_id: TEMPLATES.EVENT,
-        namespace: 'aa',
+        namespace: NAMESPACE,
         data: { ...sceneData, prose },
       },
       {
@@ -1331,7 +1331,7 @@ function SceneEditor({
         createDocument.mutate(
           {
             template_id: TEMPLATES.EVENT,
-            namespace: 'aa',
+            namespace: NAMESPACE,
             data: { ...sceneData, prose: firstHtml },
           },
           { onSuccess: () => resolve(), onError: reject }
@@ -1344,7 +1344,7 @@ function SceneEditor({
         createDocument.mutate(
           {
             template_id: TEMPLATES.EVENT,
-            namespace: 'aa',
+            namespace: NAMESPACE,
             data: {
               title: newTitle,
               event_type: sceneData.event_type,
@@ -1378,7 +1378,7 @@ function SceneEditor({
           createDocument.mutate(
             {
               template_id: TEMPLATES.BOOK_STRUCTURE,
-              namespace: 'aa',
+              namespace: NAMESPACE,
               data: { ...structure.raw, chapters: newChapters },
             },
             { onSuccess: () => resolve(), onError: reject }
@@ -1427,7 +1427,7 @@ function SceneEditor({
     createDocument.mutate(
       {
         template_id: TEMPLATES.EVENT,
-        namespace: 'aa',
+        namespace: NAMESPACE,
         data: updatedData as unknown as Record<string, unknown>,
       },
       {

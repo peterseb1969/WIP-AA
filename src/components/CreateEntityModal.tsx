@@ -362,7 +362,7 @@ export default function CreateEntityModal({
       }
 
       createDoc.mutate(
-        { template_id: config.templateId, namespace: 'aa', data },
+        { template_id: config.templateId, namespace: NAMESPACE, data },
         {
           onSuccess: () => {
             onCreated?.()

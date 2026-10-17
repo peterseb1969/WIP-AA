@@ -17,6 +17,3 @@ export const queryClient = new QueryClient({
     },
   },
 })
-
-/** The WIP namespace for this book */
-export const WIP_NAMESPACE = 'aa'

@@ -938,7 +938,7 @@ export default function ImportPage() {
     const createOne = (templateId: string, data: Record<string, unknown>): Promise<string> => {
       return new Promise((resolve, reject) => {
         createDocument.mutate(
-          { template_id: templateId, namespace: 'aa', data },
+          { template_id: templateId, namespace: NAMESPACE, data },
           {
             onSuccess: (result: any) => { created++; setImportProgress(created); resolve(result.document_id) },
             onError: (err) => { created++; setImportProgress(created); reject(err) },
