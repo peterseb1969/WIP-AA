@@ -1,7 +1,9 @@
 # AuthorAssist Roadmap
 
 ## Next Up
+- **Fix split scene** — Second half never appears; the text after the cursor is lost. See KNOWN_ISSUES
 - **Fix scene editor first-load** — Editor may appear unresponsive on first visit. Likely TipTap initialization timing.
+- **Alias collision check** — Warn when an alias is already a label/alias of another entity in the same terminology
 
 ## Backlog
 - **Analyse button + Prompt Library** — AI-powered scene analysis with editable prompt library. Each analysis type (Continuity Check, Character Voice, Style Polish, Plot Intelligence, etc.) is a prompt definition with: name, context selector (which WIP entities to include), system prompt, user prompt template with placeholders, output format. Prompts stored as WIP documents (AA_PROMPT template) or local JSON for v1. UI: dropdown on Analyse button to pick analysis type, "Manage Prompts..." opens library editor. Results in Scene Editor context panel AI tab. Requires Anthropic API key — optional enhancement, not a gate
@@ -22,9 +24,12 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Deploy contract: `/api/app-config` route; the SPA reads its namespace from it at boot (no hard-coded `aa`); AA's own ports 3014/5180 as defaults (2026-10-17)
+- Bootstrap: namespace-prefixed `AA_BOOTSTRAP_RECORD` (legacy `BOOTSTRAP_RECORD` still accepted), "incomplete" state with idempotent resume, bootstrap follows `WIP_NAMESPACE` (2026-10-17)
+- Libraries: @wip/client 0.60.0, @wip/react 0.20.0, @wip/proxy 0.5.1 (2026-10-17)
 - Alias management: AliasManager component on Characters, Locations, and Plot Threads detail pages. Add/remove aliases as tags, immediate save via WIP API. No console access needed
 - ValidateSceneAnnotations: regex-based prose scanning for characters, locations, plot threads. Four states (confirmed, missing, detected, suppressed). Shield button in toolbar, Validate tab in context panel. Actions: add, dismiss, remove, restore. AA_EVENT template v2 with `suppressed_suggestions` field
-- Split scene: scissors button splits prose at cursor (paragraph boundary), creates new scene, updates book structure
+- Split scene: scissors button splits prose at cursor (paragraph boundary), creates new scene, updates book structure — **but see KNOWN_ISSUES: the second half is lost**
 - Book structure refactoring: AA_BOOK_STRUCTURE replaces chapter_number/scene_order fields
 - Dashboard "Danger Zone": per-entity-type deletion with checkboxes + name registry toggle
 - Unsaved draft banner: dismiss (session-hide) vs discard (revert to WIP) + reliable resume navigation
