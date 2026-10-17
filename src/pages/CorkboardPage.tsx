@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { useDocuments } from '@wip/react'
+import { useDocuments, useUpdateDocument } from '@wip/react'
 import {
   LayoutGrid,
   PenTool,
@@ -78,9 +78,18 @@ function wordCount(text?: string): number {
 function SceneCard({
   event,
   colorClass,
+  dnd,
 }: {
   event: { document_id: string; data: EventData }
   colorClass: string
+  /** Present only where cards can be reordered (group by chapter). */
+  dnd?: {
+    onDragStart: () => void
+    onDragEnd: () => void
+    onDropBefore: () => void
+    isDropTarget: boolean
+    setDropTarget: (on: boolean) => void
+  }
 }) {
   const { t } = useTranslation()
   const wc = wordCount(event.data.prose)
@@ -88,7 +97,19 @@ function SceneCard({
   return (
     <Link
       to={`/scenes?id=${event.document_id}`}
-      className={`block bg-white rounded-lg border border-gray-200 border-l-4 ${colorClass} p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group`}
+      draggable={!!dnd}
+      onDragStart={dnd ? (e) => {
+        e.dataTransfer.effectAllowed = 'move'
+        e.dataTransfer.setData('text/plain', event.document_id)
+        dnd.onDragStart()
+      } : undefined}
+      onDragEnd={dnd?.onDragEnd}
+      onDragOver={dnd ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.setDropTarget(true) } : undefined}
+      onDragLeave={dnd ? () => dnd.setDropTarget(false) : undefined}
+      onDrop={dnd ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.onDropBefore() } : undefined}
+      className={`block bg-white rounded-lg border border-gray-200 border-l-4 ${colorClass} p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group ${
+        dnd?.isDropTarget ? 'ring-2 ring-primary ring-offset-2' : ''
+      }`}
       style={{ minWidth: 180, maxWidth: 240 }}
     >
       <div className="flex items-start justify-between gap-1 mb-1.5">
@@ -146,7 +167,33 @@ export default function CorkboardPage() {
   const [colorBy, setColorBy] = useState<ColorBy>('chapter_status')
   const [filterChapter, setFilterChapter] = useState<number | null>(null)
 
-  const { structure } = useBookStructure()
+  const { structure, structureDocId } = useBookStructure()
+  const updateDoc = useUpdateDocument()
+  const [dragId, setDragId] = useState<string | null>(null)
+  // A scene id (drop before that card) or `end:<chapterIndex>` (append).
+  const [dropTarget, setDropTarget] = useState<string | null>(null)
+  const [moveError, setMoveError] = useState<string | null>(null)
+
+  // Move a scene to a new position in the book structure: before
+  // `beforeId` in its chapter, or at the end of `chapterIndex` when
+  // beforeId is null. Saved as a merge PATCH of `chapters` only.
+  const moveScene = (sceneId: string, chapterIndex: number, beforeId: string | null) => {
+    setDropTarget(null)
+    if (!structure || !structureDocId || sceneId === beforeId) return
+    const chapters = structure.raw.chapters.map((slot) => ({
+      ...slot,
+      scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
+    }))
+    const target = chapters[chapterIndex]
+    if (!target) return
+    const at = beforeId ? target.scene_ids.indexOf(beforeId) : -1
+    target.scene_ids.splice(at >= 0 ? at : target.scene_ids.length, 0, sceneId)
+    setMoveError(null)
+    updateDoc.mutate(
+      { documentId: structureDocId, patch: { chapters } },
+      { onError: (err) => setMoveError(err.message || t('corkboard.move_failed')) },
+    )
+  }
 
   const { data: events, isLoading } = useDocuments({
     template_id: TEMPLATES.EVENT,
@@ -252,6 +299,11 @@ export default function CorkboardPage() {
     if (groupBy === 'chapter') {
       // Group by chapter using structure ordering
       const byChapter = new Map<number, typeof filtered>()
+      // Start from every chapter in the structure (or the filtered one) so
+      // empty chapters still show — and can still receive a dropped scene.
+      structure?.raw.chapters.forEach((_, i) => {
+        if (filterChapter == null || filterChapter === i + 1) byChapter.set(i + 1, [])
+      })
       filtered.forEach((e) => {
         const ch = structure?.getChapterNumberForScene(e.document_id) ?? 0
         if (!byChapter.has(ch)) byChapter.set(ch, [])
@@ -266,6 +318,8 @@ export default function CorkboardPage() {
           return {
             label: `${t('corkboard.group_chapter')} ${num}${ch?.title ? `: ${ch.title}` : ''}`,
             status: ch?.status,
+            // 0 = scenes missing from the structure; those can't be a drop target.
+            chapterIndex: num > 0 ? num - 1 : undefined,
             events: sortByStructure(evts),
           }
         })
@@ -297,7 +351,7 @@ export default function CorkboardPage() {
     return [...byThread.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([title, evts]) => ({ label: title, events: evts }))
-  }, [filtered, groupBy, chapterMap, structure, sceneOrderIndex])
+  }, [filtered, groupBy, chapterMap, structure, sceneOrderIndex, filterChapter])
 
   // Chapters sorted by structure order for the filter dropdown
   const sortedChapters = useMemo(() => {
@@ -391,10 +445,23 @@ export default function CorkboardPage() {
         </div>
       </div>
 
+      {groupBy === 'chapter' && structureDocId ? (
+        <p className="text-xs text-text-muted -mt-3 mb-4">
+          {updateDoc.isPending ? t('corkboard.saving_order') : t('corkboard.drag_hint')}
+        </p>
+      ) : null}
+      {moveError ? (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{moveError}</div>
+      ) : null}
+
       {/* Card grid */}
       {groups.length > 0 ? (
         <div className="space-y-6">
-          {groups.map((group) => (
+          {groups.map((group) => {
+            const chapterIndex = 'chapterIndex' in group ? group.chapterIndex : undefined
+            const canDrop = groupBy === 'chapter' && chapterIndex !== undefined && !!structureDocId
+            const endKey = `end:${chapterIndex}`
+            return (
             <div key={group.label}>
               <div className="flex items-center gap-2 mb-3">
                 <h2 className="text-sm font-semibold text-text">{group.label}</h2>
@@ -409,17 +476,35 @@ export default function CorkboardPage() {
                 </span>
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div
+                className={`flex flex-wrap gap-3 rounded-lg ${
+                  canDrop && dragId ? 'min-h-24 p-1 -m-1 border-2 border-dashed' : ''
+                } ${canDrop && dropTarget === endKey ? 'border-primary bg-primary/5' : 'border-transparent'}`}
+                onDragOver={canDrop ? (e) => { e.preventDefault(); setDropTarget(endKey) } : undefined}
+                onDrop={canDrop ? (e) => {
+                  e.preventDefault()
+                  const id = e.dataTransfer.getData('text/plain')
+                  if (id) moveScene(id, chapterIndex!, null)
+                } : undefined}
+              >
                 {group.events.map((event) => (
                   <SceneCard
                     key={event.document_id}
                     event={event}
                     colorClass={getColorClass(event.document_id, event.data)}
+                    dnd={canDrop ? {
+                      onDragStart: () => setDragId(event.document_id),
+                      onDragEnd: () => { setDragId(null); setDropTarget(null) },
+                      onDropBefore: () => { if (dragId) moveScene(dragId, chapterIndex!, event.document_id) },
+                      isDropTarget: dropTarget === event.document_id && dragId !== event.document_id,
+                      setDropTarget: (on) => setDropTarget(on ? event.document_id : null),
+                    } : undefined}
                   />
                 ))}
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
         <p className="text-text-muted">{t('corkboard.empty')}</p>
