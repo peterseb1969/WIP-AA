@@ -50,7 +50,8 @@
   },
   "dashboard": {
     "title": "\u00dcbersicht",
-    "no_project": "Noch kein Projekt erstellt. Verwende die Frageleiste, um eines zu erstellen.",
+    "no_project": "Noch kein Projekt erstellt.",
+    "create_project": "Projekt erstellen",
     "by_author": "von {{author}}",
     "time_label": "Zeit: {{system}}",
     "recent_scenes": "Letzte Szenen",
@@ -101,7 +102,14 @@
     "goals": "Ziele",
     "flaws": "Schw\u00e4chen",
     "voice_notes": "Sprachnotizen",
-    "arc_summary": "Entwicklungsbogen"
+    "arc_summary": "Entwicklungsbogen",
+    "add_relationship": "Beziehung hinzuf\u00fcgen",
+    "remove_relationship": "Beziehung entfernen",
+    "no_relationships": "Noch keine Beziehungen.",
+    "pick_character": "Figur...",
+    "pick_relationship_type": "Beziehung...",
+    "relationship_description": "Beschreibung (optional)",
+    "add_confirm": "Hinzuf\u00fcgen"
   },
   "locations": {
     "title": "Schaupl\u00e4tze",
@@ -154,6 +162,7 @@
     "exceptions": "Ausnahmen"
   },
   "scenes": {
+    "resize_panel": "Ziehen zum Anpassen, Doppelklick zum Zur\u00fccksetzen",
     "title": "Szenen-Editor",
     "new": "Neue Szene",
     "select_prompt": "W\u00e4hle eine Szene zum Bearbeiten, oder \u00f6ffne die Leseansicht f\u00fcr ein ganzes Kapitel.",
@@ -318,6 +327,18 @@
     "add_anyway": "Trotzdem hinzufügen"
   },
   "entities": {
+    "save_failed": "Speichern fehlgeschlagen.",
+    "project": {
+      "label": "Projekt",
+      "fields": {
+        "title": { "label": "Titel", "placeholder": "Buchtitel" },
+        "author": { "label": "Autor" },
+        "genre": { "label": "Genre" },
+        "time_system": { "label": "Zeitsystem" },
+        "description": { "label": "Beschreibung", "placeholder": "Worum geht es im Buch?" },
+        "setting_summary": { "label": "Schauplatz", "placeholder": "Wo und wann die Geschichte spielt" }
+      }
+    },
     "character": {
       "label": "Figur",
       "fields": {

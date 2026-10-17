@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDocuments } from '@wip/react'
+import { useDocuments, useDeleteDocument } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   LayoutDashboard,
@@ -12,11 +12,14 @@ import {
   AlertCircle,
   Trash2,
   Loader2,
+  Pencil,
+  Plus,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import { useBookStructure } from '../lib/useBookStructure'
 import StatusBadge from '../components/StatusBadge'
+import CreateEntityModal from '../components/CreateEntityModal'
 
 interface ChapterData {
   title: string
@@ -69,6 +72,17 @@ export default function DashboardPage() {
 
   const project = projects?.items?.[0]
   const projectData = project?.data as Record<string, unknown> | undefined
+  const [projectModal, setProjectModal] = useState<'create' | 'edit' | null>(null)
+  const deleteDocument = useDeleteDocument()
+
+  // AA_PROJECT's identity is its title: saving a new title creates a new
+  // document rather than a new version. Retire the old one so the book
+  // keeps exactly one project. Nothing references the project document.
+  const handleProjectSaved = (savedId?: string) => {
+    if (projectModal === 'edit' && project && savedId && savedId !== project.document_id) {
+      deleteDocument.mutate({ id: project.document_id })
+    }
+  }
 
   const openThreads = threads?.items?.filter((t) => {
     const d = t.data as Record<string, unknown>
@@ -112,7 +126,16 @@ export default function DashboardPage() {
       {/* Project header */}
       {projectData ? (
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text">{String(projectData.title)}</h1>
+          <div className="flex items-start justify-between gap-4">
+            <h1 className="text-2xl font-bold text-text">{String(projectData.title)}</h1>
+            <button
+              onClick={() => setProjectModal('edit')}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium border border-gray-200 text-text-muted rounded-lg hover:border-primary hover:text-primary transition-colors"
+            >
+              <Pencil className="w-3.5 h-3.5" />
+              {t('common.edit')}
+            </button>
+          </div>
           <div className="flex items-center gap-3 mt-1 text-sm text-text-muted">
             {projectData.author ? <span>{t('dashboard.by_author', { author: String(projectData.author) })}</span> : null}
             {projectData.genre ? (
@@ -131,7 +154,24 @@ export default function DashboardPage() {
             {t('dashboard.title')}
           </h1>
           <p className="text-text-muted mt-1">{t('dashboard.no_project')}</p>
+          <button
+            onClick={() => setProjectModal('create')}
+            className="mt-3 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            {t('dashboard.create_project')}
+          </button>
         </div>
+      )}
+
+      {projectModal && (
+        <CreateEntityModal
+          entityType="project"
+          mode={projectModal}
+          existingData={projectModal === 'edit' ? projectData : undefined}
+          onClose={() => setProjectModal(null)}
+          onCreated={handleProjectSaved}
+        />
       )}
 
       {/* Stats grid */}

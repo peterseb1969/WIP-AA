@@ -25,6 +25,17 @@ interface EntityConfig {
 // ── Entity Configurations ────────────────────────────────
 
 export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
+  project: {
+    templateId: TEMPLATES.PROJECT,
+    fields: [
+      { name: 'title', type: 'text', required: true },
+      { name: 'author', type: 'text' },
+      { name: 'genre', type: 'select', terminologyId: TERMINOLOGIES.GENRE },
+      { name: 'time_system', type: 'select', required: true, terminologyId: TERMINOLOGIES.TIME_SYSTEM },
+      { name: 'description', type: 'textarea' },
+      { name: 'setting_summary', type: 'textarea' },
+    ],
+  },
   character: {
     templateId: TEMPLATES.CHARACTER,
     fields: [
@@ -279,7 +290,8 @@ export default function CreateEntityModal({
 }: {
   entityType: string
   onClose: () => void
-  onCreated?: () => void
+  /** Called with the saved document's id after a successful save. */
+  onCreated?: (documentId?: string) => void
   defaults?: Record<string, unknown>
   mode?: 'create' | 'edit'
   existingData?: Record<string, unknown>
@@ -289,6 +301,7 @@ export default function CreateEntityModal({
   const wipClient = useWipClient()
   const createDoc = useCreateDocument()
   const [submitting, setSubmitting] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   // For edit mode, merge existingData as the initial values
   const initialData = mode === 'edit' && existingData ? existingData : defaults
@@ -319,11 +332,19 @@ export default function CreateEntityModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
+    setSaveError(null)
 
     try {
-      // Build data — strip empty strings, convert numbers
-      const data: Record<string, unknown> = {}
+      // Build data — strip empty strings, convert numbers. A save replaces
+      // the whole document, so in edit mode start from the existing data:
+      // fields the form doesn't show (a character's relationships, a
+      // thread's resolved_chapter, ...) must survive the edit. Fields the
+      // form does show are re-added below only when set, so clearing one
+      // in the form removes it.
+      const data: Record<string, unknown> =
+        mode === 'edit' && existingData ? { ...existingData } : {}
       config.fields.forEach((f) => {
+        delete data[f.name]
         const val = formData[f.name]
         if (f.type === 'number') {
           const num = Number(val)
@@ -364,14 +385,16 @@ export default function CreateEntityModal({
       createDoc.mutate(
         { template_id: config.templateId, namespace: NAMESPACE, data },
         {
-          onSuccess: () => {
-            onCreated?.()
+          onSuccess: (result) => {
+            onCreated?.(result.document_id)
             onClose()
           },
+          onError: (err) => setSaveError(err.message || t('entities.save_failed')),
           onSettled: () => setSubmitting(false),
         }
       )
-    } catch {
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : t('entities.save_failed'))
       setSubmitting(false)
     }
   }
@@ -484,6 +507,12 @@ export default function CreateEntityModal({
             </div>
           ) : null}
         </form>
+
+        {saveError && (
+          <div className="mx-5 mb-1 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {saveError}
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-gray-200">

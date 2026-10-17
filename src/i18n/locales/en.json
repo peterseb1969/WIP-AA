@@ -49,7 +49,8 @@
   },
   "dashboard": {
     "title": "Dashboard",
-    "no_project": "No project created yet. Use the AskBar to create one.",
+    "no_project": "No project created yet.",
+    "create_project": "Create project",
     "by_author": "by {{author}}",
     "time_label": "Time: {{system}}",
     "recent_scenes": "Recent Scenes",
@@ -100,7 +101,14 @@
     "goals": "Goals",
     "flaws": "Flaws",
     "voice_notes": "Voice Notes",
-    "arc_summary": "Arc Summary"
+    "arc_summary": "Arc Summary",
+    "add_relationship": "Add relationship",
+    "remove_relationship": "Remove relationship",
+    "no_relationships": "No relationships yet.",
+    "pick_character": "Character...",
+    "pick_relationship_type": "Relationship...",
+    "relationship_description": "Description (optional)",
+    "add_confirm": "Add"
   },
   "locations": {
     "title": "Locations",
@@ -153,6 +161,7 @@
     "exceptions": "Exceptions"
   },
   "scenes": {
+    "resize_panel": "Drag to resize, double-click to reset",
     "title": "Scene Editor",
     "new": "New Scene",
     "select_prompt": "Select a scene to edit, or enter Flow view to read an entire chapter.",
@@ -317,6 +326,18 @@
     "add_anyway": "Add anyway"
   },
   "entities": {
+    "save_failed": "Saving failed.",
+    "project": {
+      "label": "Project",
+      "fields": {
+        "title": { "label": "Title", "placeholder": "Book title" },
+        "author": { "label": "Author" },
+        "genre": { "label": "Genre" },
+        "time_system": { "label": "Time system" },
+        "description": { "label": "Description", "placeholder": "What is the book about?" },
+        "setting_summary": { "label": "Setting", "placeholder": "Where and when the story takes place" }
+      }
+    },
     "character": {
       "label": "Character",
       "fields": {
