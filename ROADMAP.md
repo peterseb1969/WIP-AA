@@ -1,7 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Fix scene editor first-load** — Editor may appear unresponsive on first visit. Likely TipTap initialization timing.
 - **Alias collision check** — Warn when an alias is already a label/alias of another entity in the same terminology
 
 ## Backlog

@@ -2,11 +2,10 @@
 
 ## Bugs
 
-### Scene editing may not save on first load
+### Scene editing may not save on first load — not reproducible
 **Page:** Scenes (`/scenes`)
-**Symptom:** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
-**Root cause:** Not fully diagnosed. Possibly related to TipTap initialization timing or the `userEditedRef` gate that skips the first `onUpdate` event.
-**Status:** Not fixed.
+**Symptom (as reported 2026-04-04):** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
+**Status:** Could not reproduce on 2026-10-17. The suspected cause, a `userEditedRef` gate that skipped the first `onUpdate`, was removed about four hours after this entry was written, when dirty detection switched to an HTML baseline comparison (commit 99f5a3e). Tested on a cold load, both straight from a URL and from the scene list, with a short scratch scene and a 1,711-word scene from the real book: the editor was editable and focused, the caret landed where clicked, typing marked the scene dirty, and Save became active. If it shows up again, note the steps (which page you came from, whether a draft banner was showing) and reopen.
 
 ### Alias collision not detected
 **Page:** Characters, Locations, Plot Threads (any detail page with AliasManager)
