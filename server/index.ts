@@ -3,14 +3,14 @@ import express, { Router } from 'express'
 import cors from 'cors'
 import path from 'path'
 import { fileURLToPath } from 'url'
-import { wipProxy } from '@wip/proxy'
+import { wipProxy, appConfigHandler } from '@wip/proxy'
 import { createWipClient } from '@wip/client'
 import { initAgent, ask } from './agent.js'
 import { parseText, extractEntities } from './import.js'
 import bootstrapRoutes from './bootstrap.routes.js'
 import configRoutes from './config.routes.js'
 
-const PORT = parseInt(process.env.PORT || '3002')
+const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const WIP_API_KEY = process.env.WIP_API_KEY || 'dev_master_key_for_testing'
 const WIP_NAMESPACE = process.env.WIP_NAMESPACE || 'aa'
@@ -44,6 +44,13 @@ router.use((req, res, next) => {
 router.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', service: 'authorassist' })
 })
+
+// --- Runtime app-config ---
+// Client-visible per-deployment values, served to every browser — an
+// allowlist only, never secrets or an env spread.
+router.get('/api/app-config', appConfigHandler({
+  namespace: WIP_NAMESPACE,
+}))
 
 // Bootstrap (offer-on-empty / use-on-exists for the aa namespace)
 router.use('/server-api', bootstrapRoutes)

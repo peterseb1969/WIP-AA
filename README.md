@@ -41,10 +41,10 @@ npm install ./libs/wip-client-*.tgz ./libs/wip-react-*.tgz ./libs/wip-proxy-*.tg
 # Development (client + server concurrently)
 npm run dev
 
-# Client only (port 5173)
+# Client only (port 5180)
 npm run dev:client
 
-# Server only (port 3002)
+# Server only (port 3014)
 npm run dev:server
 
 # Production build
@@ -57,7 +57,7 @@ The server expects a WIP backend reachable via the proxy. The `@wip/proxy` middl
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `PORT` | `3002` | Server port |
+| `PORT` | `3014` | Server port |
 | `WIP_API_KEY` | — | API key for WIP backend |
 | `ANTHROPIC_API_KEY` | — | For import entity extraction and ask bar |
 | `SESSION_TTL_MINUTES` | `30` | Ask bar session timeout |

@@ -113,7 +113,7 @@ don't run the full WIP install locally:
 
 ```bash
 $ npm run dev
-# Server on :3002, Vite on :5173 (defaults; override with PORT and VITE_PORT)
+# Server on :3014, Vite on :5180 (defaults; override with PORT and VITE_PORT)
 ```
 
 `vite.config.ts` is env-aware: `PORT=3003 VITE_PORT=5180 npm run dev` shifts

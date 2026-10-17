@@ -5,9 +5,9 @@
 AuthorAssist is a single-page React app with a Node.js Express server. The server proxies all WIP API calls (injecting auth) and hosts two AI endpoints for manuscript import and a chat assistant. The client uses `@wip/react` hooks (TanStack Query) for all data access.
 
 ```
-Browser (React SPA, port 5173 in dev)
+Browser (React SPA, port 5180 in dev)
   │
-  ├─ /wip/* ──→ Express proxy (port 3002) ──→ WIP backend
+  ├─ /wip/* ──→ Express proxy (port 3014) ──→ WIP backend
   ├─ /api/ask ──→ MCP agent loop (Claude + read-only WIP tools)
   └─ /api/import/* ──→ Claude entity extraction
 ```
@@ -116,4 +116,4 @@ Every page maps to one or more WIP templates. All entities live in the `aa` name
 
 ## Proxy setup
 
-In development, Vite proxies `/api/*` and `/wip/*` to the Express server on port 3002. The Express server uses `@wip/proxy` middleware on `/wip` to forward requests to the WIP backend with API key injection. No client-side authentication.
+In development, Vite proxies `/api/*` and `/wip/*` to the Express server on port 3014. The Express server uses `@wip/proxy` middleware on `/wip` to forward requests to the WIP backend with API key injection. No client-side authentication.

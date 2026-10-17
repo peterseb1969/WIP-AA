@@ -11,8 +11,8 @@ const RESOLVED_BASE = process.env.VITE_BASE_PATH || process.env.APP_BASE_PATH ||
 const BASE_WITH_SLASH = RESOLVED_BASE.endsWith('/') ? RESOLVED_BASE : `${RESOLVED_BASE}/`
 const BASE_PATH = RESOLVED_BASE.replace(/\/$/, '')
 
-const SERVER_PORT = process.env.PORT || '3002'
-const CLIENT_PORT = parseInt(process.env.VITE_PORT || '5173')
+const SERVER_PORT = process.env.PORT || '3014'
+const CLIENT_PORT = parseInt(process.env.VITE_PORT || '5180')
 const SERVER_URL = `http://localhost:${SERVER_PORT}`
 
 export default defineConfig({
