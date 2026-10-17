@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDocuments, useTerms, useDeleteDocument } from '@wip/react'
-import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2 } from 'lucide-react'
+import { useDocuments, useTerms, useDeleteDocument, useUpdateDocument } from '@wip/react'
+import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2, X } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -53,7 +53,7 @@ function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => 
   )
 }
 
-function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
+function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { documentId: string; data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   // Resolve character names from terms
   const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50, namespace: NAMESPACE } as any)
@@ -126,37 +126,173 @@ function CharacterDetail({ data, onBack, onEdit, onDelete }: { data: CharacterDa
         </div>
       ) : null}
 
-      {/* Relationships */}
-      {data.relationships?.length ? (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <h3 className="font-medium text-sm text-primary mb-3 flex items-center gap-2">
-            <Heart className="w-4 h-4" />
-            {t('characters.relationships')} ({data.relationships.length})
-          </h3>
-          <div className="space-y-2">
-            {data.relationships.map((rel, i) => (
-              <div key={i} className="flex items-center gap-3 p-2 rounded bg-surface">
-                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-medium">
-                  {(termLookup.get(rel.character) ?? rel.character).charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-text">
-                    {termLookup.get(rel.character) ?? rel.character}
-                  </div>
-                  <div className="text-xs text-text-muted">
-                    {rel.relationship_type.replace(/_/g, ' ').toLowerCase()}
-                    {rel.start_time != null ? ` (from ${rel.start_time})` : ''}
-                    {rel.end_time != null ? ` to ${rel.end_time}` : ''}
-                  </div>
-                </div>
-                {rel.description ? (
-                  <div className="text-xs text-text-light max-w-48 truncate">{rel.description}</div>
-                ) : null}
+      <Relationships
+        documentId={documentId}
+        characterValue={data.name}
+        relationships={data.relationships ?? []}
+        termLookup={termLookup}
+        characterTerms={charTerms?.items ?? []}
+      />
+    </div>
+  )
+}
+
+type Relationship = NonNullable<CharacterData['relationships']>[number]
+
+/**
+ * A character's relationships, stored inline on the character document as
+ * an array of AA_CHAR_REL objects. Changes are saved with a merge PATCH of
+ * just that array (arrays replace wholesale), so the rest of the document is
+ * untouched and the identity field (`name`) never changes.
+ */
+function Relationships({
+  documentId,
+  characterValue,
+  relationships,
+  termLookup,
+  characterTerms,
+}: {
+  documentId: string
+  characterValue: string
+  relationships: Relationship[]
+  termLookup: Map<string, string | undefined>
+  characterTerms: Array<{ value: string; label?: string | null }>
+}) {
+  const { t } = useTranslation()
+  const updateDoc = useUpdateDocument()
+  const { data: typeTerms } = useTerms(TERMINOLOGIES.RELATIONSHIP_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
+  const [adding, setAdding] = useState(false)
+  const [draft, setDraft] = useState({ character: '', relationship_type: '', description: '' })
+  const [error, setError] = useState<string | null>(null)
+
+  const save = (next: Relationship[], onDone?: () => void) => {
+    setError(null)
+    updateDoc.mutate(
+      { documentId, patch: { relationships: next } },
+      {
+        onSuccess: () => onDone?.(),
+        onError: (err) => setError(err.message || t('entities.save_failed')),
+      },
+    )
+  }
+
+  const handleAdd = () => {
+    if (!draft.character || !draft.relationship_type) return
+    const rel: Relationship = { character: draft.character, relationship_type: draft.relationship_type }
+    if (draft.description.trim()) rel.description = draft.description.trim()
+    save([...relationships, rel], () => {
+      setAdding(false)
+      setDraft({ character: '', relationship_type: '', description: '' })
+    })
+  }
+
+  const typeLabel = (value: string) =>
+    typeTerms?.items?.find((tm) => tm.value === value)?.label || value.replace(/_/g, ' ').toLowerCase()
+
+  const selectClass =
+    'border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white text-text focus:outline-none focus:border-primary'
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="font-medium text-sm text-primary flex items-center gap-2">
+          <Heart className="w-4 h-4" />
+          {t('characters.relationships')} ({relationships.length})
+        </h3>
+        {!adding && (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-1 text-sm text-primary hover:text-primary-dark"
+          >
+            <Plus className="w-4 h-4" />
+            {t('characters.add_relationship')}
+          </button>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        {relationships.map((rel, i) => (
+          <div key={i} className="flex items-center gap-3 p-2 rounded bg-surface">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-medium">
+              {(termLookup.get(rel.character) ?? rel.character).charAt(0)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-text">
+                {termLookup.get(rel.character) ?? rel.character}
               </div>
-            ))}
+              <div className="text-xs text-text-muted">
+                {typeLabel(rel.relationship_type)}
+                {rel.start_time != null ? ` (from ${rel.start_time})` : ''}
+                {rel.end_time != null ? ` to ${rel.end_time}` : ''}
+              </div>
+            </div>
+            {rel.description ? (
+              <div className="text-xs text-text-light max-w-48 truncate">{rel.description}</div>
+            ) : null}
+            <button
+              onClick={() => save(relationships.filter((_, j) => j !== i))}
+              disabled={updateDoc.isPending}
+              title={t('characters.remove_relationship')}
+              className="text-text-light hover:text-red-500 transition-colors disabled:opacity-50"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
+        ))}
+        {!relationships.length && !adding ? (
+          <p className="text-sm text-text-muted">{t('characters.no_relationships')}</p>
+        ) : null}
+      </div>
+
+      {adding && (
+        <div className="mt-3 flex flex-wrap items-center gap-2 p-2 rounded border border-primary/20 bg-primary/5">
+          <select
+            value={draft.character}
+            onChange={(e) => setDraft({ ...draft, character: e.target.value })}
+            className={selectClass}
+          >
+            <option value="">{t('characters.pick_character')}</option>
+            {characterTerms
+              .filter((tm) => tm.value !== characterValue)
+              .map((tm) => (
+                <option key={tm.value} value={tm.value}>{tm.label || tm.value}</option>
+              ))}
+          </select>
+          <select
+            value={draft.relationship_type}
+            onChange={(e) => setDraft({ ...draft, relationship_type: e.target.value })}
+            className={selectClass}
+          >
+            <option value="">{t('characters.pick_relationship_type')}</option>
+            {(typeTerms?.items ?? []).map((tm) => (
+              <option key={tm.value} value={tm.value}>{tm.label || tm.value}</option>
+            ))}
+          </select>
+          <input
+            value={draft.description}
+            onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            placeholder={t('characters.relationship_description')}
+            className="flex-1 min-w-32 border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:border-primary"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={!draft.character || !draft.relationship_type || updateDoc.isPending}
+            className="px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
+          >
+            {t('characters.add_confirm')}
+          </button>
+          <button
+            onClick={() => { setAdding(false); setError(null) }}
+            className="px-3 py-1.5 text-sm text-text-muted hover:text-text"
+          >
+            {t('common.cancel')}
+          </button>
         </div>
-      ) : null}
+      )}
+
+      {error && (
+        <div className="mt-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
+      )}
     </div>
   )
 }
@@ -193,6 +329,7 @@ export default function CharactersPage() {
       {selectedData ? (
         <>
           <CharacterDetail
+            documentId={selectedId!}
             data={selectedData}
             onBack={() => setSelectedId(null)}
             onEdit={() => setEditData(selectedData as unknown as Record<string, unknown>)}
