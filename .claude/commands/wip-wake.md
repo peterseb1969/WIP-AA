@@ -13,11 +13,35 @@ It closes the prior session if still active (atomic frontmatter flip + auto-clos
 ```
 PRIOR_ID=<prior-id>
 NEW_ID=<NEW_ID>
+PRIOR_SUMMARY=content|stub|absent
+PROJECT_BRIEF=<path>|none|failed
 ```
 
-**Do not re-implement the rollover by hand** — the full state machine (every edge case: missing sentinel, missing prior dir + the legacy shared-path transition note, malformed frontmatter regeneration, collision retry, partial-failure convergence) lives in the script's docstring and its test suite (`agent-scripts/`, `./scripts/wip-test.sh agent-scripts`). On a non-zero exit, read the script's error message: missing sentinel → run `/wip-setup`; missing `reports/<prior-id>/` → resolve per the message (never fabricate state); missing `.session-role` → re-run your scaffold with `--refresh`.
+**Do not re-implement the rollover by hand** — the full state machine (every edge case: missing sentinel, missing prior dir + the legacy shared-path transition note, malformed frontmatter regeneration, collision retry, partial-failure convergence) lives in the script's docstring and its test suite (`agent-scripts/`, `./scripts/wip-test.sh agent-scripts`). On a non-zero exit, read the script's error message: missing sentinel → run `/wip-setup`; missing `reports/<prior-id>/` → resolve per the message (never fabricate state); missing `.session-role` → re-run `scripts/create-app-project.sh <app-dir> --prefix APP-<X>` from the WIP clone (repos whose committed `.app-meta` records `ROLE_PREFIX` self-heal without `--prefix`) (there is NO `--refresh` flag; the scaffolds auto-detect mode).
 
 After Step A, `.claude/.session-id` holds `<NEW_ID>`. Every **write** from here on goes to the new session's dir; the continuity **reads** in Step B target the **prior** session's reports (use the `PRIOR_ID` the script printed).
+
+### Step A.2 — Backfill the prior's summary, if the script says it is a stub
+
+**Skip this step entirely unless the script printed `PRIOR_SUMMARY=stub`.** `content` means someone wrote a real summary — never overwrite it. `absent` means there is no prior, or nothing readable to summarise.
+
+`stub` means the prior's summary is a heading with nothing under it — most often because the prior died without `/wip-report session-end` (a `/clear`, a context wall, a closed laptop) and the close phase you just ran wrote `## Session Summary — auto-closed by /wip-wake (<ts>)` as a placeholder. It also covers a stub an earlier wake left behind. That placeholder is otherwise permanent: the agent who could have written the summary is gone, and nobody runs `session-end` against a session that is not theirs. Now — while the artifacts are still on this disk — is the only moment it gets written.
+
+Reconstruct from what survives, then replace the bare heading in place in `reports/$PRIOR_ID/session.md`, leave `ended_at` alone (the auto-close timestamp is the truth about when the session ended), and re-mirror with `kbc kb-write.py SESSION reports/$PRIOR_ID` (`SESSION` is keyed on `session_id`, so this upserts and cannot mint a duplicate).
+
+The sources, in descending reliability:
+
+- `reports/$PRIOR_ID/commits.md` and `session-updates.md` — the richest, and per-session attributed. The kb mirror bundles them into the SESSION body, so they are readable from kb too, not only on the originating clone.
+- Cases the session filed or responded to: `kbc case-fetch.py list --filed-by $PRIOR_ID`. Reliably attributed.
+- `git log` over the session's window — **only as corroboration when `commits.md` exists.**
+
+Three ways to get this wrong, each worth avoiding deliberately:
+
+- **Label it as a reconstruction.** A backfilled summary that reads as though the session wrote it fabricates provenance. Say who rebuilt it, when, and from what.
+- **Do not build a commit narrative from `git log` alone.** Sessions overlap on the same branch, and `commits.md` is the only per-session commit attribution that exists. Where it is missing, a time-windowed `git log` will hand you another session's commits with full confidence. Cite the case list instead and say plainly that no local commit log survived.
+- **When nothing survives, record that.** A session that died early can leave a session dir holding nothing but a few hundred bytes of `session.md` frontmatter — no commit log, no running log. Then write "no durable artifacts survived; reconstructed from kb case activity only", or that nothing was recoverable. Recording irrecoverability is a real artifact. Composing a plausible narrative to fill the space is the fabrication the first rule warns about.
+
+Do **not** hand-close the prior before running the Step A script. `close_prior` returns early on an already-closed session and skips *both* the rewrite and the kb mirror, stranding whatever you wrote on local disk where no peer can read it. Let the script close and mirror; backfill and re-mirror after.
 
 ### Step B — Recover context
 
@@ -43,6 +67,7 @@ Compaction wipes prior reads. As an APP-YAC, you must reload baseline context as
 - `ReadMcpResourceTool server=wip uri=wip://data-model` — entity shapes in WIP.
 - `ReadMcpResourceTool server=wip uri=wip://conventions` — bulk-first 200 OK, PATCH semantics, idempotent bootstrap, template cache, namespace/authorization rules.
 - `Read` `docs/wip-deployable-app-contract.md` — what your app must satisfy to ship under `wip-deploy install` (bundled into this project by the scaffold, in `docs/`). Reload it so deploy-contract drift doesn't creep in across a long build.
+- **Project brief** — if Step A printed `PROJECT_BRIEF=<path>`, `Read` that file: the kb brief of the project `.claude/kb.json` names (`project` key) — its open cases, decisions, lessons, firesides, recent sessions, memories and mirrored documents, as handles and titles. Untagged documents are not listed, so an empty section is not proof that nothing exists. `PROJECT_BRIEF=failed` → the script's stderr warning says why; carry it into the report and continue (fetch it by hand later with `kbc case-fetch.py brief`). `PROJECT_BRIEF=none` → this repo names no project; nothing to load.
 
 Output one line per source confirming it was loaded. This step is non-optional; recovery without baseline context is recovery into the same drift the previous session ended in.
 
@@ -122,6 +147,7 @@ WIP state:
 - 127 documents (42 accounts, 85 transactions)
 
 Seed files: present and matching WIP state
+Project brief: loaded (<project>) | none | failed (<reason>)
 
 Suggested next step: Complete the import flow in ImportPage.tsx, then commit.
 ```

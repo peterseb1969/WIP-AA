@@ -35,8 +35,8 @@ Modes
                    `## Session Summary — auto-closed by /wip-wake (<ts>)`;
                    then mirror the closed prior to kb.
               4. Mint `<ROLE>-<YYYYMMDD-HHMMSS>` (ROLE from
-                 `.claude/.session-role`; missing -> exit 4, re-run your
-                 scaffold with --refresh). Seconds precision is deliberate —
+                 `.claude/.session-role`; missing -> exit 4 with the
+                 re-scaffold remediation). Seconds precision is deliberate —
                  it removes the same-minute collision class.
               5. `mkdir reports/<NEW>` (plain, not -p; collision -> re-mint,
                  up to 3 attempts) + write fresh frontmatter with
@@ -65,7 +65,31 @@ Modes
 Output contract (stdout, last lines, machine-readable):
     PRIOR_ID=<id or ->
     NEW_ID=<id>
+    PRIOR_SUMMARY=content|stub|absent
+    PROJECT_BRIEF=<path>|none|failed|skipped
 Progress/warnings go to stderr.
+
+PROJECT_BRIEF: when `.claude/kb.json` names a `project`, both modes fetch
+that project's brief from kb (`case-fetch.py brief <project>`) and save it
+as `reports/<NEW_ID>/project-brief.md` next to session.md; the value is
+that path, relative to the project root, for the caller to Read. `none` =
+tier 2 or no `project` key (no call made). `failed` = the fetch did not
+succeed (non-zero exit, timeout, client missing, unreadable kb.json); a
+warning carrying the reason goes to stderr. `skipped` = --dry-run with a
+project set (nothing fetched). The project key is read here rather than
+left to the verb, because the verb's "no project" exit code is the same as
+its transport-failure one. Like the mirror, a failed fetch never changes
+the exit code — the brief is context, not identity.
+
+PRIOR_SUMMARY describes the prior's `## Session Summary` as it stands once
+the rollover is done: `content` = a real summary someone wrote, `stub` = a
+heading with nothing under it, `absent` = no heading, no prior, or no
+readable session.md. A session that died active reports `stub`, because the
+close phase has just written the placeholder — that is the dominant case and
+the whole point of the signal. `stub` is the caller's cue to backfill from
+the durable artifacts; `content` means never overwrite. The state is
+reported rather than left for the caller to re-derive, because a
+discretionary check is one an agent reliably skips.
 
 Idempotence / partial-failure recovery: every write is atomic; re-running
 after a failure converges (an already-closed prior is skipped, kb mirrors
@@ -76,11 +100,13 @@ uses.
 Test hooks (env, used only by the test suite):
     WAKE_ROLLOVER_NOW  freeze the timestamp (YYYYMMDD-HHMMSS)
     WAKE_ROLLOVER_KBC  override the kb shim command
+    WAKE_ROLLOVER_BRIEF_TIMEOUT  override the brief fetch timeout (seconds)
 """
 
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import subprocess
 import sys
@@ -96,6 +122,7 @@ EXIT_ACTIVE_PRIOR = 5
 EXIT_MKDIR = 6
 
 KB_TIMEOUT_S = 60
+BRIEF_TIMEOUT_S = 30
 
 
 def log(msg: str) -> None:
@@ -154,6 +181,14 @@ def render_frontmatter(fields: list[tuple[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def kbc_cmd(*args: str) -> list[str]:
+    """The served kb client runner, or the test override, with `args`."""
+    shim = os.environ.get("WAKE_ROLLOVER_KBC")
+    if shim:
+        return [*shim.split(), *args]
+    return ["bash", str(Path.home() / ".cache" / "wip-kb-client" / "kb-client.sh"), *args]
+
+
 def kb_mirror(root: Path, session_md: Path, dry_run: bool) -> None:
     """Tier-gated, warn-and-continue mirror of session.md to kb."""
     if not (root / ".claude" / "kb.json").exists():
@@ -162,17 +197,7 @@ def kb_mirror(root: Path, session_md: Path, dry_run: bool) -> None:
     if dry_run:
         log(f"kb mirror (dry-run): would push {session_md}")
         return
-    shim = os.environ.get("WAKE_ROLLOVER_KBC")
-    if shim:
-        cmd = [*shim.split(), "kb-write.py", "SESSION", str(session_md)]
-    else:
-        cmd = [
-            "bash",
-            str(Path.home() / ".cache" / "wip-kb-client" / "kb-client.sh"),
-            "kb-write.py",
-            "SESSION",
-            str(session_md),
-        ]
+    cmd = kbc_cmd("kb-write.py", "SESSION", str(session_md))
     try:
         res = subprocess.run(
             cmd, capture_output=True, text=True, timeout=KB_TIMEOUT_S, cwd=str(root)
@@ -186,6 +211,89 @@ def kb_mirror(root: Path, session_md: Path, dry_run: bool) -> None:
             )
     except (OSError, subprocess.TimeoutExpired) as e:
         log(f"WARNING: kb mirror unreachable (local write is authoritative): {e}")
+
+
+def fetch_project_brief(root: Path, new_id: str, dry_run: bool) -> str:
+    """Save the kb brief of the project kb.json names; return PROJECT_BRIEF."""
+    kb_json = root / ".claude" / "kb.json"
+    if not kb_json.exists():
+        return "none"
+    try:
+        config = json.loads(kb_json.read_text())
+    except (OSError, ValueError) as e:
+        log(f"WARNING: project brief not loaded — .claude/kb.json is unreadable: {e}")
+        return "failed"
+    project = config.get("project") if isinstance(config, dict) else None
+    if not isinstance(project, str) or not project.strip():
+        log("project brief: none (kb.json names no project)")
+        return "none"
+    project = project.strip()
+    if dry_run:
+        log(f"project brief (dry-run): would fetch the brief for '{project}'")
+        return "skipped"
+
+    timeout = float(os.environ.get("WAKE_ROLLOVER_BRIEF_TIMEOUT") or BRIEF_TIMEOUT_S)
+    try:
+        res = subprocess.run(
+            kbc_cmd("case-fetch.py", "brief", project),
+            capture_output=True, text=True, timeout=timeout, cwd=str(root),
+        )
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log(f"WARNING: project brief for '{project}' not loaded — kb unreachable: {e}")
+        return "failed"
+    if res.returncode != 0 or not res.stdout.strip():
+        reason = res.stderr.strip() or res.stdout.strip() or "empty output"
+        log(
+            f"WARNING: project brief for '{project}' not loaded "
+            f"(exit {res.returncode}): {reason}"
+        )
+        return "failed"
+
+    rel = Path("reports") / new_id / "project-brief.md"
+    atomic_write(root / rel, res.stdout)
+    log(f"project brief: '{project}' saved to {rel}")
+    return str(rel)
+
+
+def summary_state(root: Path, prior_id: str | None) -> str:
+    """Classify the prior's `## Session Summary` as content | stub | absent.
+
+    `stub` means a heading with nothing under it — the placeholder close_prior
+    writes when a session dies without /wip-report session-end. It reads
+    identically to a real close on a `status: closed` check, which is why the
+    state is reported explicitly rather than left to be re-derived: an agent
+    that has to remember to look will not look.
+
+    Call this AFTER close_prior, so the answer describes the prior as it now
+    stands. The dominant case is a session that died active: close_prior has
+    just appended the placeholder, and `stub` — the cue to backfill — is
+    exactly right. Reading before the append would report `absent` there and
+    silently skip the backfill in the very case it exists for.
+
+    Any summary section carrying content wins, so a real summary is never
+    misreported as a stub because an append landed after it. Emptiness is
+    judged strictly (nothing but whitespace under the heading): a terse but
+    real summary counts as content, and no length threshold needs defending.
+    """
+    if prior_id is None:
+        return "absent"
+    session_md = root / "reports" / prior_id / "session.md"
+    if not session_md.is_file():
+        return "absent"
+    _, body = parse_frontmatter(session_md.read_text())
+
+    lines = body.splitlines()
+    starts = [i for i, line in enumerate(lines) if line.startswith("## Session Summary")]
+    if not starts:
+        return "absent"
+
+    for start in starts:
+        for line in lines[start + 1 :]:
+            if line.startswith("## "):
+                break
+            if line.strip():
+                return "content"
+    return "stub"
 
 
 def close_prior(root: Path, prior_id: str, dry_run: bool) -> bool:
@@ -305,8 +413,12 @@ def read_role(root: Path) -> str:
     p = root / ".claude" / ".session-role"
     if not p.exists() or not p.read_text().strip():
         print(
-            "Error: .claude/.session-role is missing. Re-run your scaffold "
-            "with --refresh, then retry.",
+            "Error: .claude/.session-role is missing (gitignored — fresh "
+            "checkouts never have it). Fix: backend clone -> re-run "
+            "scripts/setup-backend-agent.sh; app repo -> re-run "
+            "scripts/create-app-project.sh <app-dir> --prefix APP-<X> "
+            "(repos whose .app-meta records ROLE_PREFIX self-heal without "
+            "--prefix). Then retry.",
             file=sys.stderr,
         )
         sys.exit(EXIT_NO_ROLE)
@@ -324,7 +436,7 @@ def prior_status(root: Path, prior_id: str) -> str | None:
     return "closed" if fm.get("status") == "closed" else "active"
 
 
-def wake(root: Path, dry_run: bool) -> tuple[str, str]:
+def wake(root: Path, dry_run: bool) -> tuple[str, str, str]:
     prior = read_sentinel(root)
     if prior is None:
         print(
@@ -352,16 +464,24 @@ def wake(root: Path, dry_run: bool) -> tuple[str, str]:
     flipped = close_prior(root, prior, dry_run)
     if flipped:
         kb_mirror(root, prior_dir / "session.md", dry_run)
+    # After the close: a session that died active has just been given the
+    # placeholder, and `stub` is the state the caller must act on.
+    prior_summary = summary_state(root, prior)
+    if dry_run and flipped and prior_summary == "absent":
+        # The close we deliberately didn't perform would have left a stub;
+        # report the plan's outcome, not the untouched file.
+        prior_summary = "stub"
 
     new_id = mint_and_create(root, role, continues_from=prior, dry_run=dry_run)
     swap_sentinel(root, new_id, dry_run)
     kb_mirror(root, root / "reports" / new_id / "session.md", dry_run)
-    return prior, new_id
+    return prior, new_id, prior_summary
 
 
-def fresh(root: Path, dry_run: bool) -> tuple[str, str]:
+def fresh(root: Path, dry_run: bool) -> tuple[str, str, str]:
     role = read_role(root)
     prior = read_sentinel(root)
+    prior_summary = summary_state(root, prior)
     if prior is not None:
         status = prior_status(root, prior)
         if status != "closed":
@@ -378,7 +498,7 @@ def fresh(root: Path, dry_run: bool) -> tuple[str, str]:
     new_id = mint_and_create(root, role, continues_from=None, dry_run=dry_run)
     swap_sentinel(root, new_id, dry_run)
     kb_mirror(root, root / "reports" / new_id / "session.md", dry_run)
-    return prior or "-", new_id
+    return prior or "-", new_id, prior_summary
 
 
 def main(argv: list[str]) -> int:
@@ -392,12 +512,15 @@ def main(argv: list[str]) -> int:
 
     root = project_root()
     if mode_fresh:
-        prior, new_id = fresh(root, dry_run)
+        prior, new_id, prior_summary = fresh(root, dry_run)
     else:
-        prior, new_id = wake(root, dry_run)
+        prior, new_id, prior_summary = wake(root, dry_run)
+    project_brief = fetch_project_brief(root, new_id, dry_run)
 
     print(f"PRIOR_ID={prior}")
     print(f"NEW_ID={new_id}")
+    print(f"PRIOR_SUMMARY={prior_summary}")
+    print(f"PROJECT_BRIEF={project_brief}")
     return 0
 
 
