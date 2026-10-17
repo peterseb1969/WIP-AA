@@ -25,7 +25,7 @@ const env = () => ({
   MCP_MODULE: process.env.MCP_MODULE || 'wip_mcp',
   WIP_API_KEY: process.env.WIP_API_KEY || '',
   CLAUDE_MODEL: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-  WIP_NAMESPACE: process.env.WIP_NAMESPACE || '',
+  WIP_NAMESPACE: process.env.WIP_NAMESPACE || 'aa',
   MAX_TURNS: parseInt(process.env.MAX_TURNS || '15'),
   SESSION_TTL_MS: parseInt(process.env.SESSION_TTL_MINUTES || '30') * 60_000,
 })
