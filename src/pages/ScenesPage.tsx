@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useDocuments, useCreateDocument, useDeleteDocument } from '@wip/react'
+import { useDocuments, useCreateDocument, useDeleteDocument, useWipClient } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   PenTool,
@@ -1264,6 +1264,26 @@ function SceneEditor({
   }, [deleteDocument, sceneId, draftKey, onBack])
 
   const [splitting, setSplitting] = useState(false)
+  const wipClient = useWipClient()
+
+  /** `base`, or `base` with " 2", " 3", … inserted before the closing
+   *  parenthesis — the first title no scene in WIP has. Asks WIP rather
+   *  than the loaded scene list, which is paged and may be stale. */
+  const uniqueSceneTitle = useCallback(async (base: string) => {
+    for (let n = 1; n < 100; n++) {
+      const candidate = n === 1 ? base : base.replace(/\)$/, ` ${n})`)
+      const found = await wipClient.documents.queryDocuments(
+        {
+          template_id: TEMPLATES.EVENT,
+          filters: [{ field: 'data.title', operator: 'eq', value: candidate }],
+          page_size: 1,
+        },
+        NAMESPACE,
+      )
+      if (!found.total) return candidate
+    }
+    throw new Error(`No free title found for "${base}".`)
+  }, [wipClient])
 
   const handleSplit = useCallback(async () => {
     if (!editor || !sceneData || !structure || !structureDocId) return
@@ -1326,65 +1346,63 @@ function SceneEditor({
 
     setSplitting(true)
     try {
-      // 1. Save first half to current scene
-      await new Promise<void>((resolve, reject) => {
-        createDocument.mutate(
-          {
-            template_id: TEMPLATES.EVENT,
-            namespace: NAMESPACE,
-            data: { ...sceneData, prose: firstHtml },
-          },
-          { onSuccess: () => resolve(), onError: reject }
-        )
-      })
+      // The new scene goes into the book structure right after this one;
+      // a scene missing from the structure would be created but never shown.
+      const pos = structure.getScenePosition(sceneId)
+      if (!pos) throw new Error('This scene is not in the book structure.')
 
-      // 2. Create new scene with second half
-      const newTitle = `${sceneData.title} (continued)`
-      const newSceneId = await new Promise<string>((resolve, reject) => {
-        createDocument.mutate(
-          {
-            template_id: TEMPLATES.EVENT,
-            namespace: NAMESPACE,
-            data: {
-              title: newTitle,
-              event_type: sceneData.event_type,
-              story_time_raw: sceneData.story_time_raw,
-              story_time_sort: (sceneData.story_time_sort ?? 0) + 1,
-              location: sceneData.location,
-              characters: sceneData.characters,
-              summary: '',
-              prose: secondHtml,
-              plot_threads: sceneData.plot_threads,
-              emotional_beat: '',
-            },
-          },
-          {
-            onSuccess: (data: any) => resolve(data.document_id),
-            onError: reject,
-          }
-        )
+      // AA_EVENT's identity is its title, so creating a scene under a title
+      // that already exists UPDATES that scene instead — a second split of
+      // the same scene used to overwrite the first "(continued)" scene's
+      // prose. Pick a title no scene in WIP uses yet.
+      const newTitle = await uniqueSceneTitle(`${sceneData.title} (continued)`)
+
+      // 1. Create the new scene with the second half FIRST, so a failure
+      //    further on can at worst duplicate text, never lose it.
+      const created = await createDocument.mutateAsync({
+        template_id: TEMPLATES.EVENT,
+        namespace: NAMESPACE,
+        data: {
+          title: newTitle,
+          event_type: sceneData.event_type,
+          story_time_raw: sceneData.story_time_raw,
+          story_time_sort: (sceneData.story_time_sort ?? 0) + 1,
+          location: sceneData.location,
+          characters: sceneData.characters,
+          summary: '',
+          prose: secondHtml,
+          plot_threads: sceneData.plot_threads,
+          emotional_beat: '',
+        },
+      })
+      // Last-resort guard (e.g. an inactive scene with this title, or a
+      // concurrent edit): the create matched an existing scene. Stop before
+      // truncating the original; the overwritten text is in that scene's
+      // version history.
+      if (!created.is_new || !created.document_id) {
+        throw new Error(`A scene titled "${newTitle}" already existed and was updated instead of created. The original scene was left unchanged.`)
+      }
+      const newSceneId = created.document_id
+
+      // 2. Save the first half to the current scene
+      await createDocument.mutateAsync({
+        template_id: TEMPLATES.EVENT,
+        namespace: NAMESPACE,
+        data: { ...sceneData, prose: firstHtml },
       })
 
       // 3. Update book structure — insert new scene after current scene
-      const pos = structure.getScenePosition(sceneId)
-      if (pos) {
-        const newChapters = structure.raw.chapters.map((slot, ci) => {
-          if (ci !== pos.chapterIndex) return slot
-          const newSceneIds = [...slot.scene_ids]
-          newSceneIds.splice(pos.sceneIndex + 1, 0, newSceneId)
-          return { ...slot, scene_ids: newSceneIds }
-        })
-        await new Promise<void>((resolve, reject) => {
-          createDocument.mutate(
-            {
-              template_id: TEMPLATES.BOOK_STRUCTURE,
-              namespace: NAMESPACE,
-              data: { ...structure.raw, chapters: newChapters },
-            },
-            { onSuccess: () => resolve(), onError: reject }
-          )
-        })
-      }
+      const newChapters = structure.raw.chapters.map((slot, ci) => {
+        if (ci !== pos.chapterIndex) return slot
+        const newSceneIds = [...slot.scene_ids]
+        newSceneIds.splice(pos.sceneIndex + 1, 0, newSceneId)
+        return { ...slot, scene_ids: newSceneIds }
+      })
+      await createDocument.mutateAsync({
+        template_id: TEMPLATES.BOOK_STRUCTURE,
+        namespace: NAMESPACE,
+        data: { ...structure.raw, chapters: newChapters },
+      })
 
       // 4. Invalidate cache so both scenes load fresh from WIP
       localStorage.removeItem(draftKey)
@@ -1398,7 +1416,7 @@ function SceneEditor({
     } finally {
       setSplitting(false)
     }
-  }, [editor, sceneData, structure, structureDocId, sceneId, createDocument, draftKey, onNavigate])
+  }, [editor, sceneData, structure, structureDocId, sceneId, createDocument, uniqueSceneTitle, draftKey, onNavigate])
 
   // ── Validation ──────────────────────────────────────────
   const handleValidate = useCallback(() => {

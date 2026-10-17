@@ -1,7 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Fix split scene** — Second half never appears; the text after the cursor is lost. See KNOWN_ISSUES
 - **Fix scene editor first-load** — Editor may appear unresponsive on first visit. Likely TipTap initialization timing.
 - **Alias collision check** — Warn when an alias is already a label/alias of another entity in the same terminology
 
@@ -29,7 +28,7 @@
 - Libraries: @wip/client 0.60.0, @wip/react 0.20.0, @wip/proxy 0.5.1 (2026-10-17)
 - Alias management: AliasManager component on Characters, Locations, and Plot Threads detail pages. Add/remove aliases as tags, immediate save via WIP API. No console access needed
 - ValidateSceneAnnotations: regex-based prose scanning for characters, locations, plot threads. Four states (confirmed, missing, detected, suppressed). Shield button in toolbar, Validate tab in context panel. Actions: add, dismiss, remove, restore. AA_EVENT template v2 with `suppressed_suggestions` field
-- Split scene: scissors button splits prose at cursor (paragraph boundary), creates new scene, updates book structure — **but see KNOWN_ISSUES: the second half is lost**
+- Split scene: scissors button splits prose at cursor (paragraph boundary), creates new scene, updates book structure (2026-10-17: fixed text loss on a repeated split — new scenes get a unique "(continued N)" title; new scene is created before the original is shortened)
 - Book structure refactoring: AA_BOOK_STRUCTURE replaces chapter_number/scene_order fields
 - Dashboard "Danger Zone": per-entity-type deletion with checkboxes + name registry toggle
 - Unsaved draft banner: dismiss (session-hide) vs discard (revert to WIP) + reliable resume navigation

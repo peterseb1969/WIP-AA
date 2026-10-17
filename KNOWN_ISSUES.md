@@ -2,13 +2,6 @@
 
 ## Bugs
 
-### Split scene is broken
-**Page:** Scenes (`/scenes`)
-**Symptom:** Clicking split saves the first half (truncated) but the second scene (text after cursor) never appears. The user loses the downstream text.
-**Root cause:** `handleSplit` nests two `createDocument.mutate` calls. The first saves the truncated original. The second (in `onSuccess`) creates a new scene with `title + " (split)"`, but it either fails silently or `onBack()` navigates away before completion.
-**Status:** Not fixed. The split button is visible in the toolbar — users can trigger it and lose text. (ROADMAP's "Done" entry records the feature landing on 2026-04-04; this issue was recorded after it, the same day.)
-**Workaround:** Do not use split. If text was lost, the original version may still exist in WIP (identity dedup).
-
 ### Scene editing may not save on first load
 **Page:** Scenes (`/scenes`)
 **Symptom:** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
@@ -24,9 +17,7 @@
 ## Unverified / technical debt
 
 ### Browser-unverified changes (2026-10-17)
-Verified at the HTTP and type-check level only, not clicked through in a browser:
-- The SPA loads its WIP namespace from `/api/app-config` before first render, and shows an error screen if that fails.
-- BootstrapGate's **incomplete** panel (Resume Bootstrap / Check Again).
+Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. Still unverified: the error screen `main.tsx` shows when `/api/app-config` can't be loaded.
 
 ### `as any` casts around the WIP client
 `AliasManager` (`defStore.updateTerm`) and several `useTerms(...)` call sites cast to `any`, so `tsc` cannot check them against @wip/client 0.60.0. Alias saving should be retested by hand after a client bump.
