@@ -316,6 +316,16 @@
     "discard_title": "Discard draft and revert to saved version",
     "hide_title": "Hide this warning"
   },
+  "cross_refs": {
+    "title": "Appears in",
+    "none": "Not referenced in any scene, note or world rule yet.",
+    "scenes_one": "{{count}} scene",
+    "scenes_other": "{{count}} scenes",
+    "notes_one": "{{count}} note",
+    "notes_other": "{{count}} notes",
+    "world_rules_one": "{{count}} world rule",
+    "world_rules_other": "{{count}} world rules"
+  },
   "alias_manager": {
     "also_known_as": "Also known as",
     "add_placeholder": "Add alias...",

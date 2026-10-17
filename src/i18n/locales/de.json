@@ -317,6 +317,16 @@
     "discard_title": "Entwurf verwerfen und zur gespeicherten Version zur\u00fcckkehren",
     "hide_title": "Diese Warnung ausblenden"
   },
+  "cross_refs": {
+    "title": "Kommt vor in",
+    "none": "Noch in keiner Szene, Notiz oder Weltregel erw\u00e4hnt.",
+    "scenes_one": "{{count}} Szene",
+    "scenes_other": "{{count}} Szenen",
+    "notes_one": "{{count}} Notiz",
+    "notes_other": "{{count}} Notizen",
+    "world_rules_one": "{{count}} Weltregel",
+    "world_rules_other": "{{count}} Weltregeln"
+  },
   "alias_manager": {
     "also_known_as": "Auch bekannt als",
     "add_placeholder": "Alias hinzuf\u00fcgen...",

@@ -6,6 +6,7 @@ import { NAMESPACE, TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS } from '../li
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
+import CrossReferences from '../components/CrossReferences'
 import BackLink from '../components/BackLink'
 
 interface PlotThreadData {
@@ -125,6 +126,7 @@ export default function PlotThreadsPage() {
                         <p className="text-sm text-text-muted mb-2">{thread.data.description}</p>
                       ) : null}
                       <AliasManager terminologyValue={TERMINOLOGIES.PLOT_THREADS} entityTermValue={thread.data.title} />
+                      <CrossReferences kind="plot_thread" value={thread.data.title} />
                       <div className="flex items-center gap-4 text-xs text-text-light">
                         {thread.data.opened_chapter != null ? (
                           <span>{t('plot_threads.opened_ch', { number: thread.data.opened_chapter })}</span>

@@ -6,6 +6,7 @@ import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
+import CrossReferences from '../components/CrossReferences'
 import BackLink from '../components/BackLink'
 
 interface LocationData {
@@ -82,6 +83,7 @@ function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData
       ) : null}
 
       <AliasManager terminologyValue={TERMINOLOGIES.LOCATIONS} entityTermValue={data.name} />
+      <CrossReferences kind="location" value={data.name} />
 
       {sections.length > 0 ? (
         <div className="grid md:grid-cols-2 gap-4">

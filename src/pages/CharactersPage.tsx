@@ -6,6 +6,7 @@ import { NAMESPACE, TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constan
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
+import CrossReferences from '../components/CrossReferences'
 import BackLink from '../components/BackLink'
 
 interface CharacterData {
@@ -113,6 +114,7 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
       </div>
 
       <AliasManager terminologyValue={TERMINOLOGIES.CHARACTERS} entityTermValue={data.name} />
+      <CrossReferences kind="character" value={data.name} />
 
       {/* Character bible sections */}
       {sections.length > 0 ? (
