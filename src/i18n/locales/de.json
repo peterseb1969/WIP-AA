@@ -312,7 +312,10 @@
     "also_known_as": "Auch bekannt als",
     "add_placeholder": "Alias hinzuf\u00fcgen...",
     "add_title": "Alias hinzuf\u00fcgen",
-    "remove_title": "\"{{alias}}\" entfernen"
+    "remove_title": "\"{{alias}}\" entfernen",
+    "collision": "\"{{alias}}\" wird bereits von {{owners}} verwendet. Die Szenenprüfung würde beide finden.",
+    "collision_check_failed": "Konnte nicht prüfen, ob \"{{alias}}\" bereits anderweitig verwendet wird.",
+    "add_anyway": "Trotzdem hinzufügen"
   },
   "entities": {
     "character": {

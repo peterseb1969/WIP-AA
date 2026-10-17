@@ -1,7 +1,7 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Alias collision check** — Warn when an alias is already a label/alias of another entity in the same terminology
+- (empty — pick from the Backlog)
 
 ## Backlog
 - **Analyse button + Prompt Library** — AI-powered scene analysis with editable prompt library. Each analysis type (Continuity Check, Character Voice, Style Polish, Plot Intelligence, etc.) is a prompt definition with: name, context selector (which WIP entities to include), system prompt, user prompt template with placeholders, output format. Prompts stored as WIP documents (AA_PROMPT template) or local JSON for v1. UI: dropdown on Analyse button to pick analysis type, "Manage Prompts..." opens library editor. Results in Scene Editor context panel AI tab. Requires Anthropic API key — optional enhancement, not a gate
@@ -22,6 +22,7 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Alias collision check: adding an alias that another entity already answers to (as value, label or alias, case-insensitive) shows who owns it, with Add anyway / Cancel (2026-10-17)
 - Deploy contract: `/api/app-config` route; the SPA reads its namespace from it at boot (no hard-coded `aa`); AA's own ports 3014/5180 as defaults (2026-10-17)
 - Bootstrap: namespace-prefixed `AA_BOOTSTRAP_RECORD` (legacy `BOOTSTRAP_RECORD` still accepted), "incomplete" state with idempotent resume, bootstrap follows `WIP_NAMESPACE` (2026-10-17)
 - Libraries: @wip/client 0.60.0, @wip/react 0.20.0, @wip/proxy 0.5.1 (2026-10-17)

@@ -7,19 +7,13 @@
 **Symptom (as reported 2026-04-04):** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
 **Status:** Could not reproduce on 2026-10-17. The suspected cause, a `userEditedRef` gate that skipped the first `onUpdate`, was removed about four hours after this entry was written, when dirty detection switched to an HTML baseline comparison (commit 99f5a3e). Tested on a cold load, both straight from a URL and from the scene list, with a short scratch scene and a 1,711-word scene from the real book: the editor was editable and focused, the caret landed where clicked, typing marked the scene dirty, and Save became active. If it shows up again, note the steps (which page you came from, whether a draft banner was showing) and reopen.
 
-### Alias collision not detected
-**Page:** Characters, Locations, Plot Threads (any detail page with AliasManager)
-**Symptom:** A writer can add an alias that is already used as a label or alias on a different entity. For example, adding "The Captain" to character "Carter" when "The Captain" is already an alias for "Briggs". ValidateSceneAnnotations would then match both entities for the same text, producing confusing results.
-**What's needed:** Before adding an alias, check all terms in the same terminology for label/alias collisions. Warn or block if the alias is already taken. Show which entity owns it so the writer can decide.
-**Status:** Not implemented. The alias is accepted silently.
-
 ## Unverified / technical debt
 
 ### Browser-unverified changes (2026-10-17)
 Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. Still unverified: the error screen `main.tsx` shows when `/api/app-config` can't be loaded.
 
 ### `as any` casts around the WIP client
-`AliasManager` (`defStore.updateTerm`) and several `useTerms(...)` call sites cast to `any`, so `tsc` cannot check them against @wip/client 0.60.0. Alias saving should be retested by hand after a client bump.
+Several `useTerms(...)` / `useTerminologies(...)` call sites cast their params to `any`, so `tsc` cannot check them against the client. `AliasManager`'s `updateTerm` call is typed again, and alias saving was retested in a browser with @wip/client 0.60.0 (2026-10-17).
 
 ### Vite rejects unknown hosts
 Vite's dev server answers 403 to a `Host` it doesn't recognise. Through Caddy on localhost this is fine; a non-localhost ingress (e.g. `kb.internal`) would need `server.allowedHosts` in `vite.config.ts`.

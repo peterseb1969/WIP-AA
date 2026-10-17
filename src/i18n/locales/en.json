@@ -311,7 +311,10 @@
     "also_known_as": "Also known as",
     "add_placeholder": "Add alias...",
     "add_title": "Add alias",
-    "remove_title": "Remove \"{{alias}}\""
+    "remove_title": "Remove \"{{alias}}\"",
+    "collision": "\"{{alias}}\" is already used by {{owners}}. Scene validation would match both.",
+    "collision_check_failed": "Couldn't check whether \"{{alias}}\" is already used by someone else.",
+    "add_anyway": "Add anyway"
   },
   "entities": {
     "character": {
