@@ -60,3 +60,40 @@
 **What:** Prefixed record + seed rename; incomplete state + gate panel; on_conflict=validate on terminology/term creates; full terminology flag forwarding; bootstrap honours WIP_NAMESPACE.
 **Why:** Peter: fix the open issues (bootstrap-record convention was flagged as a design decision earlier).
 **Discovered:** The scaffold template has no legacy-record handling — a straight port would mark every pre-CASE-757 namespace (incl. live aa) incomplete and offer a resume over live data. AA kept a legacy fallback. Worth telling BE-YAC (other apps bootstrapped before the prefix have the same trap) — not filed.
+
+## 2c2c2fa — docs: sync KNOWN_ISSUES and ROADMAP with the current state
+**Time:** 16:23
+**Files:** 2 files changed, 30 insertions(+), 9 deletions(-)
+**Tests:** n/a
+**What:** Alias collision moved to Bugs; three bugs Next Up; unverified/tech-debt section; today's work in Done.
+**Why:** Peter: sync before working the bugs.
+
+## e7c05a1 — gate: read the namespace label at render, not at module load
+**Time:** 16:23
+**Files:** 1 file changed, 7 insertions(+), 7 deletions(-)
+**Tests:** browser, scratch namespace — label shows dev-aa-split
+**What:** Removed module-level NAMESPACE_LABEL copy.
+**Why:** My own regression from 495c1fa: I audited the 55 existing NAMESPACE reads for module-scope use, then introduced a module-scope copy in the gate. Only the browser click-through caught it.
+
+## 3121fe3 — fix(scenes): split no longer overwrites an existing "(continued)" scene
+**Time:** 16:23
+**Files:** 3 files changed, 76 insertions(+), 68 deletions(-)
+**Tests:** browser repro on scratch namespace before (2nd split overwrote "(continued)" prose, structure got a duplicate id) and after (new "(continued 2)", old scene untouched, structure ordered, no dup)
+**What:** Unique title via WIP query; create-new-first ordering; is_new guard; loud failure when the scene is missing from the structure.
+**Why:** Data loss on repeated split.
+**PoNIF:** #3 (identity hash) — title is AA_EVENT's identity, so a reused title is an upsert, silently.
+**Discovered:** The KNOWN_ISSUES root cause (nested mutate calls) described code rewritten 4h after the entry was written. Basic split worked; the real bug was elsewhere.
+
+## 7b4907e — docs: scene editor first-load bug is not reproducible
+**Time:** 16:23
+**Files:** 2 files changed, 3 insertions(+), 5 deletions(-)
+**Tests:** browser: cold load via URL and via list; scratch scene and a 1,711-word real aa scene (read-only check, no typing/saving on aa)
+**What:** Entry rewritten as not-reproducible with evidence and what to capture.
+**Why:** Suspected cause (userEditedRef) removed in 99f5a3e after the entry was written.
+
+## 185f3aa — feat(aliases): warn when an alias is already another entity's name
+**Time:** 16:23
+**Files:** 5 files changed, 74 insertions(+), 16 deletions(-)
+**Tests:** tsc + vite build clean; browser on scratch namespace: collision flagged case-insensitively, Cancel saves nothing, free alias saves, Add anyway saves.
+**What:** Exact defStore.searchTerms over the terminology before saving; owner shown; Add anyway / Cancel; en+de strings; dropped as-any on updateTerm.
+**Why:** Bug 3 from KNOWN_ISSUES.
