@@ -44,3 +44,19 @@
 **What:** Namespace section rewritten for aa; What This App Does filled; four refresh hunks merged; dev-namespace hunks deliberately not merged.
 **Why:** CLAUDE.md pointed at a never-created dev-authorassist namespace.
 **Discovered:** .app-meta DEV_NAMESPACE feeds the CLAUDE.md render template, which includes a "retire dev namespace via delete_namespace" step — setting it to aa would make every refresh render a delete instruction for live data, so .app-meta was left as is. AA still uses unprefixed BOOTSTRAP_RECORD and has no "incomplete" gate state — open design decision.
+
+## 495c1fa — spa: read the WIP namespace from /api/app-config at boot
+**Time:** 16:03
+**Files:** 8 files changed, 85 insertions(+), 18 deletions(-)
+**Tests:** tsc clean; vite build clean; in container via Vite :5180 — /apps/aa/api/app-config → {"namespace":"aa"}, served main.tsx contains fetchAppConfig. No browser click-through.
+**What:** main.tsx awaits app-config before first render and sets NAMESPACE (export let + setter); literal 'aa' namespaces replaced; unused WIP_NAMESPACE export dropped.
+**Why:** Contract: client-visible per-deployment values come from the runtime config, not bakes/constants.
+**Discovered:** All NAMESPACE reads are inside components/hooks, so the ES live binding avoided touching 16 importers.
+
+## a6f5a64 — bootstrap: AA_BOOTSTRAP_RECORD, incomplete state, idempotent resume
+**Time:** 16:03
+**Files:** 5 files changed, 120 insertions(+), 32 deletions(-)
+**Tests:** Scratch namespace dev-authorassist via a 2nd server instance (PORT=3099): needs_bootstrap → incomplete → resume → ready; second run over existing data succeeded (12 templates, 68 terms, no dups). Live aa → ready (legacy fallback). Scratch namespace deleted.
+**What:** Prefixed record + seed rename; incomplete state + gate panel; on_conflict=validate on terminology/term creates; full terminology flag forwarding; bootstrap honours WIP_NAMESPACE.
+**Why:** Peter: fix the open issues (bootstrap-record convention was flagged as a design decision earlier).
+**Discovered:** The scaffold template has no legacy-record handling — a straight port would mark every pre-CASE-757 namespace (incl. live aa) incomplete and offer a resume over live data. AA kept a legacy fallback. Worth telling BE-YAC (other apps bootstrapped before the prefix have the same trap) — not filed.
