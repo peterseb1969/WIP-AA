@@ -35,6 +35,7 @@ import {
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, type BookStructure } from '../lib/useBookStructure'
+import { useResizableWidth } from '../lib/useResizableWidth'
 import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
 import CreateEntityModal from '../components/CreateEntityModal'
 import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
@@ -1018,6 +1019,8 @@ function SceneEditor({
   const [mode, setMode] = useState<EditorMode>('full')
   const [metadataExpanded, setMetadataExpanded] = useState(false)
   const [panelCollapsed, setPanelCollapsed] = useState(false)
+  const { width: panelWidth, onPointerDown: startPanelResize, reset: resetPanelWidth } =
+    useResizableWidth('aa-scene-panel-width', 320, 240, 640)
   const [isDirty, setIsDirty] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -1718,9 +1721,18 @@ function SceneEditor({
           </div>
         </div>
 
-        {/* Context panel (right) */}
+        {/* Context panel (right) — drag its left edge to resize */}
         {!panelCollapsed ? (
-          <div className="w-72 xl:w-80 border-l border-gray-200 bg-white flex-shrink-0 hidden md:flex flex-col">
+          <div
+            className="relative border-l border-gray-200 bg-white flex-shrink-0 hidden md:flex flex-col"
+            style={{ width: panelWidth }}
+          >
+            <div
+              onPointerDown={startPanelResize}
+              onDoubleClick={resetPanelWidth}
+              title={t('scenes.resize_panel')}
+              className="absolute inset-y-0 -left-1 w-2 cursor-col-resize z-10 hover:bg-primary/20 active:bg-primary/30 transition-colors"
+            />
             <ContextPanel
               scene={sceneData}
               characterDocs={characterDocs}
