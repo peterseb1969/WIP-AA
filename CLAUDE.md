@@ -4,7 +4,7 @@
 
 ## What This App Does
 
-> AuthorAssist — TODO: replace this line with what this app does.
+> AuthorAssist is a novel-writing assistant. A writer imports a manuscript, and an AI-assisted import pipeline extracts its chapters, scenes, characters, locations and plot threads. The writer then manages scenes (with a prose editor), characters, locations, chapters, plot threads, world rules and notes through the UI. All data lives in WIP namespace `aa`; see `README.md` for the pages and features.
 
 ## The Golden Rule
 
@@ -14,30 +14,26 @@ WIP is the backend. This app is a frontend that maps a domain onto WIP's primiti
 
 **Verify before asserting any factual claim.** Any factual claim a cheap check could falsify — a file's contents, a function's location, a date, a count, a previous case's content — must be checked, not asserted from memory. "I'm pretty sure" is fabrication if you haven't run the check. The pattern has been observed across BE-YAC and FRanC; it is agent-agnostic.
 
+- **Wake-up reading has a quality bar and a ceiling.** A wake-load reading must describe behavior that is **present, current, generally-scoped, and enforced**, with a **reconciliation path** for when reality moves. Five ways it drifts, each with its own fix — name the mode before choosing the fix:
+  - **MISSING** — the reading isn't in the wake-load → add it.
+  - **STALE** — the reading contradicts reality, with no way to notice → give it a reconciliation path.
+  - **TOO-NARROW** — the rule is present but phrased to miss the case → re-scope the wording.
+  - **ASPIRATIONAL** — the contract describes intended, not enforced, behavior → back it with a real check.
+  - **NOT-RETAINED** — the reading is present, current, scoped, and enforced, and still gets lost to mid-session salience decay under delivery pressure.
+
+  The first four are reading-list fixes. **The fifth is not** — no wake-load change reaches a rule that decays mid-session. It needs an **action-triggered gate**: a check that fires on the risky action itself (the write, the model change), not at the session boundary. When a drift instance appears in the wild, classify it against these five first; if it's NOT-RETAINED, do not reach for a reading-list patch.
+
 **Case numbers in code comments are provenance, never substance.** A comment must state the constraint or invariant in full prose; a `CASE-NNN` token may prefix it as history, but the comment must survive the deletion test: remove the token — does it still explain the code? "See CASE-NNN" as the whole explanation is a dead link to every reader without KB access, and case-pointer comments rot because the pointer never gets re-verified against the code around it. Anything user-facing or generated (UI copy, served API descriptions, docs your app publishes) carries no case tokens at all — those readers have no KB.
 
-## Dev Namespace
+## Namespace
 
-Your development namespace is `dev-authorassist`. Use it for all data modeling during development.
+The app's namespace is **`aa`**. It is the live namespace, not a scratch one: the app's own bootstrap created it on 2026-06-29 from the seed files in `server/seed/`, and it holds a full imported novel (characters, locations, plot threads, scenes) that the writer works in. `deletion_mode` is `retain`. The server (`server/index.ts`, `server/agent.ts`) and the SPA (`src/lib/constants.ts`, `src/lib/wip.ts`) all default to `aa`, and the wip-deploy manifest sets `WIP_NAMESPACE=aa` with `APP_BASE_PATH=/apps/aa`.
 
-**A missing namespace is never a setup failure.** The namespace is created at *bootstrap* — when you actually have data to put in it — not as a setup precondition. `/wip-setup` does not check for it, and its absence at session start is expected and non-blocking. If you have no data model yet (or this app is a cross-namespace console that owns no namespace of its own), there is simply nothing to create now — do **not** treat an absent `dev-authorassist` as an error, fail setup over it, or go hunting for a namespace that was never provisioned.
+The scaffold's dev-namespace workflow was never used here: `dev-authorassist` was never created, and the data model was finalised directly in `aa`. `.claude/.app-meta` still records `DEV_NAMESPACE="dev-authorassist"`, so every scaffold refresh renders `CLAUDE.md.refresh` with the generic dev-namespace text. That text includes a "retire the dev namespace with `delete_namespace`" step. **Never apply that step to `aa`**, and don't merge the dev-namespace hunks of a refresh back into this section.
 
-**Why:** Terminologies and templates are hard to delete cleanly once documents reference them. A dev namespace lets you iterate freely — create, modify, delete, start over — without polluting production data.
+**Changing the data model.** Templates and terminologies are hard to change cleanly once documents reference them, so don't iterate on the model in `aa`. Bootstrap a scratch namespace (e.g. `dev-authorassist`) from `server/seed/`, change things there, update the seed files and `data-model/`, and only then apply the finished change to `aa`. A template change is an upsert that creates a new version (PoNIF #2), so deactivate the old version, and migrate existing documents if they need the new one. Delete the scratch namespace when you're done.
 
-**Workflow:**
-1. Use `dev-authorassist` for all `/wip-design-model` and `/wip-implement` work
-2. Create terminologies, templates, and test documents in this namespace
-3. Iterate until the data model is stable
-4. When ready for production, create a new namespace (e.g., `authorassist`) and recreate the finalized model there
-5. Retire the dev namespace via the API when the data model is finalised:
-   ```
-   mcp__wip__delete_namespace(prefix="dev-authorassist")
-   ```
-   (or `DELETE /api/registry/namespaces/dev-authorassist`). The API
-   honours each namespace's deletion mode (`retain` vs `full`) — no
-   `--force` flag needed.
-
-**Important:** MCP tool calls use the privileged admin key, so always pass `namespace=dev-authorassist` explicitly when modeling. Your app's runtime key comes from `WIP_API_KEY_FILE` in `.env` (the wip-deploy secrets file) — see **API Key** below.
+**Important:** MCP tool calls use the privileged admin key, so always pass `namespace=aa` explicitly (or the scratch namespace when modeling). Your app's runtime key comes from `WIP_API_KEY_FILE` in `.env` (the wip-deploy secrets file) — see **API Key** below.
 
 ## API Key
 
@@ -55,10 +51,10 @@ WIP_API_KEY_FILE=/Users/peter/.wip-deploy/wip-local/secrets/api-key
 ```bash
 curl -k -X POST https://localhost:8443/api/registry/api-keys \
   -H 'X-API-Key: <admin-key>' -H 'Content-Type: application/json' \
-  -d '{"name": "authorassist", "namespaces": ["dev-authorassist"], "grant_permission": "write"}'
+  -d '{"name": "authorassist", "namespaces": ["aa"], "grant_permission": "write"}'
 ```
 
-**Multi-namespace key → pass `namespace` explicitly.** The deploy admin/proxy key spans all namespaces, so WIP cannot derive one for you — pass `namespace=dev-authorassist` on API calls that need scoping, or set `defaultNamespace` on `@wip/proxy` to scope reads. A single-namespace key (the least-privilege opt-in above) gets automatic derivation instead.
+**Multi-namespace key → pass `namespace` explicitly.** The deploy admin/proxy key spans all namespaces, so WIP cannot derive one for you — pass `namespace=aa` on API calls that need scoping, or set `defaultNamespace` on `@wip/proxy` to scope reads. A single-namespace key (the least-privilege opt-in above) gets automatic derivation instead.
 
 **Grants:** writes need an explicit namespace grant. If you provision a least-privilege key, pass `grant_permission` on `create_api_key` / `POST /api/registry/api-keys`, or add a grant afterwards (`create_grant` MCP tool, `registry.createGrants` in @wip/client, or `POST /api/registry/namespaces/<ns>/grants`). Grant subject for api keys is the bare key name.
 
@@ -114,17 +110,19 @@ Otherwise start with:
 Every WIP-consuming app must follow the **offer-on-empty / use-on-exists** discipline at runtime. This is a **runtime** discipline (triggered at app launch, when a user is present to act), **not a setup precondition** — a namespace absent at `/wip-setup` time is expected and creates no obligation; it is created here, at bootstrap, only when there is data to put in it. Three rules:
 
 1. **Namespace missing on launch** → show the user an explicit bootstrap offer. Do **not** auto-bootstrap silently. The user can either (a) confirm bootstrap or (b) restore from a backup via the WIP console / `wip-deploy` first and reload.
-2. **Namespace exists on launch** → use it as-is. **No** schema reconciliation, **no** "templates differ" check, **no** merge logic. Rolling redeploys against an existing namespace must come up clean. A partially-bootstrapped namespace is the user's signal to use the console, not the app's signal to silently re-bootstrap.
-3. **On user-initiated bootstrap** → write one **`BOOTSTRAP_RECORD`** audit doc capturing: `bootstrap_id`, `app_version`, `bootstrapped_at`, `commit_sha`, `templates_created`, `edge_types_created`, `terminologies_created`. This is the provenance trail any future YAC reading the namespace can rely on.
+2. **Namespace exists on launch** → use it as-is. **No** schema reconciliation, **no** "templates differ" check, **no** merge logic. Rolling redeploys against an existing namespace must come up clean. The one exception is a bootstrap that never finished — the namespace exists but holds no `<NS_PREFIX>_BOOTSTRAP_RECORD`, which the bootstrap writes last. The gate shows that as **incomplete** and *offers* to resume (every step is idempotent); it never re-bootstraps on its own, and starting over is a console action.
+3. **On user-initiated bootstrap** → write one **`<NS_PREFIX>_BOOTSTRAP_RECORD`** audit doc (the template value is namespace-prefixed, e.g. `KB_BOOTSTRAP_RECORD` — derived from your namespace in the server template's `BOOTSTRAP_RECORD_VALUE`; a shared literal value made every app-to-app merge collide on this one template, and the prefix also makes a merged-in record self-labeling about its origin) capturing: `bootstrap_id`, `app_version`, `bootstrapped_at`, `commit_sha`, `templates_created`, `edge_types_created`, `terminologies_created`. This is the provenance trail any future YAC reading the namespace can rely on.
+
+**AA predates rules 2 and 3 as written.** Its bootstrap (`server/lib/bootstrap.ts`, `server/seed/templates/00_BOOTSTRAP_RECORD.json`) writes the unprefixed `BOOTSTRAP_RECORD` template, which is also what is live in `aa`, and `BootstrapGate.tsx` has no **incomplete** state. Moving to `AA_BOOTSTRAP_RECORD` changes the data model, so it is a design decision for Peter, not a drive-by fix.
 
 **Restore is not an app concern.** The bootstrap UI mentions restore as an alternative the user may prefer; it does not provide UI for it. Restore is console-initiated.
 
 **Starting point — three template files** are copied into `templates/bootstrap/` of every new app project:
 - `bootstrap.server.ts.template` — `checkStatus()` and `runBootstrap()` library functions, with the §3.4 deltas (post-rename term-relations API, BOOTSTRAP_RECORD writing) already applied
 - `bootstrap.routes.ts.template` — Express `GET /server-api/bootstrap/status` and `POST /server-api/bootstrap/run` (SSE streaming for progress)
-- `BootstrapGate.tsx.template` — React component that wraps the app and renders the four states (checking / unreachable / needs-bootstrap / bootstrapping / error / ready)
+- `BootstrapGate.tsx.template` — React component that wraps the app and renders the gate states (checking / unreachable / needs-bootstrap / incomplete / bootstrapping / error / ready)
 
-Read each template's header comment, fill in the TODO markers (namespace, app title), drop a `BOOTSTRAP_RECORD` template into `server/seed/templates/`, and you're done. The seed-file convention (`server/seed/terminologies/<VALUE>.json`, `server/seed/templates/<NN>_<VALUE>.json`) is documented in the server template's header.
+Read each template's header comment, fill in the TODO markers (namespace, app title), drop a `<NS_PREFIX>_BOOTSTRAP_RECORD` template into `server/seed/templates/` (value must match the server template's derived `BOOTSTRAP_RECORD_VALUE`), and you're done. The seed-file convention (`server/seed/terminologies/<VALUE>.json`, `server/seed/templates/<NN>_<VALUE>.json`) is documented in the server template's header, along with where the seeds are read from (`SEED_DIR`, default `<cwd>/server/seed` — ship it in the runtime image, and don't rely on the module's location if you bundle the server) and the role-keyed layout plus `server/seed/namespaces.json` for apps that own more than one namespace.
 
 ## Reference Documentation
 
@@ -149,7 +147,7 @@ Read these before starting:
 
 ## MCP
 
-WIP is accessed exclusively via MCP tools (94 tools, 5 resources). Before starting:
+WIP is accessed exclusively via MCP tools (101 tools, 5 resources). Before starting:
 - Read `wip://conventions` — bulk-first API, identity hashing, versioning
 - Read `wip://data-model` — terminologies, templates, documents, fields, term-relations
 - Read `wip://ponifs` — 8 behaviours that trip up every new developer
@@ -314,7 +312,7 @@ For session-meaningful work that is **neither a change, an end-state, nor a fire
 2. **Scope-trim decisions mid-session** — why you're doing less than originally pitched, when the rationale matters for reading the resulting commit but isn't architectural enough for a fireside.
 3. **Block/unblock state and pre-`/compact` snapshots** — written when context is filling so the post-compaction same-agent self has more than just the last commit message and a stale session.md.
 
-**`/compact` vs `/clear`:** before `/compact` (same agent continues, conversation just summarized) write a running-log entry — this mode. Before `/clear` or end-of-day (next agent starts cold from durable artifacts) run `/wip-report session-end`. The two events look similar but have different recovery semantics.
+**`/compact` vs `/clear`:** before `/compact` (same agent continues, conversation just summarized) write a running-log entry — this mode. Before `/clear` (next agent starts cold from durable artifacts) run `/wip-report session-end`. The two events look similar but have different recovery semantics. A session is bounded by context usage, not by the calendar: it does not end because a day ended or because the human stopped for the night — a session ID several days old means the context lasted, which is the good outcome. `/clear` is the human's call, made when the window nears full; never propose it on a schedule.
 
 Append-only — distinct from `session.md` (overwritten at end) and `report-<slug>.md` (per-decision). Each entry is **timestamp + short headline + one paragraph**.
 
