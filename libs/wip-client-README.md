@@ -162,14 +162,19 @@ API key auth headers are cached internally for performance (the key is static; t
 
 ## Services
 
-| Service | Property | Port | Description |
-|---------|----------|------|-------------|
-| Def-Store | `client.defStore` | 8002 | Terminologies, terms, validation, ontology, import/export |
-| Template-Store | `client.templates` | 8003 | Document schemas, versioning, draft mode, inheritance |
-| Document-Store | `client.documents` | 8004 | Documents, versions, table view, CSV export, query |
-| File-Store | `client.files` | 8004 | File upload/download (MinIO), orphan detection, integrity |
-| Registry | `client.registry` | 8001 | Namespaces, ID management, synonyms, merge |
-| Reporting-Sync | `client.reporting` | 8005 | Cross-service search, integrity checks, activity feed |
+| Service | Property | Exported class | Port | Description |
+|---------|----------|----------------|------|-------------|
+| Def-Store | `client.defStore` | `DefStoreService` | 8002 | Terminologies, terms, validation, ontology, import/export |
+| Template-Store | `client.templates` | `TemplateStoreService` | 8003 | Document schemas, versioning, draft mode, inheritance |
+| Document-Store | `client.documents` | `DocumentStoreService` | 8004 | Documents, versions, table view, CSV export, query |
+| File-Store | `client.files` | `FileStoreService` | 8004 | File upload/download (MinIO), orphan detection, integrity |
+| Registry | `client.registry` | `RegistryService` | 8001 | Namespaces, ID management, synonyms, merge |
+| Reporting-Sync | `client.reporting` | `ReportingSyncService` | 8005 | Cross-service search, integrity checks, activity feed |
+
+The service classes (plus their abstract base `BaseService`) are exported
+for typing and subclassing; in normal use you reach them through the
+client properties above rather than constructing them directly. The
+sections below document each service's methods through those properties.
 
 All services route through the `baseUrl`. The Caddy reverse proxy routes `/api/def-store/*`, `/api/template-store/*`, etc. to the correct service port. The client always sends requests to `baseUrl + /api/<service>/...` — Caddy is required to route them correctly. In browser apps behind a Vite proxy, use `baseUrl: '/wip'` (resolved to `window.location.origin + '/wip'`). Use `baseUrl: ''` for direct Caddy access. In Node.js scripts, use `baseUrl: 'https://your-host:8443'`.
 
@@ -293,7 +298,7 @@ const imported = await client.defStore.importTerminology({
 // Export
 const exported = await client.defStore.exportTerminology('COUNTRY', {
   format: 'json',              // or 'csv'
-  includeRelationships: true,
+  includeRelations: true,
   includeInactive: false,
   includeMetadata: true,
 })
@@ -306,7 +311,7 @@ const ontology = await client.defStore.importOntology(oboGraphJson, {
   batch_size: 1000,
   registry_batch_size: 50,
 })
-// ontology.terms.created, ontology.relationships.created, ontology.elapsed_seconds
+// ontology.terms.created, ontology.relations.created, ontology.elapsed_seconds
 ```
 
 ### Ontology Term Relations
@@ -340,8 +345,15 @@ const ancestors = await client.defStore.getAncestors('ALZHEIMERS_DISEASE', {
   max_depth: 10,
 })
 const descendants = await client.defStore.getDescendants('NEUROLOGY', { max_depth: 3 })
-const parents = await client.defStore.getParents('ALZHEIMERS_DISEASE', 'wip')
-const children = await client.defStore.getChildren('NEUROLOGY', 'wip')
+
+// Direct neighbors (depth 1 by definition — no max_depth).
+// relation_type defaults to is_a on the server; pass another type to
+// follow part_of / regulates / ... links instead.
+const parents = await client.defStore.getParents('ALZHEIMERS_DISEASE', { namespace: 'wip' })
+const children = await client.defStore.getChildren('NEUROLOGY', {
+  relation_type: 'part_of',
+  namespace: 'wip',
+})
 ```
 
 ---
@@ -549,6 +561,34 @@ const csv = await client.documents.exportTableCsv('PATIENT_RECORD', {
   status: 'active',
   include_metadata: true,
 })
+```
+
+### Migrating Documents Across Template Versions
+
+A validated, identity-preserving bulk re-pin of a cohort from one template
+version to another. The two versions must declare the same `identity_fields`
+(an identity-changing move is a fork, not a migrate, and is rejected).
+Dry-run first — a dry-run with `failed === 0` guarantees a successful apply,
+barring concurrent writes:
+
+```typescript
+const preview = await client.documents.migrateDocuments({
+  template_id: 'PATIENT_RECORD',   // UUID or registered value/synonym
+  from_version: 1,
+  to_version: 2,
+  // dry_run defaults to true
+})
+
+if (preview.failed === 0) {
+  await client.documents.migrateDocuments({
+    template_id: 'PATIENT_RECORD',
+    from_version: 1,
+    to_version: 2,
+    dry_run: false,
+  })
+}
+// Per-document outcome in results[i]: status 'updated' | 'error'
+// (error_code 'validation_failed' | 'identity_fields_changed')
 ```
 
 ---
