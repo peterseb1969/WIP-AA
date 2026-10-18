@@ -1,7 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Move dialog replaces the chapter dropdown** (agreed 2026-10-18) — The header shows the chapter as text plus a **Move…** button (also in the toolbar). The dialog picks the chapter (current preselected) and the position: *At the beginning* / *After "Scene X"* / *At the end* (default). Moving within the same chapter = reordering. The dialog is the confirmation (no extra "Are you sure?"); the Undo notice follows. Reason: a select that acts on change can move a scene by accident (arrow keys change it in some browsers)
 - **Autosave with explicit Save** (agreed 2026-10-18; settles the deferred auto-save decision) — Save to WIP after 45 s without typing, at most every 5 min of continuous typing, when leaving the scene, and when the tab is hidden (`visibilitychange`). The Save button stays: it shows the state ("Save" while changes are pending, "Saved 14:02" otherwise), and Cmd/Ctrl+S saves (today it opens the browser's "Save page" dialog). The local draft stays only as a crash backup; the floating reminder is replaced by a notice that appears only when a save has *failed*
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
 - **Render analysis results as Markdown** — Claude answers with headings, bold and lists; the Analysis tab shows them as plain text (raw `#`, `**`)
@@ -21,6 +20,9 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Move dialog: "Move…" in the scene header/toolbar — choose chapter and position (beginning / after a scene / end); reorder within a chapter; undoable (2026-10-18)
+- Corkboard drag is pointer-based (fixes: after one drop no other card could be dragged) (2026-10-18)
+- Undo: quiet top-bar Undo + History list (return to any earlier state), survives navigation and reload (2026-10-18)
 - Undo for scene moves: notice with Undo after every Corkboard/picker move, Cmd/Ctrl+Z outside text fields, multi-step, refuses (if_match) when the order changed meanwhile (2026-10-18)
 - Move scenes between chapters: chapter picker in the scene editor header; new chapters join the book structure; unassigned scenes draggable on the Corkboard (2026-10-18)
 - Unsaved-draft reminder floats and skips the open scene, so the editor no longer jumps while typing (2026-10-18)

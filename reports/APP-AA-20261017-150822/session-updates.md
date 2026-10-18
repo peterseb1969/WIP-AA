@@ -32,3 +32,6 @@ Undo is now icons-only in the top bar + a history list (click a state to return 
 
 ## 14:32 — "can't move twice" was "can't drag ANY card after a drop": native HTML5 DnD; replaced with pointer drag
 Peter's clarification: after one move no other card could be dragged; mouseup became a click (opened the editor). Cause: HTML5 DnD on <a> cards + re-render of the dragged card during the save left Chrome's drag session hanging. Replaced with pointer-based drag (61f303a); verified with REAL mouse drags (the claude-in-chrome left_click_drag produces pointer events — it could never drive native DnD, which is why earlier tests used synthetic DragEvents and missed the bug). Lesson: synthetic events that bypass a browser subsystem can't prove that subsystem works. Also: Peter — never stop on my own at high context (memory saved).
+
+## 14:36 — Move dialog shipped (1046dfe)
+Next Up now: autosave + explicit Save (spec in ROADMAP), merge characters/locations, Markdown analysis, rename without duplicates.
