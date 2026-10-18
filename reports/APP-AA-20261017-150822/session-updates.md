@@ -44,3 +44,6 @@ Save-on-leave rewrote the full text over a split's first half when the editor ha
 
 ## 15:00 — phantom drafts fixed (30fbfd9)
 Peter's screenshot (repo screenshot/ folder) showed the floating draft card. Both drafts in his browser equalled WIP: Back/Prev/Next wrote backups for clean scenes. Fixed + self-cleaning + reminder moved to the top bar. Possibly what Peter meant by "odd splitting": a second split of a scene puts "(continued 2)" before "(continued)" — order correct, naming confusing. Asked.
+
+## 15:09 — scene merge shipped (c18a1da)
+WIP finding worth keeping: no document-restore endpoint, but re-creating a document with a soft-deleted one's identity REACTIVATES it (same document_id, new version). Merge undo relies on it. Also fixed: editor didn't reload on external prose changes (would autosave stale text).

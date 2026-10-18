@@ -1,7 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Merge scenes** (Peter, 2026-10-18) — The counterpart to split: merge a scene with the next one (and/or pick another scene in the same chapter). The first scene keeps its title and details; its prose gets the other's appended; characters and plot threads are combined; the merged-away scene leaves the book structure and is deleted (soft, so WIP keeps it). Design points: confirm in a dialog (like Move); undo needs more than the structure undo — it must restore the first scene's prose and reactivate the deleted scene; save the open editor first so autosave can't interfere (see the split fix)
 - **Drag and drop for chapters** (Peter, 2026-10-18) — Reorder chapters by dragging (Chapters page, and chapter headers on the Corkboard). Same pointer-based drag as the Corkboard cards; a merge PATCH of AA_BOOK_STRUCTURE `chapters` order through `useStructureEditor`, so it gets undo for free
 - **Renumber chapters on request** (Peter, 2026-10-18) — The user picks the first chapter to renumber and the number to start with; chapters from there on are numbered consecutively. Open design question: chapter numbers today are positions in the book structure ("Ch. N"), while imported titles carry their own numbers ("Kapitel 5"). Renumbering titles hits the rename problem (AA_CHAPTER's identity is `title`, so a changed title is a new document — see "Rename without duplicates"); a separate `number` field on AA_CHAPTER would avoid that but is a data-model change needing Peter's approval
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
@@ -22,6 +21,8 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Merge scenes: Merge button next to Split -> dialog with previous/next scene, choose whose details to keep, preview; undoable (re-creates the removed scene with its original id) (2026-10-18)
+- Phantom drafts fixed; draft reminder moved to a top-bar icon that only appears after a failed save (2026-10-18)
 - Autosave + explicit Save: 45 s idle / max 5 min / on leave / on hidden tab; Save button shows the state; Cmd/Ctrl+S; prose-only PATCH (2026-10-18)
 - Move dialog: "Move…" in the scene header/toolbar — choose chapter and position (beginning / after a scene / end); reorder within a chapter; undoable (2026-10-18)
 - Corkboard drag is pointer-based (fixes: after one drop no other card could be dragged) (2026-10-18)
