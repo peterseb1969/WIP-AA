@@ -26,3 +26,6 @@ Undo done (fc53046). Next Up order: Move dialog (replaces the chapter <select>; 
 
 ## 14:18 — Peter: undo must persist across pages; bug "can't move a scene twice"; stopping at ~72% context
 (1) Undo rework IN PROGRESS, UNCOMMITTED, UNTESTED: src/lib/structureUndo.tsx now keeps the stack in state + sessionStorage and exposes it; StructureUndoControl in the Layout top bar shows "Undo: <last move>" (+N) whenever something can be undone; Cmd/Ctrl+Z on any page outside text fields; no toast. tsc passes. Next: browser-test (move → navigate → undo; reload → undo; conflict), then commit. (2) Bug report "I cannot move a scene I moved once" — recorded in KNOWN_ISSUES with the aa structure version history (moves do reach WIP; UI-side failure). Need Peter's exact steps. (3) Peter said the chapter picker "seems unchanged" — correct: the Move dialog was deferred, not started. (4) IMPORTANT for any YAC: the deployed dev container bind-mounts this working tree, so every file save is live in Peter's browser immediately.
+
+## 14:24 — undo rework committed; move bug not reproduced
+Undo is now icons-only in the top bar + a history list (click a state to return to it), persisted in sessionStorage. The "can't move twice" report did not reproduce on either surface. Next session: Move dialog, autosave (ROADMAP Next Up).

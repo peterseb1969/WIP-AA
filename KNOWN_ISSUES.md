@@ -15,7 +15,7 @@
 
 ### A scene can't be moved a second time (reported by Peter 2026-10-18, not yet reproduced)
 **Symptom:** "I cannot move a scene I moved once."
-**Evidence:** the live AA_BOOK_STRUCTURE history shows moves and undos reaching WIP (v1–v13 on 2026-10-18 between 11:53 and 12:14; scene …479f moved several times, each followed by a restore). So the PATCHes themselves work, and the failure is in the UI. Which surface (Corkboard drag or the editor's chapter picker) and what happens (nothing, an error, the scene snapping back) is still unknown. Scratch tests moved the same scene twice (picker, then Corkboard) without trouble.
+**Evidence:** the live AA_BOOK_STRUCTURE history shows moves and undos reaching WIP (v1–v13 on 2026-10-18 between 11:53 and 12:14; scene …479f moved several times, each followed by a restore). So the PATCHes themselves work, and the failure is in the UI. Which surface (Corkboard drag or the editor's chapter picker) and what happens (nothing, an error, the scene snapping back) is still unknown. Not reproduced: scratch tests moved the same scene twice in a row on the Corkboard and twice with the chapter picker (2026-10-18). Peter tested while in-progress files were being served live, which may explain it. If it recurs, note the page, the steps and what happened.
 **Suspects to check first:** (1) a move computed from a stale `structure` (the hook reads the cached chapter order, so a second move before the refetch lands would start from the old order); (2) on the Corkboard, the dragged card re-mounts into another chapter group during the save, so its `dragend` never fires and the drag state goes stale.
 **Note:** the deployed dev app serves this working tree live (bind mount + HMR), so it was partly tested against in-progress edits.
 
