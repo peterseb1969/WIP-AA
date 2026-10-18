@@ -36,6 +36,7 @@ import {
   Loader2,
   ArrowRightLeft,
   Merge,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, useStructureEditor, type BookStructure } from '../lib/useBookStructure'
@@ -49,6 +50,8 @@ import MergeSceneDialog from '../components/MergeSceneDialog'
 import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
+import MediaSection, { Avatar } from '../components/MediaSection'
+import { useAttachments, useCharacterPortraits } from '../lib/media'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -454,6 +457,7 @@ function CharactersPanel({
 }) {
   const { t } = useTranslation()
   const [expandedChar, setExpandedChar] = useState<string | null>(null)
+  const portraits = useCharacterPortraits()
 
   // Match character docs by name
   const present = useMemo(() => {
@@ -479,9 +483,7 @@ function CharactersPanel({
             onClick={() => setExpandedChar(expandedChar === c.name ? null : c.name)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface rounded transition-colors"
           >
-            <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary flex-shrink-0">
-              {c.name.charAt(0)}
-            </div>
+            <Avatar fileId={portraits.get(c.name.toLowerCase())} name={c.name} className="w-7 h-7" textClassName="text-xs font-medium" />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-text truncate">{c.name}</div>
               {c.doc?.role ? (
@@ -526,7 +528,7 @@ function CharactersPanel({
 const AUTOSAVE_IDLE_MS = 45_000
 const AUTOSAVE_MAX_MS = 5 * 60_000
 
-type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'validate' | 'analysis'
+type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'media' | 'validate' | 'analysis'
 
 /** One run of a library prompt against the open scene. */
 interface AnalysisState {
@@ -558,6 +560,7 @@ function AnalysisPanel({ analysis }: { analysis: AnalysisState | null }) {
 }
 
 function ContextPanel({
+  sceneId,
   scene,
   characterDocs,
   locationDocs,
@@ -571,6 +574,7 @@ function ContextPanel({
   onValidationUnsuppress,
   analysis,
 }: {
+  sceneId: string
   scene: EventData
   characterDocs: Array<{ document_id: string; data: CharacterDocData }>
   locationDocs: Array<{ document_id: string; data: LocationData }>
@@ -609,6 +613,8 @@ function ContextPanel({
     [threadDocs, scene.plot_threads]
   )
 
+  const { attachments } = useAttachments(sceneId)
+
   const validationActionCount = validationResults
     ? validationResults.filter(r => r.state === 'detected' || r.state === 'missing').length
     : undefined
@@ -619,6 +625,7 @@ function ContextPanel({
     { key: 'threads', labelKey: 'scenes.panel_threads', icon: GitBranch, count: activeThreads.length },
     { key: 'rules', labelKey: 'scenes.panel_rules', icon: Globe, count: ruleDocs.length },
     { key: 'notes', labelKey: 'scenes.panel_notes', icon: StickyNote, count: noteDocs.length },
+    { key: 'media', labelKey: 'scenes.panel_media', icon: ImageIcon, count: attachments.length },
     { key: 'validate', labelKey: 'scenes.panel_validate', icon: ShieldCheck, count: validationActionCount, highlight: (validationActionCount ?? 0) > 0 },
     { key: 'analysis', labelKey: 'scenes.panel_analysis', icon: Sparkles },
   ]
@@ -749,6 +756,11 @@ function ContextPanel({
           </div>
         ) : null}
 
+        {tab === 'media' ? (
+          <div className="p-2">
+            <MediaSection entityId={sceneId} kind="scene" compact />
+          </div>
+        ) : null}
         {tab === 'analysis' ? <AnalysisPanel analysis={analysis} /> : null}
         {tab === 'validate' ? (
           <ValidationPanel
@@ -2154,6 +2166,7 @@ function SceneEditor({
               className="absolute inset-y-0 -left-1 w-2 cursor-col-resize z-10 hover:bg-primary/20 active:bg-primary/30 transition-colors"
             />
             <ContextPanel
+              sceneId={sceneId}
               scene={sceneData}
               characterDocs={characterDocs}
               locationDocs={locationDocs}

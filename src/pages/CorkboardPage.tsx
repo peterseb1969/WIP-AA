@@ -14,6 +14,8 @@ import { useBookStructure, useStructureEditor, chapterDropBefore, chapterNumberA
 import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
+import { Avatar } from '../components/MediaSection'
+import { useCharacterPortraits } from '../lib/media'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -95,6 +97,7 @@ function SceneCard({
 }) {
   const { t } = useTranslation()
   const wc = wordCount(event.data.prose)
+  const portraits = useCharacterPortraits()
 
   return (
     <Link
@@ -138,13 +141,7 @@ function SceneCard({
       {event.data.characters?.length ? (
         <div className="flex flex-wrap gap-0.5 mt-1.5">
           {event.data.characters.slice(0, 3).map((c, i) => (
-            <span
-              key={i}
-              className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-medium text-primary"
-              title={String(c)}
-            >
-              {String(c).charAt(0)}
-            </span>
+            <Avatar key={i} fileId={portraits.get(String(c).toLowerCase())} name={String(c)} className="w-5 h-5" textClassName="text-[9px] font-medium" />
           ))}
           {event.data.characters.length > 3 ? (
             <span className="text-[9px] text-text-light self-center ml-0.5">

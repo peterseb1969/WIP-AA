@@ -4,7 +4,6 @@
 - **Renumber chapters on request** (Peter, 2026-10-18) — The user picks the first chapter to renumber and the number to start with; chapters from there on are numbered consecutively. Open design question: chapter numbers today are positions in the book structure ("Ch. N"), while imported titles carry their own numbers ("Kapitel 5"). Renumbering titles hits the rename problem (AA_CHAPTER's identity is `title`, so a changed title is a new document — see "Rename without duplicates"); a separate `number` field on AA_CHAPTER would avoid that but is a data-model change needing Peter's approval
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
 - **Render analysis results as Markdown** — Claude answers with headings, bold and lists; the Analysis tab shows them as plain text (raw `#`, `**`)
-- **Image support** (Peter, 2026-10-18) — Scope to be agreed (e.g. images in scene prose, character/location portraits, reference images). WIP stores binaries as Files (MinIO) referenced by `file` fields, so any variant is a data-model change needing Peter's approval
 - **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
 
 ## Backlog
@@ -14,6 +13,7 @@
 - **End User Manual** — Writer-facing documentation covering all 11 pages, import workflow, scene editing, validation, alias management, and entity CRUD. Should be approachable for non-technical users
 
 ## Ideas
+- **Media, next steps** (from the image design, 2026-10-18) — The model is generic (AA_MEDIA + AA_ATTACHED_TO, any file type). Not built yet: Images sections on Chapters, Notes and World Rules (the link type already allows them); a Media library page (every file, where it is attached, attach/detach); sound files (an audio player row; first check that the app proxy passes `Range` requests through, since seeking needs them: a Range request returned 200 with the full body on 2026-10-18); images inside scene prose (a custom editor node that stores the file id); shrinking large photos in the browser before upload
 - **Structure history** (Peter, 2026-10-18) — A "History" panel listing earlier chapter/scene orders from AA_BOOK_STRUCTURE's WIP version history, with restore. Persists across reloads, unlike the in-session undo. Same idea could later cover scene prose versions (autosave creates them)
 - **Book import/export** — Export the full book as a single file (e.g. Markdown, EPUB, or plain text) and reimport from exported format. Round-trip fidelity for backup and external editing workflows
 - **AI-based scene validation** — Second validation mechanism complementing regex-based ValidateSceneAnnotations. Uses AI to detect entities mentioned indirectly (pronouns, descriptions, nicknames not in aliases) and flag semantic issues (character in wrong location, timeline inconsistencies). Design TBD
@@ -21,6 +21,7 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Images (v1 of generic file support): an Images section on Character, Location and Plot Thread pages and an Images tab in the scene editor; upload by button or by dropping files; attach images already in the book; lightbox; title/caption (shared) and role (per attachment: Portrait, Illustration, Map, Reference, Other); the first Portrait becomes the character's avatar (detail header, Characters list, relationships, Corkboard, Timeline, scene editor). Model: AA_MEDIA (one per file, identity = the file, so the same image is stored once) + edge type AA_ATTACHED_TO (2026-10-18)
 - Drag and drop for chapters: drag a chapter row on the Chapters page, or a chapter heading on the Corkboard; a line shows where it lands; chapter numbers follow; undoable. Corkboard card drag now shares the same pointer-drag code (2026-10-18)
 - Merge scenes: Merge button next to Split -> dialog with previous/next scene, choose whose details to keep, preview; undoable (re-creates the removed scene with its original id) (2026-10-18)
 - Phantom drafts fixed; draft reminder moved to a top-bar icon that only appears after a failed save (2026-10-18)

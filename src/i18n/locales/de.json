@@ -27,7 +27,8 @@
     "event_count_other": "{{count}} Ereignisse",
     "invalid_suffix": "(ung\u00fcltig)",
     "scenes": "Szenen",
-    "chapter_prefix": "Kapitel {{number}}"
+    "chapter_prefix": "Kapitel {{number}}",
+    "close": "Schließen"
   },
   "nav": {
     "scenes": "Szenen-Editor",
@@ -242,7 +243,8 @@
     "no_chapters_yet": "Lege zuerst ein Kapitel an (Kapitel-Seite)",
     "saved": "Gespeichert",
     "save_failed": "Nicht gespeichert \u2014 erneut",
-    "save_shortcut": "Speichern (Cmd/Strg+S) \u2014 speichert auch automatisch"
+    "save_shortcut": "Speichern (Cmd/Strg+S) \u2014 speichert auch automatisch",
+    "panel_media": "Bilder"
   },
   "corkboard": {
     "title": "Pinnwand",
@@ -711,5 +713,32 @@
     "preview": "\u201e{{a}}\u201c + \u201e{{b}}\u201c \u2192 \u201e{{title}}\u201c, {{words}} W\u00f6rter",
     "merge": "Zusammenf\u00fchren",
     "merging": "Wird zusammengef\u00fchrt\u2026"
+  },
+  "media": {
+    "title": "Bilder",
+    "add": "Bilder hinzuf\u00fcgen",
+    "from_book": "Aus dem Buch",
+    "from_book_title": "Ein Bild anh\u00e4ngen, das schon im Buch ist",
+    "loading": "Bilder werden geladen...",
+    "empty": "Noch keine Bilder. F\u00fcge welche hinzu oder ziehe Bilddateien hierher.",
+    "only_images": "Vorerst k\u00f6nnen nur Bilder angeh\u00e4ngt werden.",
+    "too_large": "{{name}} ist gr\u00f6\u00dfer als 25 MB.",
+    "upload_failed": "{{name}} konnte nicht hinzugef\u00fcgt werden: {{message}}",
+    "edit": "Bild bearbeiten",
+    "field_title": "Titel",
+    "field_caption": "Bildunterschrift",
+    "field_role": "Rolle hier",
+    "shared_hint": "Titel und Bildunterschrift erscheinen \u00fcberall, wo das Bild angeh\u00e4ngt ist; die Rolle gilt nur hier.",
+    "detach": "Hier entfernen",
+    "pick_title": "Bilder im Buch",
+    "already_attached": "Hier schon angeh\u00e4ngt",
+    "none_in_book": "Im Buch gibt es noch keine Bilder.",
+    "role": {
+      "PORTRAIT": "Portr\u00e4t",
+      "ILLUSTRATION": "Illustration",
+      "MAP": "Karte",
+      "REFERENCE": "Referenz",
+      "OTHER": "Sonstiges"
+    }
   }
 }

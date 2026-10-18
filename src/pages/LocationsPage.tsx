@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
+import MediaSection from '../components/MediaSection'
 import BackLink from '../components/BackLink'
 
 interface LocationData {
@@ -30,7 +31,7 @@ const TYPE_COLORS: Record<string, string> = {
   OTHER: 'bg-gray-200 text-gray-700',
 }
 
-function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
+function LocationDetail({ documentId, data, onBack, onEdit, onDelete }: { documentId: string; data: LocationData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   const sections = [
     { label: t('locations.atmosphere'), value: data.atmosphere },
@@ -84,6 +85,7 @@ function LocationDetail({ data, onBack, onEdit, onDelete }: { data: LocationData
 
       <AliasManager terminologyValue={TERMINOLOGIES.LOCATIONS} entityTermValue={data.name} />
       <CrossReferences kind="location" value={data.name} />
+      <MediaSection entityId={documentId} kind="location" />
 
       {sections.length > 0 ? (
         <div className="grid md:grid-cols-2 gap-4">
@@ -131,6 +133,7 @@ export default function LocationsPage() {
       {selectedData ? (
         <>
           <LocationDetail
+            documentId={selectedId!}
             data={selectedData}
             onBack={() => setSelectedId(null)}
             onEdit={() => setEditData(selectedData as unknown as Record<string, unknown>)}

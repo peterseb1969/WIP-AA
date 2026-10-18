@@ -8,6 +8,8 @@ import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
 import BackLink from '../components/BackLink'
+import MediaSection, { Avatar } from '../components/MediaSection'
+import { useAttachments, useCharacterPortraits, portraitOf } from '../lib/media'
 
 interface CharacterData {
   name: string
@@ -29,15 +31,16 @@ interface CharacterData {
   }>
 }
 
-function CharacterCard({ data, onClick }: { data: CharacterData; onClick: () => void }) {
+function CharacterCard({ data, portrait, onClick }: { data: CharacterData; portrait?: string; onClick: () => void }) {
   const { t } = useTranslation()
   return (
     <button
       onClick={onClick}
       className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all w-full"
     >
-      <div className="flex items-start justify-between mb-2">
-        <h3 className="font-semibold text-text">{data.name}</h3>
+      <div className="flex items-start gap-3 mb-2">
+        {portrait ? <Avatar fileId={portrait} name={data.name} className="w-10 h-10" /> : null}
+        <h3 className="font-semibold text-text flex-1">{data.name}</h3>
         <StatusBadge label={data.role} colorClass={ROLE_COLORS[data.role]} />
       </div>
       {data.age ? <div className="text-xs text-text-muted mb-1">{t('characters.age_label', { age: data.age })}</div> : null}
@@ -59,6 +62,7 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
   // Resolve character names from terms
   const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50, namespace: NAMESPACE } as any)
   const termLookup = new Map(charTerms?.items?.map((tm) => [tm.value, tm.label]) ?? [])
+  const { attachments } = useAttachments(documentId)
 
   const sections = [
     { label: t('characters.personality'), value: data.personality },
@@ -80,9 +84,7 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
       </button>
 
       <div className="flex items-start gap-4 mb-6">
-        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl">
-          {data.name.charAt(0)}
-        </div>
+        <Avatar fileId={portraitOf(attachments)?.fileId} name={data.name} className="w-14 h-14" textClassName="font-bold text-xl" />
         <div className="flex-1">
           <div className="flex items-start justify-between">
             <h2 className="text-xl font-bold text-text">{data.name}</h2>
@@ -115,6 +117,7 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
 
       <AliasManager terminologyValue={TERMINOLOGIES.CHARACTERS} entityTermValue={data.name} />
       <CrossReferences kind="character" value={data.name} />
+      <MediaSection entityId={documentId} kind="character" />
 
       {/* Character bible sections */}
       {sections.length > 0 ? (
@@ -162,6 +165,7 @@ function Relationships({
 }) {
   const { t } = useTranslation()
   const updateDoc = useUpdateDocument()
+  const portraits = useCharacterPortraits()
   const { data: typeTerms } = useTerms(TERMINOLOGIES.RELATIONSHIP_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ character: '', relationship_type: '', description: '' })
@@ -215,9 +219,12 @@ function Relationships({
       <div className="space-y-2">
         {relationships.map((rel, i) => (
           <div key={i} className="flex items-center gap-3 p-2 rounded bg-surface">
-            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-medium">
-              {(termLookup.get(rel.character) ?? rel.character).charAt(0)}
-            </div>
+            <Avatar
+              fileId={portraits.get(rel.character.toLowerCase())}
+              name={termLookup.get(rel.character) ?? rel.character}
+              className="w-8 h-8"
+              textClassName="text-sm font-medium"
+            />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-text">
                 {termLookup.get(rel.character) ?? rel.character}
@@ -306,6 +313,7 @@ export default function CharactersPage() {
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteDoc = useDeleteDocument()
+  const portraits = useCharacterPortraits()
 
   const { data: characters, isLoading } = useDocuments({
     template_id: TEMPLATES.CHARACTER,
@@ -391,6 +399,7 @@ export default function CharactersPage() {
                 <CharacterCard
                   key={ch.document_id}
                   data={ch.data as unknown as CharacterData}
+                  portrait={portraits.get(String((ch.data as { name?: string }).name ?? '').toLowerCase())}
                   onClick={() => setSelectedId(ch.document_id)}
                 />
               ))}

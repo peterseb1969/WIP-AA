@@ -13,6 +13,8 @@ import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure } from '../lib/useBookStructure'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
+import { Avatar } from '../components/MediaSection'
+import { useCharacterPortraits } from '../lib/media'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -48,6 +50,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 // ── Timeline Event Card ──────────────────────────────────
 
 function TimelineEvent({ event }: { event: { document_id: string; data: EventData } }) {
+  const portraits = useCharacterPortraits()
   return (
     <Link
       to={`/scenes?id=${event.document_id}`}
@@ -85,13 +88,7 @@ function TimelineEvent({ event }: { event: { document_id: string; data: EventDat
       {event.data.characters?.length ? (
         <div className="flex items-center gap-1 mt-2">
           {event.data.characters.slice(0, 4).map((c, i) => (
-            <span
-              key={i}
-              className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center text-[9px] font-medium text-primary"
-              title={String(c)}
-            >
-              {String(c).charAt(0)}
-            </span>
+            <Avatar key={i} fileId={portraits.get(String(c).toLowerCase())} name={String(c)} className="w-5 h-5" textClassName="text-[9px] font-medium" />
           ))}
           {event.data.characters.length > 4 ? (
             <span className="text-[10px] text-text-light ml-0.5">

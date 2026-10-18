@@ -27,7 +27,8 @@
     "event_count_other": "{{count}} events",
     "invalid_suffix": "(invalid)",
     "scenes": "Scenes",
-    "chapter_prefix": "Chapter {{number}}"
+    "chapter_prefix": "Chapter {{number}}",
+    "close": "Close"
   },
   "nav": {
     "scenes": "Scene Editor",
@@ -241,7 +242,8 @@
     "no_chapters_yet": "Create a chapter first (Chapters page)",
     "saved": "Saved",
     "save_failed": "Not saved \u2014 retry",
-    "save_shortcut": "Save (Cmd/Ctrl+S) \u2014 also saves automatically"
+    "save_shortcut": "Save (Cmd/Ctrl+S) \u2014 also saves automatically",
+    "panel_media": "Images"
   },
   "corkboard": {
     "title": "Corkboard",
@@ -710,5 +712,32 @@
     "preview": "\u201c{{a}}\u201d + \u201c{{b}}\u201d \u2192 \u201c{{title}}\u201d, {{words}} words",
     "merge": "Merge",
     "merging": "Merging\u2026"
+  },
+  "media": {
+    "title": "Images",
+    "add": "Add images",
+    "from_book": "From the book",
+    "from_book_title": "Attach an image that is already in the book",
+    "loading": "Loading images...",
+    "empty": "No images yet. Add some, or drop image files here.",
+    "only_images": "Only images can be attached for now.",
+    "too_large": "{{name}} is larger than 25 MB.",
+    "upload_failed": "{{name}} could not be added: {{message}}",
+    "edit": "Edit image",
+    "field_title": "Title",
+    "field_caption": "Caption",
+    "field_role": "Role here",
+    "shared_hint": "Title and caption are shown wherever this image is attached; the role is just for this one.",
+    "detach": "Remove from here",
+    "pick_title": "Images in the book",
+    "already_attached": "Already attached here",
+    "none_in_book": "There are no images in the book yet.",
+    "role": {
+      "PORTRAIT": "Portrait",
+      "ILLUSTRATION": "Illustration",
+      "MAP": "Map",
+      "REFERENCE": "Reference",
+      "OTHER": "Other"
+    }
   }
 }
