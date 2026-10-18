@@ -24,3 +24,4 @@ Continues from APP-AA-20261017-150822 (via /wip-wake).
 - [x] Merge implementation (fc96e42), after CASE-904 was answered
 - [x] Analysis/Ask answers render as Markdown (c3e84cb)
 - [x] Scratch namespace dev-aa-md deleted
+- [x] Rename without duplicates, A1 + B1 (2a27ee5); term-id matching fixes Appears-in etc. on aa

@@ -61,3 +61,11 @@
 **What/Why:** Agreed merge design (A, fields b, no undo, all three kinds); CASE-904 answered: app-side rewrite confirmed, write canonical names.
 **PoNIF:** #3 (identity = term-resolved name: survivor's doc keeps its identity; absorbed docs retired not re-posted); #4 (bulk results checked: single-item client calls throw on per-item errors).
 **Discovered:** CASE-904 response: document-store's cached term lookup includes deprecated/inactive terms indefinitely (TTL 300 s, refetch on miss only); term hard-delete leaves Registry entry (re-created value reuses the old id).
+
+## 2a27ee5 — feat(rename): rename without duplicates; match entities by term id
+**Time:** 00:05 (2026-10-19)
+**Files:** 21 files changed
+**Tests:** tsc clean; browser on scratch ns dev-aa-ren (retain; deleted after) seeded with aa's mixed spellings (entity doc "Lady Linora Thalyn", scene refs "LADY_LINORA_THALYN"): "Appears in" (scene + note) and alias manager now work; A1 rename Lady Linora Thalyn → Linora Thalyn via Edit (term label changed, old label alias, same doc, portrait/appears-in intact, no duplicate); collision (Carter → "lady linora thalyn") refused with merge hint; scene editor shows label + portrait + matched doc; B1 scene rename via header (new id, structure re-pointed, navigated); chapter rename via Edit (position + scene kept); note rename (image followed). API check: no duplicates, structure ids all live, old chapter/scene/note inactive, all edges target live docs.
+**What/Why:** Peter: A1 + B1, no fix for existing data. Interpreted as "don't rewrite stored data"; the term-id matching is code-only and was included (flagged to Peter).
+**PoNIF:** #3 (resolved-referent identity: term-named entities keep identity across a label change; string-titled ones can't — copy + re-point).
+**Discovered:** Live bugs in aa from mixed spellings (entity doc = display name, references = term value): "Appears in" empty for every character, AliasManager couldn't find multi-word terms, portraits missing for multi-word names in lists, scene-editor Characters tab couldn't expand multi-word characters, relationship picker didn't hide self. All fixed by term-id matching. Also: fc96e42 had dropped the KNOWN_ISSUES "Unverified / technical debt" heading — restored in ecea23a.
