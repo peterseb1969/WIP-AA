@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Placeholder from '@tiptap/extension-placeholder'
-import { useDocuments, useCreateDocument, useDeleteDocument, useWipClient } from '@wip/react'
+import { useDocuments, useCreateDocument, useDeleteDocument, useWipClient, wipKeys } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   PenTool,
@@ -518,6 +518,10 @@ function CharactersPanel({
 }
 
 // ── Context Panel (right, tabbed) ────────────────────────
+
+// Autosave timing (see the saving section in SceneEditor).
+const AUTOSAVE_IDLE_MS = 45_000
+const AUTOSAVE_MAX_MS = 5 * 60_000
 
 type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'validate' | 'analysis'
 
@@ -1233,6 +1237,88 @@ function SceneEditor({
     }
   }, [editor, writeDraft])
 
+  // ── Saving: autosave + explicit Save ─────────────────────
+  // Prose is saved as a merge PATCH of `prose` only, so a save never touches
+  // the scene's other fields. Autosave runs after AUTOSAVE_IDLE_MS without
+  // typing, at most every AUTOSAVE_MAX_MS while typing non-stop, when the
+  // scene is left and when the tab is hidden; Save and Cmd/Ctrl+S save at
+  // once. The localStorage draft is only a crash backup between saves — it
+  // outlives a save only when the save failed.
+  const saveClient = useWipClient()
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const savingRef = useRef(false)
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dirtySinceRef = useRef<number | null>(null)
+
+  const saveProse = useCallback(async () => {
+    if (!editor || editor.isDestroyed || !isDirtyRef.current || savingRef.current) return
+    const prose = editor.getHTML()
+    savingRef.current = true
+    setSaving(true)
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    try {
+      await saveClient.documents.updateDocument(sceneId, { prose })
+      baselineHtmlRef.current = prose
+      // Typing may have continued while the save was in flight.
+      const stillDirty = !editor.isDestroyed && editor.getHTML() !== prose
+      isDirtyRef.current = stillDirty
+      setIsDirty(stillDirty)
+      dirtySinceRef.current = stillDirty ? Date.now() : null
+      setLastSaved(new Date())
+      setSaveError(null)
+      if (!stillDirty) {
+        localStorage.removeItem(draftKey)
+        notifyDraftChange()
+      }
+      queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : String(err))
+    } finally {
+      savingRef.current = false
+      setSaving(false)
+    }
+  }, [editor, saveClient, sceneId, draftKey, queryClient])
+
+  // Schedule autosave on every change.
+  useEffect(() => {
+    if (!editor) return
+    const onUpdate = () => {
+      if (!isDirtyRef.current) return
+      if (dirtySinceRef.current == null) dirtySinceRef.current = Date.now()
+      if (Date.now() - dirtySinceRef.current >= AUTOSAVE_MAX_MS) {
+        saveProse()
+        return
+      }
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = setTimeout(() => { saveProse() }, AUTOSAVE_IDLE_MS)
+    }
+    editor.on('update', onUpdate)
+    return () => {
+      editor.off('update', onUpdate)
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    }
+  }, [editor, saveProse])
+
+  // Save when the tab is hidden (switching apps, minimising — usually also
+  // before the machine sleeps), and on Cmd/Ctrl+S instead of the browser's
+  // "Save page" dialog.
+  useEffect(() => {
+    const onVisibility = () => { if (document.visibilityState === 'hidden') saveProse() }
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        saveProse()
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [saveProse])
+
   // Auto-backup to localStorage every 3 seconds on change
   useEffect(() => {
     if (!editor) return
@@ -1249,12 +1335,22 @@ function SceneEditor({
     return () => {
       editor.off('update', handler)
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
-      // Only save draft if user actually made edits
+      // Leaving the scene with unsaved edits: keep the local backup and save
+      // to WIP; the backup is removed once that save succeeds (a failed save
+      // leaves it, and the draft reminder offers to resume).
       if (isDirtyRef.current && editor.getText().trim()) {
-        writeDraft(editor.getHTML())
+        const prose = editor.getHTML()
+        writeDraft(prose)
+        saveClient.documents.updateDocument(sceneId, { prose })
+          .then(() => {
+            localStorage.removeItem(draftKey)
+            notifyDraftChange()
+            queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
+          })
+          .catch(() => { /* backup stays */ })
       }
     }
-  }, [editor, draftKey, writeDraft])
+  }, [editor, draftKey, writeDraft, saveClient, sceneId, queryClient])
 
   // Listen for discard events from the banner — reset editor to WIP version
   useEffect(() => {
@@ -1272,30 +1368,18 @@ function SceneEditor({
     return () => window.removeEventListener(DRAFT_DISCARD_EVENT, handler)
   }, [editor, sceneId, sceneData?.prose])
 
-  // Save prose to WIP — creates a new version with all existing data + updated prose
-  const handleSave = useCallback(() => {
-    if (!editor || !sceneData) return
-    const prose = editor.getHTML()
-    createDocument.mutate(
-      {
-        template_id: TEMPLATES.EVENT,
-        namespace: NAMESPACE,
-        data: { ...sceneData, prose },
-      },
-      {
-        onSuccess: () => {
-          // Reset baseline to current content so further edits compare against saved state
-          if (editor) baselineHtmlRef.current = editor.getHTML()
-          setIsDirty(false)
-          isDirtyRef.current = false
-          setLastSaved(new Date())
-          // Clear localStorage draft since we've saved to WIP
-          localStorage.removeItem(draftKey)
-          notifyDraftChange()
-        },
-      }
-    )
-  }, [editor, sceneData, createDocument, draftKey])
+  const handleSave = useCallback(() => { saveProse() }, [saveProse])
+
+  // What the Save button says: the save state, at a fixed width.
+  const saveLabel = saving
+    ? t('scenes.saving_prose')
+    : saveError
+      ? t('scenes.save_failed')
+      : isDirty
+        ? t('scenes.save')
+        : lastSaved
+          ? t('scenes.saved_at', { time: lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) })
+          : t('scenes.saved')
 
   const currentWordCount = editor ? wordCount(editor.getText()) : 0
 
@@ -1687,11 +1771,12 @@ function SceneEditor({
             <span className="text-xs">{t('common.words', { count: currentWordCount })}</span>
             <button
               onClick={handleSave}
-              disabled={!isDirty || createDocument.isPending}
-              className="flex items-center gap-1.5 text-sm hover:text-white transition-colors disabled:opacity-30 disabled:cursor-default"
+              disabled={(!isDirty && !saveError) || saving}
+              title={saveError ?? t('scenes.save_shortcut')}
+              className={`flex items-center gap-1.5 text-sm transition-colors disabled:cursor-default ${saveError ? 'text-red-300' : 'hover:text-white disabled:opacity-60'}`}
             >
               <Save className="w-4 h-4" />
-              {createDocument.isPending ? t('scenes.saving_prose') : t('scenes.save')}
+              {saveLabel}
             </button>
             <button
               onClick={() => setMode('full')}
@@ -1739,15 +1824,18 @@ function SceneEditor({
         {/* Save button */}
         <button
           onClick={handleSave}
-          disabled={!isDirty || createDocument.isPending}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-            isDirty
-              ? 'bg-primary text-white hover:bg-primary-dark'
-              : 'bg-gray-100 text-text-muted cursor-default'
-          } disabled:opacity-50`}
+          disabled={(!isDirty && !saveError) || saving}
+          title={saveError ?? t('scenes.save_shortcut')}
+          className={`flex items-center justify-center gap-1.5 min-w-28 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+            saveError
+              ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+              : isDirty
+                ? 'bg-primary text-white hover:bg-primary-dark'
+                : 'bg-gray-100 text-text-muted cursor-default'
+          }`}
         >
           <Save className="w-3.5 h-3.5" />
-          {createDocument.isPending ? t('scenes.saving_prose') : t('scenes.save')}
+          {saveLabel}
         </button>
 
         {/* Split */}
@@ -1918,11 +2006,6 @@ function SceneEditor({
           <div className="bg-surface border-t border-gray-100 px-4 py-1.5 flex items-center justify-between text-xs text-text-muted">
             <span>{t('common.words', { count: currentWordCount })}</span>
             <span>
-              {lastSaved ? (
-                <span className="text-green-600 mr-2">{t('scenes.saved_at', { time: '' }).trim()}</span>
-              ) : isDirty ? (
-                <span className="text-amber-500 mr-2">Unsaved changes</span>
-              ) : null}
               {t('dashboard.ch_short', { number: chapterNumber ?? '?' })} · Scene {sceneNumber ?? '?'}
             </span>
           </div>

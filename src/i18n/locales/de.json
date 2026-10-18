@@ -236,7 +236,10 @@
     "manage_prompts": "Prompts verwalten...",
     "move_to_chapter": "Szene in ein anderes Kapitel verschieben",
     "no_chapter": "Kein Kapitel",
-    "no_chapters_yet": "Lege zuerst ein Kapitel an (Kapitel-Seite)"
+    "no_chapters_yet": "Lege zuerst ein Kapitel an (Kapitel-Seite)",
+    "saved": "Gespeichert",
+    "save_failed": "Nicht gespeichert \u2014 erneut",
+    "save_shortcut": "Speichern (Cmd/Strg+S) \u2014 speichert auch automatisch"
   },
   "corkboard": {
     "title": "Pinnwand",

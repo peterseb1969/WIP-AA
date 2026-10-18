@@ -235,7 +235,10 @@
     "manage_prompts": "Manage prompts...",
     "move_to_chapter": "Move this scene to another chapter",
     "no_chapter": "No chapter",
-    "no_chapters_yet": "Create a chapter first (Chapters page)"
+    "no_chapters_yet": "Create a chapter first (Chapters page)",
+    "saved": "Saved",
+    "save_failed": "Not saved \u2014 retry",
+    "save_shortcut": "Save (Cmd/Ctrl+S) \u2014 also saves automatically"
   },
   "corkboard": {
     "title": "Corkboard",
