@@ -35,3 +35,6 @@ Peter's clarification: after one move no other card could be dragged; mouseup be
 
 ## 14:36 — Move dialog shipped (1046dfe)
 Next Up now: autosave + explicit Save (spec in ROADMAP), merge characters/locations, Markdown analysis, rename without duplicates.
+
+## 14:42 — autosave shipped (38b0460); Peter added chapter DnD + renumbering ToDos
+Renumbering has an open design question (title numbers vs a number field; title = identity) — recorded in ROADMAP.

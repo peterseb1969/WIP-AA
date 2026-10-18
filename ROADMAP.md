@@ -1,7 +1,8 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Autosave with explicit Save** (agreed 2026-10-18; settles the deferred auto-save decision) — Save to WIP after 45 s without typing, at most every 5 min of continuous typing, when leaving the scene, and when the tab is hidden (`visibilitychange`). The Save button stays: it shows the state ("Save" while changes are pending, "Saved 14:02" otherwise), and Cmd/Ctrl+S saves (today it opens the browser's "Save page" dialog). The local draft stays only as a crash backup; the floating reminder is replaced by a notice that appears only when a save has *failed*
+- **Drag and drop for chapters** (Peter, 2026-10-18) — Reorder chapters by dragging (Chapters page, and chapter headers on the Corkboard). Same pointer-based drag as the Corkboard cards; a merge PATCH of AA_BOOK_STRUCTURE `chapters` order through `useStructureEditor`, so it gets undo for free
+- **Renumber chapters on request** (Peter, 2026-10-18) — The user picks the first chapter to renumber and the number to start with; chapters from there on are numbered consecutively. Open design question: chapter numbers today are positions in the book structure ("Ch. N"), while imported titles carry their own numbers ("Kapitel 5"). Renumbering titles hits the rename problem (AA_CHAPTER's identity is `title`, so a changed title is a new document — see "Rename without duplicates"); a separate `number` field on AA_CHAPTER would avoid that but is a data-model change needing Peter's approval
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
 - **Render analysis results as Markdown** — Claude answers with headings, bold and lists; the Analysis tab shows them as plain text (raw `#`, `**`)
 - **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
@@ -20,6 +21,7 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Autosave + explicit Save: 45 s idle / max 5 min / on leave / on hidden tab; Save button shows the state; Cmd/Ctrl+S; prose-only PATCH (2026-10-18)
 - Move dialog: "Move…" in the scene header/toolbar — choose chapter and position (beginning / after a scene / end); reorder within a chapter; undoable (2026-10-18)
 - Corkboard drag is pointer-based (fixes: after one drop no other card could be dragged) (2026-10-18)
 - Undo: quiet top-bar Undo + History list (return to any earlier state), survives navigation and reload (2026-10-18)
