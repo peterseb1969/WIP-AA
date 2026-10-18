@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUpdateDocument } from '@wip/react'
 import { Undo2, History, X } from 'lucide-react'
@@ -141,11 +141,28 @@ export function StructureUndoControl() {
   const { t } = useTranslation()
   const u = useStructureUndo()
   const [open, setOpen] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  // The history list closes on any click outside it, and on Escape.
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: PointerEvent) => {
+      if (!boxRef.current?.contains(e.target as Node)) setOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
   if (!u || (!u.entries.length && !u.error)) return null
   const last = u.entries[u.entries.length - 1]
   const iconBtn = 'p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-surface transition-colors disabled:opacity-40'
   return (
-    <div className="ml-auto flex items-center gap-1 text-sm relative">
+    <div ref={boxRef} className="ml-auto flex items-center gap-1 text-sm relative">
       {u.error ? (
         <span className="flex items-center gap-1 text-red-600 truncate max-w-80" title={u.error}>
           <span className="truncate">{u.error}</span>

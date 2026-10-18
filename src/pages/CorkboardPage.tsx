@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
@@ -84,12 +84,13 @@ function SceneCard({
   colorClass: string
   /** Present only where cards can be reordered (group by chapter). */
   dnd?: {
-    onDragStart: () => void
-    onDragEnd: () => void
-    /** Absent for cards that can be dragged but not dropped on (no chapter). */
-    onDropBefore?: () => void
+    onPointerDown: (e: React.PointerEvent) => void
+    /** Chapter a drop on this card lands in; absent for cards outside every chapter. */
+    chapterIndex?: number
     isDropTarget: boolean
-    setDropTarget: (on: boolean) => void
+    isDragging: boolean
+    /** True once for the click that ends a drag — that click must not open the scene. */
+    consumeClick: () => boolean
   }
 }) {
   const { t } = useTranslation()
@@ -98,19 +99,16 @@ function SceneCard({
   return (
     <Link
       to={`/scenes?id=${event.document_id}`}
-      draggable={!!dnd}
-      onDragStart={dnd ? (e) => {
-        e.dataTransfer.effectAllowed = 'move'
-        e.dataTransfer.setData('text/plain', event.document_id)
-        dnd.onDragStart()
-      } : undefined}
-      onDragEnd={dnd?.onDragEnd}
-      onDragOver={dnd?.onDropBefore ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.setDropTarget(true) } : undefined}
-      onDragLeave={dnd?.onDropBefore ? () => dnd.setDropTarget(false) : undefined}
-      onDrop={dnd?.onDropBefore ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.onDropBefore!() } : undefined}
-      className={`block bg-white rounded-lg border border-gray-200 border-l-4 ${colorClass} p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group ${
+      // The browser's own link dragging stays off; dragging is pointer-based.
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
+      onPointerDown={dnd?.onPointerDown}
+      onClick={(e) => { if (dnd?.consumeClick()) e.preventDefault() }}
+      data-scene-id={event.document_id}
+      data-drop-chapter-index={dnd?.chapterIndex}
+      className={`block bg-white rounded-lg border border-gray-200 border-l-4 ${colorClass} p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group select-none ${
         dnd?.isDropTarget ? 'ring-2 ring-primary ring-offset-2' : ''
-      }`}
+      } ${dnd?.isDragging ? 'opacity-40' : ''}`}
       style={{ minWidth: 180, maxWidth: 240 }}
     >
       <div className="flex items-start justify-between gap-1 mb-1.5">
@@ -170,13 +168,77 @@ export default function CorkboardPage() {
 
   const { structure } = useBookStructure()
   const structureEditor = useStructureEditor()
-  const [dragId, setDragId] = useState<string | null>(null)
+  // The scene being dragged and where the pointer is (for the floating copy).
+  const [drag, setDrag] = useState<{ id: string; title: string; x: number; y: number } | null>(null)
+  const suppressClick = useRef(false)
   // A scene id (drop before that card) or `end:<chapterIndex>` (append).
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
 
   // Move a scene before `beforeId` in the chapter at `chapterIndex`, or to
   // its end when beforeId is null — including scenes not yet in any chapter.
+  /**
+   * Pointer-based dragging. A press on a card turns into a drag only after
+   * the pointer moves 5px; until then it is a normal click that opens the
+   * scene. The drop target is whatever is under the pointer: a card (insert
+   * before it) or a chapter's free space (append). Escape cancels. This
+   * replaces the browser's HTML5 drag-and-drop, which could leave a drag
+   * session hanging after a drop so the next drag never started.
+   */
+  const startPress = (e: React.PointerEvent, sceneId: string, title: string) => {
+    if (e.button !== 0) return
+    const startX = e.clientX
+    const startY = e.clientY
+    let active = false
+    let target: { chapterIndex: number; beforeId: string | null } | null = null
+
+    const findTarget = (x: number, y: number) => {
+      const el = document.elementFromPoint(x, y) as HTMLElement | null
+      const card = el?.closest<HTMLElement>('[data-drop-chapter-index]')
+      if (card && card.dataset.sceneId !== sceneId) {
+        return { chapterIndex: Number(card.dataset.dropChapterIndex), beforeId: card.dataset.sceneId!, key: card.dataset.sceneId! }
+      }
+      const area = el?.closest<HTMLElement>('[data-drop-chapter]')
+      if (area) return { chapterIndex: Number(area.dataset.dropChapter), beforeId: null, key: `end:${area.dataset.dropChapter}` }
+      return null
+    }
+    const cleanup = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onCancel)
+      window.removeEventListener('keydown', onKey)
+      document.body.style.userSelect = ''
+    }
+    const finish = (drop: boolean) => {
+      cleanup()
+      if (!active) return // a plain click: the link opens the scene
+      // Swallow the click the browser fires after this pointerup.
+      suppressClick.current = true
+      setTimeout(() => { suppressClick.current = false }, 300)
+      setDrag(null)
+      setDropTarget(null)
+      if (drop && target) moveScene(sceneId, target.chapterIndex, target.beforeId)
+    }
+    const onMove = (ev: PointerEvent) => {
+      if (!active) {
+        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return
+        active = true
+        document.body.style.userSelect = 'none'
+      }
+      const found = findTarget(ev.clientX, ev.clientY)
+      target = found
+      setDropTarget(found?.key ?? null)
+      setDrag({ id: sceneId, title, x: ev.clientX, y: ev.clientY })
+    }
+    const onUp = () => finish(true)
+    const onCancel = () => finish(false)
+    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') finish(false) }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onCancel)
+    window.addEventListener('keydown', onKey)
+  }
+
   const moveScene = (sceneId: string, chapterIndex: number, beforeId: string | null) => {
     setDropTarget(null)
     const chapterId = structure?.raw.chapters[chapterIndex]?.chapter_id
@@ -451,6 +513,15 @@ export default function CorkboardPage() {
         <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{moveError}</div>
       ) : null}
 
+      {drag ? (
+        <div
+          className="fixed z-50 pointer-events-none px-3 py-2 bg-white rounded-lg border border-primary shadow-lg text-sm font-semibold text-text max-w-60 truncate"
+          style={{ left: drag.x + 12, top: drag.y + 12 }}
+        >
+          {drag.title}
+        </div>
+      ) : null}
+
       {/* Card grid */}
       {groups.length > 0 ? (
         <div className="space-y-6">
@@ -476,15 +547,10 @@ export default function CorkboardPage() {
               </div>
 
               <div
+                data-drop-chapter={canDrop ? chapterIndex : undefined}
                 className={`flex flex-wrap gap-3 rounded-lg ${
-                  canDrop && dragId ? 'min-h-24 p-1 -m-1 border-2 border-dashed' : ''
+                  canDrop && drag ? 'min-h-24 p-1 -m-1 border-2 border-dashed' : ''
                 } ${canDrop && dropTarget === endKey ? 'border-primary bg-primary/5' : 'border-transparent'}`}
-                onDragOver={canDrop ? (e) => { e.preventDefault(); setDropTarget(endKey) } : undefined}
-                onDrop={canDrop ? (e) => {
-                  e.preventDefault()
-                  const id = e.dataTransfer.getData('text/plain')
-                  if (id) moveScene(id, chapterIndex!, null)
-                } : undefined}
               >
                 {group.events.map((event) => (
                   <SceneCard
@@ -492,11 +558,15 @@ export default function CorkboardPage() {
                     event={event}
                     colorClass={getColorClass(event.document_id, event.data)}
                     dnd={canDrag ? {
-                      onDragStart: () => setDragId(event.document_id),
-                      onDragEnd: () => { setDragId(null); setDropTarget(null) },
-                      onDropBefore: canDrop ? () => { if (dragId) moveScene(dragId, chapterIndex!, event.document_id) } : undefined,
-                      isDropTarget: dropTarget === event.document_id && dragId !== event.document_id,
-                      setDropTarget: (on) => setDropTarget(on ? event.document_id : null),
+                      onPointerDown: (e) => startPress(e, event.document_id, event.data.title),
+                      chapterIndex: canDrop ? chapterIndex : undefined,
+                      isDropTarget: dropTarget === event.document_id,
+                      isDragging: drag?.id === event.document_id,
+                      consumeClick: () => {
+                        const swallow = suppressClick.current
+                        suppressClick.current = false
+                        return swallow
+                      },
                     } : undefined}
                   />
                 ))}
