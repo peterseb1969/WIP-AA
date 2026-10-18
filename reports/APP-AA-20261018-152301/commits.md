@@ -53,3 +53,11 @@
 **Tests:** tsc clean; vite build ok; browser on scratch ns dev-aa-md with /api/analyse and /api/ask stubbed in-page: headings, bold/italic, nested lists, blockquote, table, link (target _blank, rel noopener), inline code, hr, strikethrough render; embedded <script>/<b> shown as text (0 script/b elements). Deployed container: deps installed into its node_modules volume first; Vite logged "new dependencies optimized … reloading", module serves 200.
 **What/Why:** ROADMAP Next Up "Render analysis results as Markdown"; Ask bar answers too (same Claude Markdown).
 **Discovered:** Adding an npm dependency while the dev container bind-mounts the tree breaks the live app until its node_modules volume has it — `podman exec wip-wip-aa sh -c 'cd /app && npm install'` first, then update node_modules/.wip-lock-hash. At 22:59 all WIP containers disappeared (redeploy in progress, not caused here); dev-aa-md namespace delete failed with 502 — retry later.
+
+## fc96e42 — feat(merge): merge characters, locations and plot threads
+**Time:** 23:31
+**Files:** 10 files changed
+**Tests:** tsc clean; browser on scratch ns dev-aa-mrg (retain mode; deleted after): LOVELACE→ADA with references in every field (scene lists incl. label spelling "Lovelace", suppressed suggestion, chapter POV, plot thread, note, world rule, Babbage's relationships, image) — preview counts matched, all rewritten, backstory filled, description/role kept, self-relationships dropped, duplicate relationship collapsed, image moved, LOVELACE doc retired + term deleted, aliases LOVELACE/Lovelace/Augusta on ADA, scene check 1 suggestion (correct). Plot threads (checkbox path) and locations merged the same way. Reordered aliases-before-retire, retested CHARLES→BABBAGE: alias accepted while CHARLES term still existed.
+**What/Why:** Agreed merge design (A, fields b, no undo, all three kinds); CASE-904 answered: app-side rewrite confirmed, write canonical names.
+**PoNIF:** #3 (identity = term-resolved name: survivor's doc keeps its identity; absorbed docs retired not re-posted); #4 (bulk results checked: single-item client calls throw on per-item errors).
+**Discovered:** CASE-904 response: document-store's cached term lookup includes deprecated/inactive terms indefinitely (TTL 300 s, refetch on miss only); term hard-delete leaves Registry entry (re-created value reuses the old id).
