@@ -24,6 +24,11 @@
 **Symptom:** with the same edge type value in two namespaces (`aa` and a scratch copy), a bare `template=AA_ATTACHED_TO` plus `namespace=dev-aa-lib` returned 0 relationships, while `template=dev-aa-lib:AA_ATTACHED_TO` or the template's canonical id returned the expected 1 (2026-10-18). The bare value resolved to the other namespace's edge type.
 **Status:** worked around: the app always passes the namespace-qualified `ns:VALUE` form (`attachedToFilter` in `src/lib/media.ts`). Reported as CASE-900 (2026-10-18).
 
+### Book reset leaves ghost names in WIP's Registry
+**Where:** Dashboard "Danger Zone" with "clear names", and the Import page's "reset book" (`DELETE /api/book/reset`, `server/index.ts`).
+**Symptom:** the reset hard-deletes every term in AA_CHARACTERS, AA_LOCATIONS and AA_PLOT_THREADS. WIP leaves each deleted term's Registry entry active, and document writes still resolve the old name to the dead term id (reproduced on a scratch namespace, 2026-10-18). Whether a re-import that writes the same names lands on those ghosts is untested.
+**Status:** reported as CASE-904. The live `aa` has no ghosts today (24 Registry entries for 24 character terms); reset has not been run there.
+
 ## Unverified / technical debt
 
 ### Browser-unverified changes (2026-10-17)
