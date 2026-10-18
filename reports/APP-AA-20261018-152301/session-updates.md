@@ -7,3 +7,6 @@ Tested on scratch dev-aa-merge (deleted): (1) hard-deleting a term in a mutable 
 
 ## 22:53 — merge design agreed; CASE-904 filed; coding blocked on its answer
 Peter: option A (app-side rewrite), field policy b (survivor keeps its details, fills empty fields from the absorbed), undo if feasible (not a priority), all three entity types at once. CASE-904 filed (ghost Registry entry after term hard delete; plus the question of the intended term-merge mechanism). Peter: do not code merging before CASE-904 has a response. ROADMAP Next Up entry rewritten with the agreed design; KNOWN_ISSUES gained the book-reset ghost entry.
+
+## 23:00 — WIP install down; scratch namespace dev-aa-md still to delete
+Right after the Markdown test every WIP container (and wip-wip-aa) vanished — looks like a redeploy (garage switch?), not caused by this session. The scratch namespace dev-aa-md (deletion_mode full) could not be deleted (502); delete it once WIP is back. Merge work stays blocked on CASE-904.

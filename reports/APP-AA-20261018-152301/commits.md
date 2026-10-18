@@ -46,3 +46,10 @@
 **What:** getDisplayNumber(+ForScene), NumberingRule/ruleOf/setNumbering (undoable), displayNumberAfterMove, titles.ts (chapterTitleShown, sceneTitleShown, chapterLabel), Numbering dialog, display sites on Chapters/Corkboard/Scenes/Dashboard/Timeline.
 **Why:** Peter: option C + display-only handling of number-only titles.
 **Discovered:** Corkboard keyed groups by label — two untitled unnumbered chapters would collide; now keyed by chapter id. With the ChN prefix hidden, scenes in different chapters can read identically ("Scene 1") in flat/character views.
+
+## c3e84cb — feat(analysis): render Claude's answers as formatted Markdown
+**Time:** 23:00
+**Files:** 6 files changed (incl. package.json/lock: +react-markdown, +remark-gfm; 98 packages added, none removed or changed)
+**Tests:** tsc clean; vite build ok; browser on scratch ns dev-aa-md with /api/analyse and /api/ask stubbed in-page: headings, bold/italic, nested lists, blockquote, table, link (target _blank, rel noopener), inline code, hr, strikethrough render; embedded <script>/<b> shown as text (0 script/b elements). Deployed container: deps installed into its node_modules volume first; Vite logged "new dependencies optimized … reloading", module serves 200.
+**What/Why:** ROADMAP Next Up "Render analysis results as Markdown"; Ask bar answers too (same Claude Markdown).
+**Discovered:** Adding an npm dependency while the dev container bind-mounts the tree breaks the live app until its node_modules volume has it — `podman exec wip-wip-aa sh -c 'cd /app && npm install'` first, then update node_modules/.wip-lock-hash. At 22:59 all WIP containers disappeared (redeploy in progress, not caused here); dev-aa-md namespace delete failed with 502 — retry later.

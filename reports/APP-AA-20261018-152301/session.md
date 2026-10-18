@@ -22,3 +22,5 @@ Continues from APP-AA-20261017-150822 (via /wip-wake).
 - [x] Chapter numbering, option C (41544b6 model on aa, 9d7c862 UI)
 - [x] Merge design agreed (A, fields b, undo optional, all three types); CASE-904 filed
 - [ ] Merge implementation — BLOCKED until CASE-904 is answered (Peter's instruction)
+- [x] Analysis/Ask answers render as Markdown (c3e84cb)
+- [ ] Delete scratch namespace dev-aa-md once WIP is back up
