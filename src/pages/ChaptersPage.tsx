@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
-import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
+import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
-import { useBookStructure, useStructureEditor } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor, chapterDropBefore, chapterNumberAfterMove } from '../lib/useBookStructure'
+import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -35,6 +36,7 @@ function ChapterRow({
   onToggle,
   onEdit,
   onDelete,
+  dnd,
 }: {
   chapterNumber: number
   data: ChapterData
@@ -43,19 +45,36 @@ function ChapterRow({
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
+  /** Present when chapters can be reordered (the book has a structure). */
+  dnd?: {
+    chapterId: string
+    onPointerDown: (e: React.PointerEvent) => void
+    isDragging: boolean
+    lineAbove: boolean
+    lineBelow: boolean
+  }
 }) {
   const { t } = useTranslation()
   const status = data.status || 'OUTLINE'
 
   return (
+    <div data-chapter-group={dnd?.chapterId} className={`relative ${dnd?.isDragging ? 'opacity-40' : ''}`}>
+    {dnd?.lineAbove ? <div className="absolute -top-2 left-0 right-0 h-1 rounded bg-primary" /> : null}
+    {dnd?.lineBelow ? <div className="absolute -bottom-2 left-0 right-0 h-1 rounded bg-primary" /> : null}
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div
         role="button"
         tabIndex={0}
         onClick={onToggle}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onToggle() }}
-        className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface/50 transition-colors cursor-pointer"
+        // Edit and Delete stay plain buttons; a press anywhere else can start a drag.
+        onPointerDown={dnd ? (e) => { if (!(e.target as HTMLElement).closest('button')) dnd.onPointerDown(e) } : undefined}
+        title={dnd ? t('chapters_page.drag_title') : undefined}
+        className="w-full flex items-center gap-3 p-4 text-left hover:bg-surface/50 transition-colors cursor-pointer select-none group/heading"
       >
+        {dnd ? (
+          <GripVertical className="w-4 h-4 -ml-2 -mr-1 text-text-light group-hover/heading:text-text-muted flex-shrink-0 cursor-grab" />
+        ) : null}
         {scenes.length > 0 ? (
           expanded ? (
             <ChevronDown className="w-4 h-4 text-text-muted flex-shrink-0" />
@@ -157,6 +176,7 @@ function ChapterRow({
         </div>
       ) : null}
     </div>
+    </div>
   )
 }
 
@@ -170,6 +190,11 @@ export default function ChaptersPage() {
 
   const { structure, isLoading: loadingStructure } = useBookStructure()
   const structureEditor = useStructureEditor()
+  // Chapter drag: the dragged chapter, where the pointer is, and the chapter
+  // id it would go before (null = end of the book, undefined = no move).
+  const [drag, setDrag] = useState<{ id: string; title: string; x: number; y: number } | null>(null)
+  const [dropBefore, setDropBefore] = useState<string | null | undefined>(undefined)
+  const [moveError, setMoveError] = useState<string | null>(null)
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -201,6 +226,35 @@ export default function ChaptersPage() {
     })
     return map
   }, [events])
+
+  /**
+   * Drag a chapter by its row: dropped on the upper half of another chapter
+   * it goes before it, on the lower half after it.
+   */
+  const startChapterPress = (e: React.PointerEvent, chapterId: string, title: string) => {
+    const ids = structure?.getChapterIds() ?? []
+    startPointerDrag<{ before: string | null }>(e, {
+      findTarget: (x, y) => {
+        const row = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-chapter-group]')
+        if (!row) return null
+        const before = chapterDropBefore(ids, chapterId, row.dataset.chapterGroup!, isUpperHalf(row, y))
+        return before === undefined ? null : { before }
+      },
+      onMove: (x, y, target) => {
+        setDropBefore(target ? target.before : undefined)
+        setDrag({ id: chapterId, title, x, y })
+      },
+      onEnd: (target) => {
+        setDrag(null)
+        setDropBefore(undefined)
+        if (!target) return
+        setMoveError(null)
+        const label = t('undo.moved_chapter', { chapter: title, number: chapterNumberAfterMove(ids, chapterId, target.before) })
+        structureEditor.moveChapter(chapterId, target.before, label).catch((err) =>
+          setMoveError(err instanceof Error ? err.message : t('chapters_page.move_failed')))
+      },
+    })
+  }
 
   const toggleChapter = (docId: string) => {
     setExpandedChapters((prev) => {
@@ -261,6 +315,23 @@ export default function ChaptersPage() {
         </div>
       </div>
 
+      {structure && orderedChapters.length > 1 ? (
+        <p className="text-xs text-text-muted -mt-3 mb-4">
+          {structureEditor.isSaving ? t('corkboard.saving_order') : t('chapters_page.drag_hint')}
+        </p>
+      ) : null}
+      {moveError ? (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{moveError}</div>
+      ) : null}
+      {drag ? (
+        <div
+          className="fixed z-50 pointer-events-none px-3 py-2 bg-white rounded-lg border border-primary shadow-lg text-sm font-semibold text-text max-w-60 truncate"
+          style={{ left: drag.x + 12, top: drag.y + 12 }}
+        >
+          {drag.title}
+        </div>
+      ) : null}
+
       {orderedChapters.length > 0 ? (
         <div className="space-y-3">
           {orderedChapters.map((entry) => {
@@ -275,6 +346,13 @@ export default function ChaptersPage() {
                 onToggle={() => toggleChapter(entry.chapterId)}
                 onEdit={() => setEditData(entry.chapter!.data as unknown as Record<string, unknown>)}
                 onDelete={() => setConfirmDelete(entry.chapterId)}
+                dnd={structure ? {
+                  chapterId: entry.chapterId,
+                  onPointerDown: (e) => startChapterPress(e, entry.chapterId, entry.chapter!.data.title || t('common.untitled')),
+                  isDragging: drag?.id === entry.chapterId,
+                  lineAbove: dropBefore === entry.chapterId,
+                  lineBelow: dropBefore === null && entry.chapterId === structure.raw.chapters.at(-1)?.chapter_id,
+                } : undefined}
               />
             )
           })}

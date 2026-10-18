@@ -1,10 +1,10 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Drag and drop for chapters** (Peter, 2026-10-18) — Reorder chapters by dragging (Chapters page, and chapter headers on the Corkboard). Same pointer-based drag as the Corkboard cards; a merge PATCH of AA_BOOK_STRUCTURE `chapters` order through `useStructureEditor`, so it gets undo for free
 - **Renumber chapters on request** (Peter, 2026-10-18) — The user picks the first chapter to renumber and the number to start with; chapters from there on are numbered consecutively. Open design question: chapter numbers today are positions in the book structure ("Ch. N"), while imported titles carry their own numbers ("Kapitel 5"). Renumbering titles hits the rename problem (AA_CHAPTER's identity is `title`, so a changed title is a new document — see "Rename without duplicates"); a separate `number` field on AA_CHAPTER would avoid that but is a data-model change needing Peter's approval
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
 - **Render analysis results as Markdown** — Claude answers with headings, bold and lists; the Analysis tab shows them as plain text (raw `#`, `**`)
+- **Image support** (Peter, 2026-10-18) — Scope to be agreed (e.g. images in scene prose, character/location portraits, reference images). WIP stores binaries as Files (MinIO) referenced by `file` fields, so any variant is a data-model change needing Peter's approval
 - **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
 
 ## Backlog
@@ -21,6 +21,7 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Drag and drop for chapters: drag a chapter row on the Chapters page, or a chapter heading on the Corkboard; a line shows where it lands; chapter numbers follow; undoable. Corkboard card drag now shares the same pointer-drag code (2026-10-18)
 - Merge scenes: Merge button next to Split -> dialog with previous/next scene, choose whose details to keep, preview; undoable (re-creates the removed scene with its original id) (2026-10-18)
 - Phantom drafts fixed; draft reminder moved to a top-bar icon that only appears after a failed save (2026-10-18)
 - Autosave + explicit Save: 45 s idle / max 5 min / on leave / on hidden tab; Save button shows the state; Cmd/Ctrl+S; prose-only PATCH (2026-10-18)

@@ -131,7 +131,10 @@
     "empty": "No chapters yet. Click \"New Chapter\" to create one.",
     "delete_title": "Delete chapter?",
     "delete_confirm": "This will permanently delete this chapter. Scenes will remain but become unassigned.",
-    "pov_label": "POV: {{character}}"
+    "pov_label": "POV: {{character}}",
+    "drag_hint": "Drag a chapter to reorder the book. Chapter numbers follow the order.",
+    "drag_title": "Drag to move this chapter, click to show its scenes",
+    "move_failed": "Moving the chapter failed."
   },
   "plot_threads": {
     "title": "Plot Threads",
@@ -247,6 +250,8 @@
     "drag_hint": "Drag a card onto another card to move it there, or onto a chapter's empty space to move it to the end.",
     "saving_order": "Saving new order...",
     "move_failed": "Moving the scene failed.",
+    "drag_chapter_hint": "Drag a chapter heading to reorder chapters.",
+    "drag_chapter_title": "Drag to move this chapter",
     "no_synopsis": "No synopsis",
     "group_label": "Group:",
     "group_chapter": "Chapter",
@@ -675,6 +680,7 @@
     "undo": "Undo",
     "shortcut": "Cmd/Ctrl+Z",
     "moved": "{{scene}} \u2192 {{chapter}}",
+    "moved_chapter": "{{chapter}} \u2192 Ch. {{number}}",
     "conflict": "The chapter order has changed since then \u2014 the move was not undone.",
     "failed": "Undo failed: {{message}}",
     "history": "Undo history",

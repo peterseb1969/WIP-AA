@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
@@ -7,9 +7,11 @@ import {
   PenTool,
   Filter,
   Palette,
+  GripVertical,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
-import { useBookStructure, useStructureEditor } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor, chapterDropBefore, chapterNumberAfterMove } from '../lib/useBookStructure'
+import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 
@@ -89,8 +91,6 @@ function SceneCard({
     chapterIndex?: number
     isDropTarget: boolean
     isDragging: boolean
-    /** True once for the click that ends a drag — that click must not open the scene. */
-    consumeClick: () => boolean
   }
 }) {
   const { t } = useTranslation()
@@ -103,7 +103,6 @@ function SceneCard({
       draggable={false}
       onDragStart={(e) => e.preventDefault()}
       onPointerDown={dnd?.onPointerDown}
-      onClick={(e) => { if (dnd?.consumeClick()) e.preventDefault() }}
       data-scene-id={event.document_id}
       data-drop-chapter-index={dnd?.chapterIndex}
       className={`block bg-white rounded-lg border border-gray-200 border-l-4 ${colorClass} p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group select-none ${
@@ -168,75 +167,68 @@ export default function CorkboardPage() {
 
   const { structure } = useBookStructure()
   const structureEditor = useStructureEditor()
-  // The scene being dragged and where the pointer is (for the floating copy).
-  const [drag, setDrag] = useState<{ id: string; title: string; x: number; y: number } | null>(null)
-  const suppressClick = useRef(false)
+  // The scene or chapter being dragged and where the pointer is (for the floating copy).
+  const [drag, setDrag] = useState<{ kind: 'scene' | 'chapter'; id: string; title: string; x: number; y: number } | null>(null)
   // A scene id (drop before that card) or `end:<chapterIndex>` (append).
   const [dropTarget, setDropTarget] = useState<string | null>(null)
+  // Chapter drag: the chapter id the dragged one goes before, or null for the end.
+  const [chapterDrop, setChapterDrop] = useState<string | null | undefined>(undefined)
   const [moveError, setMoveError] = useState<string | null>(null)
 
-  // Move a scene before `beforeId` in the chapter at `chapterIndex`, or to
-  // its end when beforeId is null — including scenes not yet in any chapter.
   /**
-   * Pointer-based dragging. A press on a card turns into a drag only after
-   * the pointer moves 5px; until then it is a normal click that opens the
-   * scene. The drop target is whatever is under the pointer: a card (insert
-   * before it) or a chapter's free space (append). Escape cancels. This
-   * replaces the browser's HTML5 drag-and-drop, which could leave a drag
-   * session hanging after a drop so the next drag never started.
+   * Drag a card: the drop target is whatever is under the pointer — a card
+   * (insert before it) or a chapter's free space (append).
    */
-  const startPress = (e: React.PointerEvent, sceneId: string, title: string) => {
-    if (e.button !== 0) return
-    const startX = e.clientX
-    const startY = e.clientY
-    let active = false
-    let target: { chapterIndex: number; beforeId: string | null } | null = null
+  const startPress = (e: React.PointerEvent, sceneId: string, title: string) =>
+    startPointerDrag(e, {
+      findTarget: (x, y) => {
+        const el = document.elementFromPoint(x, y) as HTMLElement | null
+        const card = el?.closest<HTMLElement>('[data-drop-chapter-index]')
+        if (card && card.dataset.sceneId !== sceneId) {
+          return { chapterIndex: Number(card.dataset.dropChapterIndex), beforeId: card.dataset.sceneId!, key: card.dataset.sceneId! }
+        }
+        const area = el?.closest<HTMLElement>('[data-drop-chapter]')
+        if (area) return { chapterIndex: Number(area.dataset.dropChapter), beforeId: null, key: `end:${area.dataset.dropChapter}` }
+        return null
+      },
+      onMove: (x, y, target) => {
+        setDropTarget(target?.key ?? null)
+        setDrag({ kind: 'scene', id: sceneId, title, x, y })
+      },
+      onEnd: (target) => {
+        setDrag(null)
+        setDropTarget(null)
+        if (target) moveScene(sceneId, target.chapterIndex, target.beforeId)
+      },
+    })
 
-    const findTarget = (x: number, y: number) => {
-      const el = document.elementFromPoint(x, y) as HTMLElement | null
-      const card = el?.closest<HTMLElement>('[data-drop-chapter-index]')
-      if (card && card.dataset.sceneId !== sceneId) {
-        return { chapterIndex: Number(card.dataset.dropChapterIndex), beforeId: card.dataset.sceneId!, key: card.dataset.sceneId! }
-      }
-      const area = el?.closest<HTMLElement>('[data-drop-chapter]')
-      if (area) return { chapterIndex: Number(area.dataset.dropChapter), beforeId: null, key: `end:${area.dataset.dropChapter}` }
-      return null
-    }
-    const cleanup = () => {
-      window.removeEventListener('pointermove', onMove)
-      window.removeEventListener('pointerup', onUp)
-      window.removeEventListener('pointercancel', onCancel)
-      window.removeEventListener('keydown', onKey)
-      document.body.style.userSelect = ''
-    }
-    const finish = (drop: boolean) => {
-      cleanup()
-      if (!active) return // a plain click: the link opens the scene
-      // Swallow the click the browser fires after this pointerup.
-      suppressClick.current = true
-      setTimeout(() => { suppressClick.current = false }, 300)
-      setDrag(null)
-      setDropTarget(null)
-      if (drop && target) moveScene(sceneId, target.chapterIndex, target.beforeId)
-    }
-    const onMove = (ev: PointerEvent) => {
-      if (!active) {
-        if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 5) return
-        active = true
-        document.body.style.userSelect = 'none'
-      }
-      const found = findTarget(ev.clientX, ev.clientY)
-      target = found
-      setDropTarget(found?.key ?? null)
-      setDrag({ id: sceneId, title, x: ev.clientX, y: ev.clientY })
-    }
-    const onUp = () => finish(true)
-    const onCancel = () => finish(false)
-    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape') finish(false) }
-    window.addEventListener('pointermove', onMove)
-    window.addEventListener('pointerup', onUp)
-    window.addEventListener('pointercancel', onCancel)
-    window.addEventListener('keydown', onKey)
+  /**
+   * Drag a chapter by its heading: dropped on the upper half of another
+   * chapter it goes before it, on the lower half after it.
+   */
+  const startChapterPress = (e: React.PointerEvent, chapterId: string, title: string) => {
+    const ids = structure?.getChapterIds() ?? []
+    startPointerDrag<{ before: string | null }>(e, {
+      findTarget: (x, y) => {
+        const group = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('[data-chapter-group]')
+        if (!group) return null
+        const before = chapterDropBefore(ids, chapterId, group.dataset.chapterGroup!, isUpperHalf(group, y))
+        return before === undefined ? null : { before }
+      },
+      onMove: (x, y, target) => {
+        setChapterDrop(target ? target.before : undefined)
+        setDrag({ kind: 'chapter', id: chapterId, title, x, y })
+      },
+      onEnd: (target) => {
+        setDrag(null)
+        setChapterDrop(undefined)
+        if (!target) return
+        setMoveError(null)
+        const label = t('undo.moved_chapter', { chapter: title, number: chapterNumberAfterMove(ids, chapterId, target.before) })
+        structureEditor.moveChapter(chapterId, target.before, label).catch((err) =>
+          setMoveError(err instanceof Error ? err.message : t('corkboard.move_failed')))
+      },
+    })
   }
 
   const moveScene = (sceneId: string, chapterIndex: number, beforeId: string | null) => {
@@ -376,6 +368,8 @@ export default function CorkboardPage() {
             label: num === 0
               ? t('scenes.unassigned')
               : `${t('corkboard.group_chapter')} ${num}${ch?.title ? `: ${ch.title}` : ''}`,
+            chapterId,
+            chapterTitle: ch?.title || t('common.untitled'),
             status: ch?.status,
             // 0 = scenes missing from the structure; those can't be a drop target.
             chapterIndex: num > 0 ? num - 1 : undefined,
@@ -507,6 +501,7 @@ export default function CorkboardPage() {
       {groupBy === 'chapter' && structure ? (
         <p className="text-xs text-text-muted -mt-3 mb-4">
           {structureEditor.isSaving ? t('corkboard.saving_order') : t('corkboard.drag_hint')}
+          {!structureEditor.isSaving && filterChapter == null ? ` ${t('corkboard.drag_chapter_hint')}` : ''}
         </p>
       ) : null}
       {moveError ? (
@@ -531,9 +526,27 @@ export default function CorkboardPage() {
             // Scenes outside every chapter can be dragged into one, not onto each other.
             const canDrag = groupBy === 'chapter'
             const endKey = `end:${chapterIndex}`
+            const chapterId = 'chapterId' in group ? group.chapterId : undefined
+            // Chapters are reordered only while all of them are shown.
+            const canDragChapter = canDrop && !!chapterId && filterChapter == null
+            const lineAbove = canDragChapter && chapterDrop === chapterId
+            const lineBelow = canDragChapter && chapterDrop === null && chapterId === structure?.raw.chapters.at(-1)?.chapter_id
             return (
-            <div key={group.label}>
-              <div className="flex items-center gap-2 mb-3">
+            <div
+              key={group.label}
+              data-chapter-group={canDragChapter ? chapterId : undefined}
+              className={`relative ${drag?.kind === 'chapter' && drag.id === chapterId ? 'opacity-40' : ''}`}
+            >
+              {lineAbove ? <div className="absolute -top-3.5 left-0 right-0 h-1 rounded bg-primary" /> : null}
+              {lineBelow ? <div className="absolute -bottom-3.5 left-0 right-0 h-1 rounded bg-primary" /> : null}
+              <div
+                className={`flex items-center gap-2 mb-3 ${canDragChapter ? 'cursor-grab select-none group/heading' : ''}`}
+                onPointerDown={canDragChapter ? (e) => startChapterPress(e, chapterId!, 'chapterTitle' in group ? group.chapterTitle : group.label) : undefined}
+                title={canDragChapter ? t('corkboard.drag_chapter_title') : undefined}
+              >
+                {canDragChapter ? (
+                  <GripVertical className="w-4 h-4 -ml-1 text-text-light group-hover/heading:text-text-muted flex-shrink-0" />
+                ) : null}
                 <h2 className="text-sm font-semibold text-text">{group.label}</h2>
                 {'status' in group && group.status ? (
                   <StatusBadge
@@ -561,12 +574,7 @@ export default function CorkboardPage() {
                       onPointerDown: (e) => startPress(e, event.document_id, event.data.title),
                       chapterIndex: canDrop ? chapterIndex : undefined,
                       isDropTarget: dropTarget === event.document_id,
-                      isDragging: drag?.id === event.document_id,
-                      consumeClick: () => {
-                        const swallow = suppressClick.current
-                        suppressClick.current = false
-                        return swallow
-                      },
+                      isDragging: drag?.kind === 'scene' && drag.id === event.document_id,
                     } : undefined}
                   />
                 ))}

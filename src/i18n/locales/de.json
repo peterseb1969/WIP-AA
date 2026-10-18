@@ -132,7 +132,10 @@
     "empty": "Noch keine Kapitel. Klicke auf \"Neues Kapitel\", um eines zu erstellen.",
     "delete_title": "Kapitel l\u00f6schen?",
     "delete_confirm": "Dieses Kapitel wird unwiderruflich gel\u00f6scht. Szenen bleiben erhalten, werden aber keinem Kapitel zugeordnet.",
-    "pov_label": "Perspektive: {{character}}"
+    "pov_label": "Perspektive: {{character}}",
+    "drag_hint": "Ziehe ein Kapitel, um das Buch umzuordnen. Die Kapitelnummern folgen der Reihenfolge.",
+    "drag_title": "Ziehen, um dieses Kapitel zu verschieben; klicken, um seine Szenen zu zeigen",
+    "move_failed": "Verschieben des Kapitels fehlgeschlagen."
   },
   "plot_threads": {
     "title": "Handlungsstr\u00e4nge",
@@ -248,6 +251,8 @@
     "drag_hint": "Ziehe eine Karte auf eine andere Karte, um sie dorthin zu verschieben, oder auf den freien Bereich eines Kapitels, um sie ans Ende zu setzen.",
     "saving_order": "Neue Reihenfolge wird gespeichert...",
     "move_failed": "Verschieben der Szene fehlgeschlagen.",
+    "drag_chapter_hint": "Ziehe eine Kapitel\u00fcberschrift, um Kapitel umzuordnen.",
+    "drag_chapter_title": "Ziehen, um dieses Kapitel zu verschieben",
     "no_synopsis": "Keine Zusammenfassung",
     "group_label": "Gruppierung:",
     "group_chapter": "Kapitel",
@@ -676,6 +681,7 @@
     "undo": "R\u00fcckg\u00e4ngig",
     "shortcut": "Cmd/Strg+Z",
     "moved": "{{scene}} \u2192 {{chapter}}",
+    "moved_chapter": "{{chapter}} \u2192 Kap. {{number}}",
     "conflict": "Die Kapitelreihenfolge wurde inzwischen ge\u00e4ndert \u2014 die Verschiebung wurde nicht r\u00fcckg\u00e4ngig gemacht.",
     "failed": "R\u00fcckg\u00e4ngig fehlgeschlagen: {{message}}",
     "history": "Verlauf",

@@ -88,6 +88,27 @@ export function useBookStructure() {
   return { structure, structureDocId, isLoading, error, refetch }
 }
 
+/**
+ * Where a chapter dropped on chapter `overId` goes, given the chapter order
+ * `ids`: the id it is inserted before, null for the end of the book, or
+ * undefined when the drop would leave the order unchanged.
+ */
+export function chapterDropBefore(ids: string[], draggedId: string, overId: string, upperHalf: boolean) {
+  const over = ids.indexOf(overId)
+  if (over < 0) return undefined
+  const before = upperHalf ? overId : ids[over + 1] ?? null
+  const from = ids.indexOf(draggedId)
+  if (before === draggedId || before === (ids[from + 1] ?? null)) return undefined
+  return before
+}
+
+/** The 1-based chapter number `draggedId` gets when moved before `before` (null = end). */
+export function chapterNumberAfterMove(ids: string[], draggedId: string, before: string | null) {
+  if (before === null) return ids.length
+  const at = ids.indexOf(before)
+  return at > ids.indexOf(draggedId) ? at : at + 1
+}
+
 /** Hook to get the createDocument mutator for updating the structure */
 export function useUpdateStructure() {
   return useCreateDocument()
@@ -101,7 +122,7 @@ export function useUpdateStructure() {
  * created on the first edit, titled after the project. Chapters that exist
  * as documents but are missing from the structure (created on the Chapters
  * page before chapters were added to it) are appended when first used.
- * Scene moves are recorded for undo (see structureUndo.tsx).
+ * Scene and chapter moves are recorded for undo (see structureUndo.tsx).
  */
 export function useStructureEditor() {
   const { structure, structureDocId } = useBookStructure()
@@ -153,6 +174,26 @@ export function useStructureEditor() {
   }
 
   /**
+   * Move a chapter (with its scenes) before `beforeId`, or to the end, and
+   * offer undo with `label`. Chapter numbers are positions, so every
+   * chapter from the old to the new position is renumbered by this.
+   */
+  const moveChapter = async (chapterId: string, beforeId: string | null, label: string) => {
+    if (chapterId === beforeId) return
+    const previous = currentChapters()
+    const moving = previous.find((slot) => slot.chapter_id === chapterId)
+    if (!moving) return
+    const chapters = currentChapters().filter((slot) => slot.chapter_id !== chapterId)
+    const at = beforeId ? chapters.findIndex((slot) => slot.chapter_id === beforeId) : -1
+    chapters.splice(at >= 0 ? at : chapters.length, 0, { ...moving, scene_ids: [...moving.scene_ids] })
+    if (chapters.every((slot, i) => slot.chapter_id === previous[i]!.chapter_id)) return
+    const saved = await save(chapters)
+    if (saved.documentId && saved.version != null) {
+      undo?.record({ label, documentId: saved.documentId, previous, version: saved.version })
+    }
+  }
+
+  /**
    * Take a scene out of the structure (used by scene merge). Returns what
    * undo needs; the caller records the undo entry, which spans documents.
    */
@@ -173,7 +214,7 @@ export function useStructureEditor() {
     return save([...chapters, { chapter_id: chapterId, scene_ids: [] }]).then(() => undefined)
   }
 
-  return { moveScene, removeScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
+  return { moveScene, moveChapter, removeScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
 }
 
 export { TEMPLATES }
