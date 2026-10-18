@@ -8,6 +8,7 @@ import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
 import MediaSection from '../components/MediaSection'
+import { MergeToolbar, MergeEntitiesDialog, useMergeSelection, selectedCardClass } from '../components/MergeEntities'
 import BackLink from '../components/BackLink'
 
 interface LocationData {
@@ -104,6 +105,8 @@ function LocationDetail({ documentId, data, onBack, onEdit, onDelete }: { docume
 export default function LocationsPage() {
   const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const merge = useMergeSelection()
+  const [merging, setMerging] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -178,9 +181,12 @@ export default function LocationsPage() {
             <MapPin className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-semibold text-text">{t('locations.title')}</h1>
             <span className="text-sm text-text-muted">({locations?.total ?? 0})</span>
+            <div className="ml-auto">
+              <MergeToolbar selection={merge} total={locations?.items?.length ?? 0} onMerge={() => setMerging(true)} />
+            </div>
             <button
               onClick={() => setShowCreate(true)}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
             >
               <Plus className="w-4 h-4" />
               {t('locations.new')}
@@ -194,8 +200,8 @@ export default function LocationsPage() {
                 return (
                   <button
                     key={loc.document_id}
-                    onClick={() => setSelectedId(loc.document_id)}
-                    className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all"
+                    onClick={() => (merge.active ? merge.toggle(loc.document_id) : setSelectedId(loc.document_id))}
+                    className={`bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all ${selectedCardClass(merge.isSelected(loc.document_id))}`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-text">{d.name}</h3>
@@ -221,6 +227,18 @@ export default function LocationsPage() {
             <CreateEntityModal
               entityType="location"
               onClose={() => setShowCreate(false)}
+            />
+          ) : null}
+
+          {merging ? (
+            <MergeEntitiesDialog
+              kind="location"
+              candidates={merge.selected.map((id) => ({
+                documentId: id,
+                name: String((locations?.items?.find((l) => l.document_id === id)?.data as { name?: string } | undefined)?.name ?? id),
+              }))}
+              onClose={() => setMerging(false)}
+              onMerged={() => { setMerging(false); merge.cancel() }}
             />
           ) : null}
         </>

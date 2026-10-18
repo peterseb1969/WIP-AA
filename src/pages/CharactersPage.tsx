@@ -9,6 +9,7 @@ import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
 import BackLink from '../components/BackLink'
 import MediaSection, { Avatar } from '../components/MediaSection'
+import { MergeToolbar, MergeEntitiesDialog, useMergeSelection, selectedCardClass } from '../components/MergeEntities'
 import { useAttachments, useCharacterPortraits, portraitOf } from '../lib/media'
 
 interface CharacterData {
@@ -31,12 +32,12 @@ interface CharacterData {
   }>
 }
 
-function CharacterCard({ data, portrait, onClick }: { data: CharacterData; portrait?: string; onClick: () => void }) {
+function CharacterCard({ data, portrait, selected = false, onClick }: { data: CharacterData; portrait?: string; selected?: boolean; onClick: () => void }) {
   const { t } = useTranslation()
   return (
     <button
       onClick={onClick}
-      className="bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all w-full"
+      className={`bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all w-full ${selectedCardClass(selected)}`}
     >
       <div className="flex items-start gap-3 mb-2">
         {portrait ? <Avatar fileId={portrait} name={data.name} className="w-10 h-10" /> : null}
@@ -314,6 +315,8 @@ export default function CharactersPage() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteDoc = useDeleteDocument()
   const portraits = useCharacterPortraits()
+  const merge = useMergeSelection()
+  const [merging, setMerging] = useState(false)
 
   const { data: characters, isLoading } = useDocuments({
     template_id: TEMPLATES.CHARACTER,
@@ -384,9 +387,12 @@ export default function CharactersPage() {
             <Users className="w-6 h-6 text-primary" />
             <h1 className="text-2xl font-semibold text-text">{t('characters.title')}</h1>
             <span className="text-sm text-text-muted">({characters?.total ?? 0})</span>
+            <div className="ml-auto">
+              <MergeToolbar selection={merge} total={characters?.items?.length ?? 0} onMerge={() => setMerging(true)} />
+            </div>
             <button
               onClick={() => setShowCreate(true)}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
             >
               <Plus className="w-4 h-4" />
               {t('characters.new')}
@@ -400,7 +406,8 @@ export default function CharactersPage() {
                   key={ch.document_id}
                   data={ch.data as unknown as CharacterData}
                   portrait={portraits.get(String((ch.data as { name?: string }).name ?? '').toLowerCase())}
-                  onClick={() => setSelectedId(ch.document_id)}
+                  selected={merge.isSelected(ch.document_id)}
+                  onClick={() => (merge.active ? merge.toggle(ch.document_id) : setSelectedId(ch.document_id))}
                 />
               ))}
             </div>
@@ -412,6 +419,18 @@ export default function CharactersPage() {
             <CreateEntityModal
               entityType="character"
               onClose={() => setShowCreate(false)}
+            />
+          ) : null}
+
+          {merging ? (
+            <MergeEntitiesDialog
+              kind="character"
+              candidates={merge.selected.map((id) => ({
+                documentId: id,
+                name: String((characters?.items?.find((c) => c.document_id === id)?.data as { name?: string } | undefined)?.name ?? id),
+              }))}
+              onClose={() => setMerging(false)}
+              onMerged={() => { setMerging(false); merge.cancel() }}
             />
           ) : null}
         </>

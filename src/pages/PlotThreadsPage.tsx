@@ -8,6 +8,7 @@ import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
 import MediaSection from '../components/MediaSection'
+import { MergeToolbar, MergeEntitiesDialog, useMergeSelection, selectedCardClass } from '../components/MergeEntities'
 import BackLink from '../components/BackLink'
 
 interface PlotThreadData {
@@ -26,6 +27,8 @@ export default function PlotThreadsPage() {
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const deleteDoc = useDeleteDocument()
+  const merge = useMergeSelection()
+  const [merging, setMerging] = useState(false)
   const { data: threads, isLoading } = useDocuments({
     template_id: TEMPLATES.PLOT_THREAD,
     status: 'active',
@@ -59,9 +62,12 @@ export default function PlotThreadsPage() {
         <GitBranch className="w-6 h-6 text-primary" />
         <h1 className="text-2xl font-semibold text-text">{t('plot_threads.title')}</h1>
         <span className="text-sm text-text-muted">({threads?.total ?? 0})</span>
+        <div className="ml-auto">
+          <MergeToolbar selection={merge} total={threads?.items?.length ?? 0} onMerge={() => setMerging(true)} />
+        </div>
         <button
           onClick={() => setShowCreate(true)}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
         >
           <Plus className="w-4 h-4" />
           {t('plot_threads.new')}
@@ -83,10 +89,15 @@ export default function PlotThreadsPage() {
                   {items.map((thread) => (
                     <div
                       key={thread.id}
-                      className="bg-white rounded-lg border border-gray-200 p-4"
+                      className={`bg-white rounded-lg border border-gray-200 p-4 ${selectedCardClass(merge.isSelected(thread.id))}`}
                     >
                       <div className="flex items-start justify-between mb-1">
-                        <h3 className="font-semibold text-text">{thread.data.title}</h3>
+                        <h3 className="font-semibold text-text flex items-center gap-2">
+                          {merge.active ? (
+                            <input type="checkbox" checked={merge.isSelected(thread.id)} onChange={() => merge.toggle(thread.id)} className="w-4 h-4" />
+                          ) : null}
+                          {thread.data.title}
+                        </h3>
                         <div className="flex items-center gap-1">
                           <button
                             onClick={() => setEditData(thread.data as unknown as Record<string, unknown>)}
@@ -150,6 +161,18 @@ export default function PlotThreadsPage() {
       ) : (
         <p className="text-text-muted">{t('plot_threads.empty')}</p>
       )}
+
+      {merging ? (
+        <MergeEntitiesDialog
+          kind="plot_thread"
+          candidates={merge.selected.map((id) => ({
+            documentId: id,
+            name: String((threads?.items?.find((th) => th.document_id === id)?.data as { title?: string } | undefined)?.title ?? id),
+          }))}
+          onClose={() => setMerging(false)}
+          onMerged={() => { setMerging(false); merge.cancel() }}
+        />
+      ) : null}
 
       {showCreate ? (
         <CreateEntityModal

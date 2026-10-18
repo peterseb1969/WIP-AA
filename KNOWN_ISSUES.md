@@ -24,12 +24,11 @@
 **Symptom:** with the same edge type value in two namespaces (`aa` and a scratch copy), a bare `template=AA_ATTACHED_TO` plus `namespace=dev-aa-lib` returned 0 relationships, while `template=dev-aa-lib:AA_ATTACHED_TO` or the template's canonical id returned the expected 1 (2026-10-18). The bare value resolved to the other namespace's edge type.
 **Status:** worked around: the app always passes the namespace-qualified `ns:VALUE` form (`attachedToFilter` in `src/lib/media.ts`). Reported as CASE-900 (2026-10-18).
 
-### Book reset leaves ghost names in WIP's Registry
-**Where:** Dashboard "Danger Zone" with "clear names", and the Import page's "reset book" (`DELETE /api/book/reset`, `server/index.ts`).
-**Symptom:** the reset hard-deletes every term in AA_CHARACTERS, AA_LOCATIONS and AA_PLOT_THREADS. WIP leaves each deleted term's Registry entry active, and document writes still resolve the old name to the dead term id (reproduced on a scratch namespace, 2026-10-18). Whether a re-import that writes the same names lands on those ghosts is untested.
-**Status:** reported as CASE-904. The live `aa` has no ghosts today (24 Registry entries for 24 character terms); reset has not been run there.
-
-## Unverified / technical debt
+### WIP resolves names of deleted or deprecated terms (CASE-904)
+**Where:** every document write with a character, location or plot-thread name.
+**What BE-YAC found (CASE-904, 2026-10-18):** the document store checks names against its own cached copy of each vocabulary. That copy includes deprecated and inactive terms indefinitely, and can be up to 5 minutes stale. A deleted or deprecated name therefore still resolves to its old term, ahead of another term's alias. Separately, hard-deleting a term leaves its Registry entry active, so re-creating the same name gets the old term id back.
+**Consequences for AA:** the merge rewrites stored references instead of relying on aliases, and the app must always write canonical names. Book reset (Dashboard "Danger Zone" with "clear names", Import's "reset book") deletes every name; a re-import then reuses the old term ids, which is harmless when the names mean the same thing.
+**Status:** fix proposed by BE-YAC (def-store becomes the only name resolver, a real `merge_terms`, term deletion removes the Registry entry); scope awaits Peter.
 
 ### Browser-unverified changes (2026-10-17)
 Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. Still unverified: the error screen `main.tsx` shows when `/api/app-config` can't be loaded.

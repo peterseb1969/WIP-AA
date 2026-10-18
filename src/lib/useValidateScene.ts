@@ -17,7 +17,7 @@ export interface AnnotationResult {
   state: AnnotationState
 }
 
-interface TermEntry {
+export interface TermEntry {
   value: string
   label: string
   aliases?: string[]
