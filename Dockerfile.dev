@@ -21,7 +21,7 @@
 # this, but keeping it in the image means a bare `docker run` still works.
 # VITE_PORT=5180: must match the manifest's `dev` port. 5173/5174 are taken
 # by wip-kb and react-console on multi-app dev installs.
-FROM node:20-alpine
+FROM node:24-alpine
 WORKDIR /app
 
 COPY docker-entrypoint-dev.sh /entrypoint-dev.sh

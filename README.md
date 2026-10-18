@@ -48,6 +48,9 @@ npm run dev:client
 # Server only (port 3014)
 npm run dev:server
 
+# Unit tests (Vitest)
+npm test
+
 # Production build
 npm run build && npm run start
 ```

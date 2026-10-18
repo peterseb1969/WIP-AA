@@ -9,9 +9,9 @@ describes what AuthorAssist commits to so the manifest is creatable.
 
 | File | Role |
 |---|---|
-| `Dockerfile` | Prod image. Multi-stage build → `dist/` + server, runs `npx tsx server/index.ts` on port 3014. Used by `compose` and `k8s` targets. |
+| `Dockerfile` | Prod image (`node:24-alpine`, like `Dockerfile.dev`; moved off Node 20, end of life since 2026-04-30). Multi-stage build → `dist/` + server, runs `npx tsx server/index.ts` on port 3014. Used by `compose` and `k8s` targets. |
 | `Dockerfile.dev` | Bind-mount-friendly dev image for `wip-deploy add-app wip-aa --app-source ~/Development/WIP-AA`. Canonical CASE-58 entrypoint pattern (same as WIP-KB / react-console). |
-| `docker-entrypoint-dev.sh` | Populates the named `/app/node_modules` volume on first start; re-runs `npm ci` when the host's package-lock.json hash changes. |
+| `docker-entrypoint-dev.sh` | Populates the named `/app/node_modules` volume on first start; re-runs `npm ci` when the hash of package-lock.json plus `node -v` changes (so a new Node base image re-installs too). |
 | `.dockerignore` | Excludes node_modules, dist, .git, .claude, .env, *.md, tests, docs, data-model, yac-discussions, tools, .DS_Store. |
 | `vite.config.ts` | Threads `VITE_BASE_PATH` / `APP_BASE_PATH` into Vite's `base` so emitted asset URLs match the gateway path. Binds 0.0.0.0 so the container dev server accepts external connections. |
 | `server/index.ts` | Mounts all routes (including `/wip` proxy) under `APP_BASE_PATH`. In production, serves `dist/` statically from inside Express; in dev-with-app-source the renderer forces `NODE_ENV=development` and Caddy routes to the Vite port instead. |
@@ -121,6 +121,14 @@ both. Useful when running alongside another local dev server.
 
 ## Known caveats
 
+- **Adding an npm dependency while the dev container runs.** The container
+  bind-mounts the tree but keeps `node_modules` in its own volume, so an
+  import of a package only installed on the host breaks the live app. Install
+  it in the container first and record the install, using the entrypoint's
+  hash formula:
+  `podman exec wip-wip-aa sh -c 'cd /app && npm install && { cat package-lock.json; node -v; } | sha256sum | cut -c1-64 > node_modules/.wip-lock-hash'`.
+  Dev-only tools that the app never imports (e.g. Vitest) can skip this; the
+  next container start re-installs.
 - **`NODE_ENV` is forced to development under `--app-source`** (CASE-55). The
   production static-serving block in `server/index.ts` only runs on
   compose/k8s targets — dev-with-app-source relies on the Vite dev port

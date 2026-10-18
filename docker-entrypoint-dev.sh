@@ -6,6 +6,9 @@
 # Handles:
 #   1. First-start populate: named volume /app/node_modules is empty → npm ci.
 #   2. Staleness after host dep changes: package-lock.json hash changed → npm ci.
+#      The Node version is hashed too, so a new base image (e.g. Node 20 → 24)
+#      re-installs node_modules under the new Node even when the lockfile is
+#      unchanged.
 #   3. Corrupted install (killed mid-install): .package-lock.json absent → retry.
 set -e
 
@@ -14,7 +17,7 @@ LOCKFILE=/app/package-lock.json
 HASH_MARKER="$NODE_MODULES/.wip-lock-hash"
 
 current_hash() {
-  [ -f "$LOCKFILE" ] && sha256sum "$LOCKFILE" 2>/dev/null | cut -c1-64
+  [ -f "$LOCKFILE" ] && { cat "$LOCKFILE"; node -v; } | sha256sum | cut -c1-64
 }
 
 run_install() {
