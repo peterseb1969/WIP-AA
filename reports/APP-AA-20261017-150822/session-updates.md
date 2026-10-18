@@ -17,3 +17,6 @@ All six backlog features shipped (commits 991d1ea..36a81de) and verified in a br
 
 ## 13:41 — Analyse verified with a real key; "platform bug" was by design; Peter's ToDos recorded
 Peter set an Anthropic key on the deployed app (runtime override, not persistable). Style Polish via the container's /api/analyse on a real aa scene (read-only): German, 10 suggestions, ~17 s, Markdown output (plain-text rendering is now a ToDo). The reporting entity-view "lag" is WIP's documented intersection-of-columns design (cross_version_view opt-in) — reproduced on a fresh namespace, then found the design in reporting_sync source; corrected KNOWN_ISSUES and the CrossReferences comment. Lesson: read the platform source before calling a platform bug. Peter's ToDos (ROADMAP Next Up): draft banner must not shift the editor; move scenes between chapters (incl. unassigned scenes, Corkboard DnD); merge characters/locations any time.
+
+## 13:51 — Peter's ToDos 1 and 2 done (9032443, 53225aa)
+Remaining Next Up: merge characters/locations, Markdown rendering for analysis, rename-without-duplicates. Context ~65%: next YAC should start from ROADMAP/KNOWN_ISSUES + this report.

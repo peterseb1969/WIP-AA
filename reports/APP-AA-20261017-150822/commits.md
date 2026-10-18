@@ -140,3 +140,13 @@
 **Time:** 13:07 · **Files:** 1 file changed, 7 insertions(+), 3 deletions(-)
 **Tests:** browser on scratch ns: thread shows scenes + note
 **Discovered:** reporting entity view doc_aa_note lacked the v2 column that doc_aa_note__v2 had — possible WIP reporting-sync issue, not filed.
+
+## 9032443 — fix(drafts): unsaved-draft reminder no longer pushes the editor down
+**Time:** 13:51 · **Files:** 1 file changed, 9 insertions(+), 4 deletions(-)
+**Tests:** browser, scratch ns: typing → draft saved, no banner, editor top 171→171; other page: floating card, content under header
+**What/Why:** Peter's ToDo 1 — banner skips the open scene and floats bottom-left.
+
+## 53225aa — feat(scenes): move scenes between chapters; new chapters join the book
+**Time:** 13:51 · **Files:** 6 files changed, 171 insertions(+), 53 deletions(-)
+**Tests:** browser, scratch ns with no structure doc: picker creates structure; new chapter appended; Corkboard unassigned → chapter, cross-chapter move
+**What/Why:** Peter's ToDo 2. **Discovered:** only import and split ever wrote AA_BOOK_STRUCTURE — chapters/scenes made in the UI were never placed.
