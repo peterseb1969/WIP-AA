@@ -4,8 +4,23 @@
 - **Test coverage** (Peter, 2026-10-19) — The app has no automated tests (no test script, no test files); every feature so far was verified by hand in a browser against throwaway namespaces. Required by the WIP guardrails' Testing Contract (`docs/WIP_DevGuardrails.md`, Guide 7) before the app counts as done. In order of value:
   1. **Unit tests, no WIP needed** (Vitest): the pure logic — chapter numbering and drop positions (`useBookStructure.ts`), number-only titles (`titles.ts`), the scene check (`validateSceneAnnotations`), name resolution (`entityNames.ts`), merge planning with a mocked client (reference rewrite, de-duplication, self-relationships, fill-empty-fields), rename conflict checks, Markdown rendering never emitting raw HTML.
   2. **Data-layer tests against a scratch namespace** (bootstrap from `server/seed`, delete afterwards): the bootstrap itself (fresh, and the in-place template upgrade), media upload + attach + permanent delete, merge, rename by relabel and by copy, structure moves with if_match. These automate the hand-run scratch rigs of 2026-10-18/19; the seed data must mirror real imported books (entity documents store the display name, references store the term value — the mismatch that hid the "Appears in" bug).
-  3. **End-to-end** (Playwright, against the dev install): create → view → update for one entity; Corkboard and chapter drag (pointer events); scene autosave/split/merge — where the regressions of 2026-10-18 (split overwritten by autosave, phantom drafts) were only caught by hand.
+  3. **End-to-end** (Playwright): smoke (every sidebar page renders its heading, no `role="alert"`, no page or console error); create → view → update for one entity; Corkboard and chapter drag (pointer events); scene autosave/split/merge — where the regressions of 2026-10-18 (split overwritten by autosave, phantom drafts) were only caught by hand.
   Plus an `npm test` script, and running the unit tests before every commit.
+
+  **How layers 2 and 3 are built** — adopted from RC's suite (kb fireside 32, "RC end-to-end test design", 48 tests that found 8 bugs its unit tests missed):
+  - **A disposable namespace per run**, `aa-e2e-<timestamp>` with `deletion_mode: full`, bootstrapped from `server/seed` and deleted in teardown; setup also deletes leftover `aa-e2e-*` namespaces from aborted runs. Never `aa`.
+  - **Where AA differs from RC:** the dev container behind the router is pinned to `WIP_NAMESPACE=aa`, the live book, so tests cannot go through `https://localhost:8443/apps/aa/`. They drive a second app instance started by Playwright's `webServer` with `WIP_NAMESPACE` set to the run's namespace and its own ports (the 3015/5181 rig used by hand). This skips the router and Dex. AA has no access rules of its own, so little is lost; base-path prefixing is still covered by the production-build curl matrix (as done for CASE-888).
+  - **The UI drives the behaviour under test; the WIP API creates fixtures and checks outcomes.** Assert twice: the UI showing a change does not prove it was stored (check the document version, the term label, the structure ids).
+  - **Fixture helpers check per-item results** (bulk writes answer 200 even when an item failed), and use `eventually()` for reporting-sync, which "Appears in" reads.
+  - **Seed data shaped like an imported book**: entity documents with display names, references with term values, multi-word names.
+  - **A twin namespace** (`<run>-twin`) holding same-named templates and terms, to prove nothing resolves into the wrong namespace (AA passes `ns:VALUE` because of CASE-900).
+  - **Serial, self-contained specs**: steps within a spec may build on each other, specs never on each other, so each passes on its own with `-g`.
+  - **Every test must fail on the code it guards**: when a test accompanies a fix, stash the fix, see the test fail, restore. Applies to unit tests too.
+  - **Probe WIP before asserting its behaviour**: check on a probe namespace what the platform really does, so a test can't share a wrong belief with the UI.
+  - **Selectors by role and label**: when a control has no accessible name, fix the app, not the selector.
+  - **Automation artifacts**: reproduce the way a person would before calling something a bug (RC saw dropped characters in URL-synced inputs and CodeMirror's completion list covering buttons; TipTap may have its own).
+  - **Excluded**: Analyse and Ask (need an Anthropic key, not deterministic); the manuscript import's AI extraction (same reason; the review and save steps can be tested with a stubbed extraction).
+  - Run in the background (60 s Bash cap), after checking that WIP answers (`nc -z localhost 8443`).
 
 ## Backlog
 - (empty — see Ideas)
