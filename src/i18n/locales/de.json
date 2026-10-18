@@ -668,5 +668,13 @@
       "CHAPTER": "Kapitel",
       "ADJACENT_SCENES": "Nachbarszenen"
     }
+  },
+  "undo": {
+    "undo": "R\u00fcckg\u00e4ngig",
+    "shortcut": "R\u00fcckg\u00e4ngig (Cmd/Strg+Z)",
+    "moved": "\u201e{{scene}}\u201c nach {{chapter}} verschoben",
+    "undone": "R\u00fcckg\u00e4ngig gemacht: {{label}}",
+    "conflict": "Die Kapitelreihenfolge wurde inzwischen ge\u00e4ndert \u2014 die Verschiebung wurde nicht r\u00fcckg\u00e4ngig gemacht.",
+    "failed": "R\u00fcckg\u00e4ngig fehlgeschlagen: {{message}}"
   }
 }

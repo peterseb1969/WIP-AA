@@ -182,7 +182,14 @@ export default function CorkboardPage() {
     const chapterId = structure?.raw.chapters[chapterIndex]?.chapter_id
     if (!chapterId) return
     setMoveError(null)
-    structureEditor.moveScene(sceneId, chapterId, beforeId).catch((err) =>
+    // (events and chapterMap are declared below; this only runs on drop.)
+    const sceneTitle = (events?.items?.find((e) => e.document_id === sceneId)?.data as { title?: string } | undefined)?.title ?? ''
+    const chapterTitle = chapterMap.get(chapterId)?.title
+    const label = t('undo.moved', {
+      scene: sceneTitle,
+      chapter: `${t('corkboard.group_chapter')} ${chapterIndex + 1}${chapterTitle ? `: ${chapterTitle}` : ''}`,
+    })
+    structureEditor.moveScene(sceneId, chapterId, beforeId, label).catch((err) =>
       setMoveError(err instanceof Error ? err.message : t('corkboard.move_failed')))
   }
 

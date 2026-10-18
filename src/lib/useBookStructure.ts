@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useDocuments, useCreateDocument, useUpdateDocument } from '@wip/react'
 import { NAMESPACE, TEMPLATES } from './constants'
+import { useStructureUndo } from './structureUndo'
 
 export interface ChapterSlot {
   chapter_id: string
@@ -100,32 +101,40 @@ export function useUpdateStructure() {
  * created on the first edit, titled after the project. Chapters that exist
  * as documents but are missing from the structure (created on the Chapters
  * page before chapters were added to it) are appended when first used.
+ * Scene moves are recorded for undo (see structureUndo.tsx).
  */
 export function useStructureEditor() {
   const { structure, structureDocId } = useBookStructure()
   const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active', namespace: NAMESPACE })
   const createDoc = useCreateDocument()
   const updateDoc = useUpdateDocument()
+  const undo = useStructureUndo()
 
+  /** Write `chapters`; returns the structure document and its new version. */
   const save = async (chapters: ChapterSlot[]) => {
-    if (structureDocId) {
-      await updateDoc.mutateAsync({ documentId: structureDocId, patch: { chapters } })
-    } else {
-      const title = (projects?.items?.[0]?.data as { title?: string } | undefined)?.title || 'Book'
-      await createDoc.mutateAsync({
-        template_id: TEMPLATES.BOOK_STRUCTURE,
-        namespace: NAMESPACE,
-        data: { book_title: title, chapters },
-      })
-    }
+    const result = structureDocId
+      ? await updateDoc.mutateAsync({ documentId: structureDocId, patch: { chapters } })
+      : await createDoc.mutateAsync({
+          template_id: TEMPLATES.BOOK_STRUCTURE,
+          namespace: NAMESPACE,
+          data: {
+            book_title: (projects?.items?.[0]?.data as { title?: string } | undefined)?.title || 'Book',
+            chapters,
+          },
+        })
+    return { documentId: result.document_id ?? structureDocId, version: result.version }
   }
 
   const currentChapters = () =>
     (structure?.raw.chapters ?? []).map((slot) => ({ ...slot, scene_ids: [...slot.scene_ids] }))
 
-  /** Move a scene into `chapterId` — before `beforeId`, or at the end. */
-  const moveScene = (sceneId: string, chapterId: string, beforeId: string | null = null) => {
-    if (sceneId === beforeId) return Promise.resolve()
+  /**
+   * Move a scene into `chapterId` — before `beforeId`, or at the end — and
+   * offer undo with `label` as the notice text.
+   */
+  const moveScene = async (sceneId: string, chapterId: string, beforeId: string | null, label: string) => {
+    if (sceneId === beforeId) return
+    const previous = currentChapters()
     const chapters = currentChapters().map((slot) => ({
       ...slot,
       scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
@@ -137,14 +146,17 @@ export function useStructureEditor() {
     }
     const at = beforeId ? target.scene_ids.indexOf(beforeId) : -1
     target.scene_ids.splice(at >= 0 ? at : target.scene_ids.length, 0, sceneId)
-    return save(chapters)
+    const saved = await save(chapters)
+    if (saved.documentId && saved.version != null) {
+      undo?.record({ label, documentId: saved.documentId, previous, version: saved.version })
+    }
   }
 
   /** Append a chapter (no-op if it is already in the structure). */
   const addChapter = (chapterId: string) => {
     const chapters = currentChapters()
     if (chapters.some((slot) => slot.chapter_id === chapterId)) return Promise.resolve()
-    return save([...chapters, { chapter_id: chapterId, scene_ids: [] }])
+    return save([...chapters, { chapter_id: chapterId, scene_ids: [] }]).then(() => undefined)
   }
 
   return { moveScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }

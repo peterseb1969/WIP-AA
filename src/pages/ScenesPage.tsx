@@ -1353,11 +1353,13 @@ function SceneEditor({
   const handleMoveToChapter = useCallback(async (chapterId: string) => {
     setMoveError(null)
     try {
-      await structureEditor.moveScene(sceneId, chapterId)
+      const chapterLabel = chapterOptions.find((o) => o.id === chapterId)?.label ?? ''
+      await structureEditor.moveScene(sceneId, chapterId, null,
+        t('undo.moved', { scene: sceneData?.title ?? '', chapter: chapterLabel }))
     } catch (err) {
       setMoveError(err instanceof Error ? err.message : String(err))
     }
-  }, [structureEditor, sceneId])
+  }, [structureEditor, sceneId, chapterOptions, sceneData?.title, t])
 
   // ── Analysis (prompt library) ───────────────────────────
   const { data: promptDocs } = useDocuments({

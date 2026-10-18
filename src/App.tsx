@@ -2,6 +2,7 @@ import './i18n'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { WipProvider } from '@wip/react'
+import { StructureUndoProvider } from './lib/structureUndo'
 import { wipClient, queryClient } from './lib/wip'
 import { BootstrapGate } from './components/BootstrapGate'
 import Layout from './components/Layout'
@@ -31,6 +32,7 @@ export default function App() {
     <BootstrapGate>
       <QueryClientProvider client={queryClient}>
         <WipProvider client={wipClient}>
+          <StructureUndoProvider>
           <BrowserRouter basename={BASENAME}>
             <Routes>
               <Route element={<Layout />}>
@@ -51,6 +53,7 @@ export default function App() {
             </Routes>
             <AskBar />
           </BrowserRouter>
+          </StructureUndoProvider>
         </WipProvider>
       </QueryClientProvider>
     </BootstrapGate>

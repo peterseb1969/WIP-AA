@@ -667,5 +667,13 @@
       "CHAPTER": "Chapter",
       "ADJACENT_SCENES": "Neighbouring scenes"
     }
+  },
+  "undo": {
+    "undo": "Undo",
+    "shortcut": "Undo (Cmd/Ctrl+Z)",
+    "moved": "Moved \u201c{{scene}}\u201d to {{chapter}}",
+    "undone": "Undone: {{label}}",
+    "conflict": "The chapter order has changed since then \u2014 the move was not undone.",
+    "failed": "Undo failed: {{message}}"
   }
 }
