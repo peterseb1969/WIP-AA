@@ -264,6 +264,12 @@ export async function runBootstrap(
       .sort()
 
     progress('templates', `Creating ${templateFiles.length} templates...`)
+    // Version each template has after this run. A nested template ref must
+    // pin a version (CASE-493 provenance); it pins the one created here, so the
+    // same seeds work for a fresh namespace (AA_CHAPTER_SLOT is v1) and for one
+    // upgraded in place (the upsert made it v2). Seed files are ordered so a
+    // referenced template comes first.
+    const versions = new Map<string, number>()
     for (const file of templateFiles) {
       const data = JSON.parse(readFileSync(join(SEED_DIR, 'templates', file), 'utf-8'))
       progress('templates', `Creating ${data.value}...`)
@@ -274,7 +280,7 @@ export async function runBootstrap(
         description: data.description || '',
         namespace: NAMESPACE,
         identity_fields: data.identity_fields || [],
-        fields: data.fields.map((f: AnyObj) => mapField(f)),
+        fields: data.fields.map((f: AnyObj) => mapField(f, versions)),
       }
 
       if (data.usage && data.usage !== 'entity') template.usage = data.usage
@@ -289,6 +295,8 @@ export async function runBootstrap(
         [template],
       )
       assertBulkSuccess(tplResult, `template create ${data.value}`)
+      const version = (tplResult as { results?: Array<{ version?: number }> }).results?.[0]?.version
+      if (version != null) versions.set(data.value, version)
 
       if (data.usage === 'relationship') edgeTypesCreated.push(data.value)
       else templatesCreated.push(data.value)
@@ -365,10 +373,11 @@ async function writeBootstrapRecord(meta: {
  * AA addition over the gene-pool template: forwards `array_template_ref`
  * and derives `array_item_type` when the seed omits it — AA's data-model
  * seeds predate the explicit array_item_type convention. CASE-493: nested
- * template refs now carry a mandatory pinned version; forward
+ * template refs carry a mandatory pinned version: the version of the
+ * referenced template created in this run (`versions`), else the seed's
  * `array_template_ref_version` / `template_ref_version`.
  */
-function mapField(f: AnyObj): AnyObj {
+function mapField(f: AnyObj, versions: Map<string, number>): AnyObj {
   const field: AnyObj = {
     name: f.name,
     label: f.label,
@@ -387,7 +396,7 @@ function mapField(f: AnyObj): AnyObj {
   if (f.target_templates) field.target_templates = f.target_templates
   // CASE-493: object template_ref carries a mandatory pinned version.
   if (f.template_ref) field.template_ref = f.template_ref
-  if (f.template_ref_version !== undefined) field.template_ref_version = f.template_ref_version
+  if (f.template_ref) field.template_ref_version = versions.get(f.template_ref) ?? f.template_ref_version
 
   // Array fields
   if (f.type === 'array') {
@@ -401,7 +410,7 @@ function mapField(f: AnyObj): AnyObj {
       field.array_template_ref = templateRef
       // CASE-493: mandatory pinned version for the nested array template.
       field.array_template_ref_version =
-        f.items?.template_ref_version ?? f.array_template_ref_version ?? 1
+        versions.get(templateRef) ?? f.items?.template_ref_version ?? f.array_template_ref_version ?? 1
     }
   }
 

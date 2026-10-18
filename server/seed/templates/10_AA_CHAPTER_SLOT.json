@@ -1,7 +1,7 @@
 {
   "value": "AA_CHAPTER_SLOT",
   "label": "Chapter Slot",
-  "description": "Embedded chapter/scene ordering entry for book structure",
+  "description": "Embedded chapter/scene ordering entry for book structure; optional numbering rule (restart at number_start, or unnumbered)",
   "identity_fields": [],
   "fields": [
     {
@@ -16,6 +16,18 @@
       "type": "array",
       "mandatory": false,
       "array_item_type": "string"
+    },
+    {
+      "name": "number_start",
+      "label": "Numbering starts at",
+      "type": "integer",
+      "mandatory": false
+    },
+    {
+      "name": "unnumbered",
+      "label": "Unnumbered",
+      "type": "boolean",
+      "mandatory": false
     }
   ]
 }
