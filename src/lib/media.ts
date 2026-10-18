@@ -1,8 +1,9 @@
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useDocumentRelationships, useReportQuery, useWipClient, wipKeys } from '@wip/react'
 import type { WipClient } from '@wip/client'
 import { useQueryClient } from '@tanstack/react-query'
 import { NAMESPACE, TEMPLATES } from './constants'
+import { useEntityNames } from './entityNames'
 
 /**
  * Media attachments: one AA_MEDIA document per stored file, attached to an
@@ -80,18 +81,22 @@ export function portraitOf(attachments: Attachment[]) {
 }
 
 /**
- * Portraits of all characters by name, from the reporting layer (one query
- * for the whole book, for avatars in lists). Reporting syncs within seconds,
- * so a just-attached portrait may take a moment to appear here; detail views
- * use useAttachments, which is immediate. Until the book has any attachment
- * the tables don't exist and the query fails — that just means "none".
+ * Portraits of all characters, keyed by the character's TERM ID, from the
+ * reporting layer (one query for the whole book, for avatars in lists).
+ * Keyed by term id because scenes, relationships and the character's own
+ * document spell the name differently (see entityNames.ts). Reporting syncs
+ * within seconds, so a just-attached portrait may take a moment to appear
+ * here; detail views use useAttachments, which is immediate. Until the book
+ * has any attachment the tables don't exist and the query fails — that just
+ * means "none".
  */
 export function useCharacterPortraits() {
-  const sql = `SELECT c.name, m.data_json->>'file' AS file_id
+  const sql = `SELECT tr->>'term_id' AS term_id, m.data_json->>'file' AS file_id
     FROM doc_aa_attached_to a
     JOIN doc_aa_media m ON m.document_id = a.source_ref AND m.status = 'active'
     JOIN doc_aa_character c ON c.document_id = a.target_ref AND c.status = 'active'
-    WHERE a.status = 'active' AND a.role = 'PORTRAIT'
+    CROSS JOIN jsonb_array_elements(COALESCE(c.term_references_json, '[]'::jsonb)) tr
+    WHERE a.status = 'active' AND a.role = 'PORTRAIT' AND tr->>'field_path' = 'name'
     ORDER BY a.sort_order NULLS LAST`
   const { data } = useReportQuery(sql, [], {
     namespace: NAMESPACE,
@@ -101,13 +106,21 @@ export function useCharacterPortraits() {
   })
   return useMemo(() => {
     const map = new Map<string, string>()
-    for (const row of (data?.rows ?? []) as Array<{ name: string; file_id: string }>) {
-      // Keyed case-insensitively: scenes and lists spell names inconsistently.
-      const key = row.name.toLowerCase()
-      if (!map.has(key)) map.set(key, row.file_id)
+    for (const row of (data?.rows ?? []) as Array<{ term_id: string; file_id: string }>) {
+      if (!map.has(row.term_id)) map.set(row.term_id, row.file_id)
     }
     return map
   }, [data])
+}
+
+/** The portrait for a character, given its name in any stored spelling. */
+export function usePortraitOf() {
+  const portraits = useCharacterPortraits()
+  const names = useEntityNames()
+  return useCallback((spelling: unknown) => {
+    const id = names.termId('character', spelling)
+    return id ? portraits.get(id) : undefined
+  }, [portraits, names])
 }
 
 /**

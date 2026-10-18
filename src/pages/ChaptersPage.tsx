@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import { useBookStructure, useStructureEditor, chapterDropBefore, displayNumberAfterMove, ruleOf, type NumberingRule } from '../lib/useBookStructure'
 import { chapterLabel, chapterTitleShown, sceneTitleShown } from '../lib/titles'
+import { useEntityNames } from '../lib/entityNames'
 import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -65,6 +66,7 @@ function ChapterRow({
   }
 }) {
   const { t } = useTranslation()
+  const names = useEntityNames()
   const status = data.status || 'OUTLINE'
 
   return (
@@ -112,7 +114,7 @@ function ChapterRow({
           </div>
           {data.pov_character ? (
             <div className="text-xs text-text-muted mt-0.5">
-              {t('chapters_page.pov_label', { character: data.pov_character })}
+              {t('chapters_page.pov_label', { character: names.label('character', data.pov_character) })}
             </div>
           ) : null}
         </div>
@@ -214,6 +216,8 @@ export default function ChaptersPage() {
   const [expandedChapters, setExpandedChapters] = useState<Set<string>>(new Set())
   const [showCreate, setShowCreate] = useState<string | null>(null)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  // The edited document — a title change renames it (see lib/rename.ts).
+  const [editId, setEditId] = useState<string | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const deleteDoc = useDeleteDocument()
 
@@ -388,7 +392,7 @@ export default function ChaptersPage() {
                 scenes={entry.scenes}
                 expanded={expandedChapters.has(entry.chapterId)}
                 onToggle={() => toggleChapter(entry.chapterId)}
-                onEdit={() => setEditData(entry.chapter!.data as unknown as Record<string, unknown>)}
+                onEdit={() => { setEditData(entry.chapter!.data as unknown as Record<string, unknown>); setEditId(entry.chapterId) }}
                 onDelete={() => setConfirmDelete(entry.chapterId)}
                 dnd={structure ? {
                   chapterId: entry.chapterId,
@@ -462,6 +466,7 @@ export default function ChaptersPage() {
           entityType="chapter"
           mode="edit"
           existingData={editData}
+          documentId={editId}
           onClose={() => setEditData(null)}
           onCreated={() => setEditData(null)}
         />

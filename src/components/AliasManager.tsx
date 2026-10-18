@@ -35,15 +35,18 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
 
   // Fetch terms and find the matching one
   const { data: terms } = useTerms(terminologyId ?? '', {
-    page_size: 100,
+    page_size: 1000,
   } as any)
 
+  // The entity's stored name may be the term's value, its label or an alias
+  // ("Lady Linora Thalyn" for LADY_LINORA_THALYN) — match all of them.
   const term = useMemo(() => {
     if (!terms?.items) return null
-    const upper = entityTermValue.toUpperCase()
-    return (terms.items as any[]).find(
-      (t) => t.value.toUpperCase() === upper
-    ) ?? null
+    const name = entityTermValue.toLowerCase()
+    const items = terms.items as any[]
+    return items.find((t) => t.value.toLowerCase() === name)
+      ?? items.find((t) => (t.label ?? '').toLowerCase() === name || (t.aliases ?? []).some((a: string) => a.toLowerCase() === name))
+      ?? null
   }, [terms, entityTermValue])
 
   const aliases: string[] = term?.aliases ?? []

@@ -5,6 +5,7 @@ import { Globe, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
+import { useEntityNames } from '../lib/entityNames'
 import { MediaToggle } from '../components/MediaSection'
 
 interface WorldRuleData {
@@ -19,8 +20,11 @@ interface WorldRuleData {
 
 export default function WorldRulesPage() {
   const { t } = useTranslation()
+  const names = useEntityNames()
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  // The edited document — a title change renames it (see lib/rename.ts).
+  const [editId, setEditId] = useState<string | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const deleteDoc = useDeleteDocument()
   const { data: rules, isLoading } = useDocuments({
@@ -77,7 +81,7 @@ export default function WorldRulesPage() {
                       <h3 className="font-semibold text-text">{rule.data.name}</h3>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => setEditData(rule.data as unknown as Record<string, unknown>)}
+                          onClick={() => { setEditData(rule.data as unknown as Record<string, unknown>); setEditId(rule.id) }}
                           className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
                         >
                           <Pencil className="w-3 h-3" />
@@ -131,12 +135,12 @@ export default function WorldRulesPage() {
                       <div className="flex flex-wrap gap-1 mt-2">
                         {rule.data.related_characters?.map((c, i) => (
                           <span key={`c-${i}`} className="px-2 py-0.5 bg-primary/5 rounded text-xs text-primary">
-                            {String(c)}
+                            {names.label('character', c)}
                           </span>
                         ))}
                         {rule.data.related_locations?.map((l, i) => (
                           <span key={`l-${i}`} className="px-2 py-0.5 bg-accent/5 rounded text-xs text-accent">
-                            {String(l)}
+                            {names.label('location', l)}
                           </span>
                         ))}
                       </div>
@@ -164,6 +168,7 @@ export default function WorldRulesPage() {
           entityType="world_rule"
           mode="edit"
           existingData={editData}
+          documentId={editId}
           onClose={() => setEditData(null)}
           onCreated={() => setEditData(null)}
         />

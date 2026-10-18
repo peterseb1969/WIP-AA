@@ -16,7 +16,8 @@ import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 import { Avatar } from '../components/MediaSection'
-import { useCharacterPortraits } from '../lib/media'
+import { usePortraitOf } from '../lib/media'
+import { useEntityNames } from '../lib/entityNames'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -98,7 +99,8 @@ function SceneCard({
 }) {
   const { t } = useTranslation()
   const wc = wordCount(event.data.prose)
-  const portraits = useCharacterPortraits()
+  const portraitOfName = usePortraitOf()
+  const names = useEntityNames()
 
   return (
     <Link
@@ -142,7 +144,7 @@ function SceneCard({
       {event.data.characters?.length ? (
         <div className="flex flex-wrap gap-0.5 mt-1.5">
           {event.data.characters.slice(0, 3).map((c, i) => (
-            <Avatar key={i} fileId={portraits.get(String(c).toLowerCase())} name={String(c)} className="w-5 h-5" textClassName="text-[9px] font-medium" />
+            <Avatar key={i} fileId={portraitOfName(c)} name={names.label('character', c)} className="w-5 h-5" textClassName="text-[9px] font-medium" />
           ))}
           {event.data.characters.length > 3 ? (
             <span className="text-[9px] text-text-light self-center ml-0.5">
@@ -172,6 +174,7 @@ export default function CorkboardPage() {
   // Chapter drag: the chapter id the dragged one goes before, or null for the end.
   const [chapterDrop, setChapterDrop] = useState<string | null | undefined>(undefined)
   const [moveError, setMoveError] = useState<string | null>(null)
+  const names = useEntityNames()
 
   /**
    * Drag a card: the drop target is whatever is under the pointer — a card
@@ -386,7 +389,8 @@ export default function CorkboardPage() {
     if (groupBy === 'character') {
       const byChar = new Map<string, typeof filtered>()
       filtered.forEach((e) => {
-        const chars = e.data.characters?.map(String) ?? ['(no characters)']
+        // Grouped by the name shown, so one character spelled two ways is one group.
+        const chars = e.data.characters?.map((c) => names.label('character', c)) ?? ['(no characters)']
         chars.forEach((c) => {
           if (!byChar.has(c)) byChar.set(c, [])
           byChar.get(c)!.push(e)
@@ -400,7 +404,7 @@ export default function CorkboardPage() {
     // thread
     const byThread = new Map<string, typeof filtered>()
     filtered.forEach((e) => {
-      const threads = e.data.plot_threads?.map(String) ?? ['(no threads)']
+      const threads = e.data.plot_threads?.map((pt) => names.label('plot_thread', pt)) ?? ['(no threads)']
       threads.forEach((t) => {
         if (!byThread.has(t)) byThread.set(t, [])
         byThread.get(t)!.push(e)
@@ -409,7 +413,7 @@ export default function CorkboardPage() {
     return [...byThread.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([title, evts]) => ({ label: title, events: evts }))
-  }, [filtered, groupBy, chapterMap, structure, sceneOrderIndex, filterChapter])
+  }, [filtered, groupBy, chapterMap, structure, sceneOrderIndex, filterChapter, names])
 
   // Chapters sorted by structure order for the filter dropdown
   const sortedChapters = useMemo(() => {

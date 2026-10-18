@@ -44,6 +44,11 @@ export interface UndoEntry {
 
 interface StructureUndo {
   record: (entry: UndoEntry) => void
+  /**
+   * A chapter or scene was renamed (lib/rename.ts): its document id changed.
+   * Recorded orders that mention the old id must restore the new one.
+   */
+  replaceId: (oldId: string, newId: string) => void
   /** Undo the moves from `index` (0 = oldest) to the newest, newest first. */
   undoTo: (index: number) => Promise<void>
   entries: UndoEntry[]
@@ -85,6 +90,15 @@ export function StructureUndoProvider({ children }: { children: ReactNode }) {
   const record = useCallback((entry: UndoEntry) => {
     setStack((s) => [...s, entry])
     setError(null)
+  }, [])
+
+  const replaceId = useCallback((oldId: string, newId: string) => {
+    const swap = (id: string) => (id === oldId ? newId : id)
+    setStack((s) => s.map((entry) => ({
+      ...entry,
+      previous: entry.previous.map((slot) => ({ ...slot, chapter_id: swap(slot.chapter_id), scene_ids: slot.scene_ids.map(swap) })),
+      ...(entry.merge ? { merge: { ...entry.merge, kept: { ...entry.merge.kept, id: swap(entry.merge.kept.id) } } } : {}),
+    })))
   }, [])
 
   const undoTo = useCallback(async (index: number) => {
@@ -149,7 +163,7 @@ export function StructureUndoProvider({ children }: { children: ReactNode }) {
   }, [stack.length, undo])
 
   return (
-    <Ctx.Provider value={{ record, undoTo, entries: stack, busy, error, clearError: () => setError(null) }}>
+    <Ctx.Provider value={{ record, replaceId, undoTo, entries: stack, busy, error, clearError: () => setError(null) }}>
       {children}
     </Ctx.Provider>
   )

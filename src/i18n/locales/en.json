@@ -823,5 +823,11 @@
     "checked_other": "Checked {{count}} scenes:",
     "suggestions_one": "{{count}} suggestion",
     "suggestions_other": "{{count}} suggestions"
+  },
+  "rename": {
+    "taken": "\u201c{{name}}\u201d is already taken \u2014 choose another name.",
+    "taken_merge": "\u201c{{name}}\u201d already has this name. To make them one, use Merge\u2026 on the list page.",
+    "save_first": "Save the scene before renaming it.",
+    "click_to_rename": "Click to rename"
   }
 }

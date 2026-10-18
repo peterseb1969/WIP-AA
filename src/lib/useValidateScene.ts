@@ -21,6 +21,8 @@ export interface TermEntry {
   value: string
   label: string
   aliases?: string[]
+  /** The term's id — what references resolve to; stable across renames. */
+  termId?: string
 }
 
 // ── Core matching logic ───────────────────────────────────
@@ -143,13 +145,13 @@ export function useEntityTerms() {
 
   // Now fetch terms using resolved UUIDs (hooks are disabled when ID is falsy)
   const { data: charTerms } = useTerms(charId ?? '', {
-    page_size: 100,
+    page_size: 1000,
   } as any)
   const { data: locTerms } = useTerms(locId ?? '', {
-    page_size: 100,
+    page_size: 1000,
   } as any)
   const { data: threadTerms } = useTerms(threadId ?? '', {
-    page_size: 100,
+    page_size: 1000,
   } as any)
 
   const characterTerms: TermEntry[] = useMemo(
@@ -157,6 +159,7 @@ export function useEntityTerms() {
       value: t.value,
       label: t.label || t.value,
       aliases: t.aliases ?? [],
+      termId: t.term_id,
     })),
     [charTerms]
   )
@@ -166,6 +169,7 @@ export function useEntityTerms() {
       value: t.value,
       label: t.label || t.value,
       aliases: t.aliases ?? [],
+      termId: t.term_id,
     })),
     [locTerms]
   )
@@ -175,6 +179,7 @@ export function useEntityTerms() {
       value: t.value,
       label: t.label || t.value,
       aliases: t.aliases ?? [],
+      termId: t.term_id,
     })),
     [threadTerms]
   )

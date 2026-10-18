@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
+import { useEntityNames } from '../lib/entityNames'
 import MediaSection from '../components/MediaSection'
 import { MergeToolbar, MergeEntitiesDialog, useMergeSelection, selectedCardClass } from '../components/MergeEntities'
 import BackLink from '../components/BackLink'
@@ -33,6 +34,7 @@ const TYPE_COLORS: Record<string, string> = {
 }
 
 function LocationDetail({ documentId, data, onBack, onEdit, onDelete }: { documentId: string; data: LocationData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
+  const names = useEntityNames()
   const { t } = useTranslation()
   const sections = [
     { label: t('locations.atmosphere'), value: data.atmosphere },
@@ -56,7 +58,7 @@ function LocationDetail({ documentId, data, onBack, onEdit, onDelete }: { docume
         </div>
         <div className="flex-1">
           <div className="flex items-start justify-between">
-            <h2 className="text-xl font-bold text-text">{data.name}</h2>
+            <h2 className="text-xl font-bold text-text">{names.label('location', data.name)}</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={onEdit}
@@ -85,7 +87,7 @@ function LocationDetail({ documentId, data, onBack, onEdit, onDelete }: { docume
       ) : null}
 
       <AliasManager terminologyValue={TERMINOLOGIES.LOCATIONS} entityTermValue={data.name} />
-      <CrossReferences kind="location" value={data.name} />
+      <CrossReferences kind="location" termId={names.termId('location', data.name)} />
       <MediaSection entityId={documentId} kind="location" />
 
       {sections.length > 0 ? (
@@ -106,6 +108,7 @@ export default function LocationsPage() {
   const { t } = useTranslation()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const merge = useMergeSelection()
+  const names = useEntityNames()
   const [merging, setMerging] = useState(false)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
@@ -146,7 +149,7 @@ export default function LocationsPage() {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
                 <h3 className="text-lg font-semibold text-text mb-2">{t('locations.delete_title')}</h3>
-                <p className="text-sm text-text-muted mb-4" dangerouslySetInnerHTML={{ __html: t('locations.delete_confirm', { name: selectedData.name }) }} />
+                <p className="text-sm text-text-muted mb-4" dangerouslySetInnerHTML={{ __html: t('locations.delete_confirm', { name: names.label('location', selectedData.name) }) }} />
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setConfirmDelete(false)}
@@ -170,6 +173,7 @@ export default function LocationsPage() {
               entityType="location"
               mode="edit"
               existingData={editData}
+              documentId={selectedId ?? undefined}
               onClose={() => setEditData(null)}
               onCreated={() => setEditData(null)}
             />
@@ -204,7 +208,7 @@ export default function LocationsPage() {
                     className={`bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all ${selectedCardClass(merge.isSelected(loc.document_id))}`}
                   >
                     <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-semibold text-text">{d.name}</h3>
+                      <h3 className="font-semibold text-text">{names.label('location', d.name)}</h3>
                       {d.type ? (
                         <StatusBadge label={d.type} colorClass={TYPE_COLORS[d.type]} />
                       ) : null}
@@ -235,7 +239,7 @@ export default function LocationsPage() {
               kind="location"
               candidates={merge.selected.map((id) => ({
                 documentId: id,
-                name: String((locations?.items?.find((l) => l.document_id === id)?.data as { name?: string } | undefined)?.name ?? id),
+                name: names.label('location', (locations?.items?.find((l) => l.document_id === id)?.data as { name?: string } | undefined)?.name ?? id),
               }))}
               onClose={() => setMerging(false)}
               onMerged={() => { setMerging(false); merge.cancel() }}

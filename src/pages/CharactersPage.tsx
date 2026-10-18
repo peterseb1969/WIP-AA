@@ -10,7 +10,8 @@ import CrossReferences from '../components/CrossReferences'
 import BackLink from '../components/BackLink'
 import MediaSection, { Avatar } from '../components/MediaSection'
 import { MergeToolbar, MergeEntitiesDialog, useMergeSelection, selectedCardClass } from '../components/MergeEntities'
-import { useAttachments, useCharacterPortraits, portraitOf } from '../lib/media'
+import { useAttachments, usePortraitOf, portraitOf } from '../lib/media'
+import { useEntityNames } from '../lib/entityNames'
 
 interface CharacterData {
   name: string
@@ -32,7 +33,7 @@ interface CharacterData {
   }>
 }
 
-function CharacterCard({ data, portrait, selected = false, onClick }: { data: CharacterData; portrait?: string; selected?: boolean; onClick: () => void }) {
+function CharacterCard({ data, displayName, portrait, selected = false, onClick }: { data: CharacterData; displayName: string; portrait?: string; selected?: boolean; onClick: () => void }) {
   const { t } = useTranslation()
   return (
     <button
@@ -40,8 +41,8 @@ function CharacterCard({ data, portrait, selected = false, onClick }: { data: Ch
       className={`bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all w-full ${selectedCardClass(selected)}`}
     >
       <div className="flex items-start gap-3 mb-2">
-        {portrait ? <Avatar fileId={portrait} name={data.name} className="w-10 h-10" /> : null}
-        <h3 className="font-semibold text-text flex-1">{data.name}</h3>
+        {portrait ? <Avatar fileId={portrait} name={displayName} className="w-10 h-10" /> : null}
+        <h3 className="font-semibold text-text flex-1">{displayName}</h3>
         <StatusBadge label={data.role} colorClass={ROLE_COLORS[data.role]} />
       </div>
       {data.age ? <div className="text-xs text-text-muted mb-1">{t('characters.age_label', { age: data.age })}</div> : null}
@@ -61,8 +62,9 @@ function CharacterCard({ data, portrait, selected = false, onClick }: { data: Ch
 function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { documentId: string; data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   // Resolve character names from terms
-  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 50, namespace: NAMESPACE } as any)
-  const termLookup = new Map(charTerms?.items?.map((tm) => [tm.value, tm.label]) ?? [])
+  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1000, namespace: NAMESPACE } as any)
+  const names = useEntityNames()
+  const displayName = names.label('character', data.name)
   const { attachments } = useAttachments(documentId)
 
   const sections = [
@@ -85,10 +87,10 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
       </button>
 
       <div className="flex items-start gap-4 mb-6">
-        <Avatar fileId={portraitOf(attachments)?.fileId} name={data.name} className="w-14 h-14" textClassName="font-bold text-xl" />
+        <Avatar fileId={portraitOf(attachments)?.fileId} name={displayName} className="w-14 h-14" textClassName="font-bold text-xl" />
         <div className="flex-1">
           <div className="flex items-start justify-between">
-            <h2 className="text-xl font-bold text-text">{data.name}</h2>
+            <h2 className="text-xl font-bold text-text">{displayName}</h2>
             <div className="flex items-center gap-2">
               <button
                 onClick={onEdit}
@@ -117,7 +119,7 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
       </div>
 
       <AliasManager terminologyValue={TERMINOLOGIES.CHARACTERS} entityTermValue={data.name} />
-      <CrossReferences kind="character" value={data.name} />
+      <CrossReferences kind="character" termId={names.termId('character', data.name)} />
       <MediaSection entityId={documentId} kind="character" />
 
       {/* Character bible sections */}
@@ -136,7 +138,6 @@ function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { docum
         documentId={documentId}
         characterValue={data.name}
         relationships={data.relationships ?? []}
-        termLookup={termLookup}
         characterTerms={charTerms?.items ?? []}
       />
     </div>
@@ -155,18 +156,17 @@ function Relationships({
   documentId,
   characterValue,
   relationships,
-  termLookup,
   characterTerms,
 }: {
   documentId: string
   characterValue: string
   relationships: Relationship[]
-  termLookup: Map<string, string | undefined>
   characterTerms: Array<{ value: string; label?: string | null }>
 }) {
   const { t } = useTranslation()
   const updateDoc = useUpdateDocument()
-  const portraits = useCharacterPortraits()
+  const portraitOfName = usePortraitOf()
+  const names = useEntityNames()
   const { data: typeTerms } = useTerms(TERMINOLOGIES.RELATIONSHIP_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ character: '', relationship_type: '', description: '' })
@@ -221,14 +221,14 @@ function Relationships({
         {relationships.map((rel, i) => (
           <div key={i} className="flex items-center gap-3 p-2 rounded bg-surface">
             <Avatar
-              fileId={portraits.get(rel.character.toLowerCase())}
-              name={termLookup.get(rel.character) ?? rel.character}
+              fileId={portraitOfName(rel.character)}
+              name={names.label('character', rel.character)}
               className="w-8 h-8"
               textClassName="text-sm font-medium"
             />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-text">
-                {termLookup.get(rel.character) ?? rel.character}
+                {names.label('character', rel.character)}
               </div>
               <div className="text-xs text-text-muted">
                 {typeLabel(rel.relationship_type)}
@@ -263,7 +263,7 @@ function Relationships({
           >
             <option value="">{t('characters.pick_character')}</option>
             {characterTerms
-              .filter((tm) => tm.value !== characterValue)
+              .filter((tm) => !names.same('character', tm.value, characterValue))
               .map((tm) => (
                 <option key={tm.value} value={tm.value}>{tm.label || tm.value}</option>
               ))}
@@ -314,7 +314,8 @@ export default function CharactersPage() {
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const deleteDoc = useDeleteDocument()
-  const portraits = useCharacterPortraits()
+  const portraitOfName = usePortraitOf()
+  const names = useEntityNames()
   const merge = useMergeSelection()
   const [merging, setMerging] = useState(false)
 
@@ -352,7 +353,7 @@ export default function CharactersPage() {
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
               <div className="bg-white rounded-lg p-6 max-w-sm mx-4 shadow-xl">
                 <h3 className="text-lg font-semibold text-text mb-2">{t('characters.delete_title')}</h3>
-                <p className="text-sm text-text-muted mb-4" dangerouslySetInnerHTML={{ __html: t('characters.delete_confirm', { name: selectedData.name }) }} />
+                <p className="text-sm text-text-muted mb-4" dangerouslySetInnerHTML={{ __html: t('characters.delete_confirm', { name: names.label('character', selectedData.name) }) }} />
                 <div className="flex justify-end gap-2">
                   <button
                     onClick={() => setConfirmDelete(false)}
@@ -376,6 +377,7 @@ export default function CharactersPage() {
               entityType="character"
               mode="edit"
               existingData={editData}
+              documentId={selectedId ?? undefined}
               onClose={() => setEditData(null)}
               onCreated={() => setEditData(null)}
             />
@@ -405,7 +407,8 @@ export default function CharactersPage() {
                 <CharacterCard
                   key={ch.document_id}
                   data={ch.data as unknown as CharacterData}
-                  portrait={portraits.get(String((ch.data as { name?: string }).name ?? '').toLowerCase())}
+                  displayName={names.label('character', (ch.data as { name?: string }).name)}
+                  portrait={portraitOfName((ch.data as { name?: string }).name)}
                   selected={merge.isSelected(ch.document_id)}
                   onClick={() => (merge.active ? merge.toggle(ch.document_id) : setSelectedId(ch.document_id))}
                 />
@@ -427,7 +430,7 @@ export default function CharactersPage() {
               kind="character"
               candidates={merge.selected.map((id) => ({
                 documentId: id,
-                name: String((characters?.items?.find((c) => c.document_id === id)?.data as { name?: string } | undefined)?.name ?? id),
+                name: names.label('character', (characters?.items?.find((c) => c.document_id === id)?.data as { name?: string } | undefined)?.name ?? id),
               }))}
               onClose={() => setMerging(false)}
               onMerged={() => { setMerging(false); merge.cancel() }}

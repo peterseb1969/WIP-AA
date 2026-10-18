@@ -129,7 +129,7 @@ export function termFor(terms: Term[], name: string): Term | undefined {
     ?? terms.find((t) => (t.label ?? '').toLowerCase() === n || t.aliases?.some((a) => a.toLowerCase() === n))
 }
 
-const namesOf = (t: Term) => [t.value, t.label ?? '', ...(t.aliases ?? [])].filter(Boolean)
+export const namesOf = (t: Term) => [t.value, t.label ?? '', ...(t.aliases ?? [])].filter(Boolean)
 
 /** Work out everything a merge would change, without writing anything. */
 export async function planMerge(

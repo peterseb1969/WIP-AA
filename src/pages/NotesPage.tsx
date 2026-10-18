@@ -6,6 +6,7 @@ import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
+import { useEntityNames } from '../lib/entityNames'
 import { MediaToggle } from '../components/MediaSection'
 
 interface NoteData {
@@ -30,9 +31,12 @@ const NOTE_TYPE_COLORS: Record<string, string> = {
 
 export default function NotesPage() {
   const { t } = useTranslation()
+  const names = useEntityNames()
   const [filterType, setFilterType] = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  // The edited document — a title change renames it (see lib/rename.ts).
+  const [editId, setEditId] = useState<string | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const deleteDoc = useDeleteDocument()
 
@@ -107,7 +111,7 @@ export default function NotesPage() {
                   <h3 className="font-semibold text-text">{d.title}</h3>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setEditData(d as unknown as Record<string, unknown>)}
+                      onClick={() => { setEditData(d as unknown as Record<string, unknown>); setEditId(note.document_id) }}
                       className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
                     >
                       <Pencil className="w-3 h-3" />
@@ -151,17 +155,17 @@ export default function NotesPage() {
                   ))}
                   {d.linked_characters?.map((c, i) => (
                     <span key={`c-${i}`} className="px-2 py-0.5 bg-primary/5 rounded text-xs text-primary">
-                      {String(c)}
+                      {names.label('character', c)}
                     </span>
                   ))}
                   {d.linked_locations?.map((l, i) => (
                     <span key={`l-${i}`} className="px-2 py-0.5 bg-accent/5 rounded text-xs text-accent">
-                      {String(l)}
+                      {names.label('location', l)}
                     </span>
                   ))}
                   {d.linked_plot_threads?.map((pt, i) => (
                     <span key={`pt-${i}`} className="px-2 py-0.5 bg-amber-50 rounded text-xs text-amber-700">
-                      {String(pt)}
+                      {names.label('plot_thread', pt)}
                     </span>
                   ))}
                 </div>
@@ -188,6 +192,7 @@ export default function NotesPage() {
           entityType="note"
           mode="edit"
           existingData={editData}
+          documentId={editId}
           onClose={() => setEditData(null)}
           onCreated={() => setEditData(null)}
         />

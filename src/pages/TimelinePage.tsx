@@ -15,7 +15,8 @@ import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 import { Avatar } from '../components/MediaSection'
-import { useCharacterPortraits } from '../lib/media'
+import { usePortraitOf } from '../lib/media'
+import { useEntityNames } from '../lib/entityNames'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -51,7 +52,8 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
 // ── Timeline Event Card ──────────────────────────────────
 
 function TimelineEvent({ event }: { event: { document_id: string; data: EventData } }) {
-  const portraits = useCharacterPortraits()
+  const portraitOfName = usePortraitOf()
+  const names = useEntityNames()
   return (
     <Link
       to={`/scenes?id=${event.document_id}`}
@@ -89,7 +91,7 @@ function TimelineEvent({ event }: { event: { document_id: string; data: EventDat
       {event.data.characters?.length ? (
         <div className="flex items-center gap-1 mt-2">
           {event.data.characters.slice(0, 4).map((c, i) => (
-            <Avatar key={i} fileId={portraits.get(String(c).toLowerCase())} name={String(c)} className="w-5 h-5" textClassName="text-[9px] font-medium" />
+            <Avatar key={i} fileId={portraitOfName(c)} name={names.label('character', c)} className="w-5 h-5" textClassName="text-[9px] font-medium" />
           ))}
           {event.data.characters.length > 4 ? (
             <span className="text-[10px] text-text-light ml-0.5">
@@ -106,6 +108,7 @@ function TimelineEvent({ event }: { event: { document_id: string; data: EventDat
 
 export default function TimelinePage() {
   const { t } = useTranslation()
+  const names = useEntityNames()
   const [filterCharacter, setFilterCharacter] = useState<string | null>(null)
   const [filterLocation, setFilterLocation] = useState<string | null>(null)
   const [zoomLevel, setZoomLevel] = useState<'story' | 'chapter'>('story')
@@ -275,7 +278,7 @@ export default function TimelinePage() {
           >
             <option value="">{t('timeline.all_characters')}</option>
             {allCharacters.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c}>{names.label('character', c)}</option>
             ))}
           </select>
           <select
@@ -285,7 +288,7 @@ export default function TimelinePage() {
           >
             <option value="">{t('timeline.all_locations')}</option>
             {allLocations.map((l) => (
-              <option key={l} value={l}>{l}</option>
+              <option key={l} value={l}>{names.label('location', l)}</option>
             ))}
           </select>
         </div>

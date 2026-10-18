@@ -7,6 +7,7 @@ import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import AliasManager from '../components/AliasManager'
 import CrossReferences from '../components/CrossReferences'
+import { useEntityNames } from '../lib/entityNames'
 import MediaSection from '../components/MediaSection'
 import { MergeToolbar, MergeEntitiesDialog, useMergeSelection, selectedCardClass } from '../components/MergeEntities'
 import BackLink from '../components/BackLink'
@@ -25,9 +26,12 @@ export default function PlotThreadsPage() {
   const { t } = useTranslation()
   const [showCreate, setShowCreate] = useState(false)
   const [editData, setEditData] = useState<Record<string, unknown> | null>(null)
+  // The edited document — a title change renames it (see lib/rename.ts).
+  const [editId, setEditId] = useState<string | undefined>(undefined)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const deleteDoc = useDeleteDocument()
   const merge = useMergeSelection()
+  const names = useEntityNames()
   const [merging, setMerging] = useState(false)
   const { data: threads, isLoading } = useDocuments({
     template_id: TEMPLATES.PLOT_THREAD,
@@ -96,11 +100,11 @@ export default function PlotThreadsPage() {
                           {merge.active ? (
                             <input type="checkbox" checked={merge.isSelected(thread.id)} onChange={() => merge.toggle(thread.id)} className="w-4 h-4" />
                           ) : null}
-                          {thread.data.title}
+                          {names.label('plot_thread', thread.data.title)}
                         </h3>
                         <div className="flex items-center gap-1">
                           <button
-                            onClick={() => setEditData(thread.data as unknown as Record<string, unknown>)}
+                            onClick={() => { setEditData(thread.data as unknown as Record<string, unknown>); setEditId(thread.id) }}
                             className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
                           >
                             <Pencil className="w-3 h-3" />
@@ -138,7 +142,7 @@ export default function PlotThreadsPage() {
                         <p className="text-sm text-text-muted mb-2">{thread.data.description}</p>
                       ) : null}
                       <AliasManager terminologyValue={TERMINOLOGIES.PLOT_THREADS} entityTermValue={thread.data.title} />
-                      <CrossReferences kind="plot_thread" value={thread.data.title} />
+                      <CrossReferences kind="plot_thread" termId={names.termId('plot_thread', thread.data.title)} />
                       <MediaSection entityId={thread.id} kind="plot_thread" />
                       <div className="flex items-center gap-4 text-xs text-text-light">
                         {thread.data.opened_chapter != null ? (
@@ -167,7 +171,7 @@ export default function PlotThreadsPage() {
           kind="plot_thread"
           candidates={merge.selected.map((id) => ({
             documentId: id,
-            name: String((threads?.items?.find((th) => th.document_id === id)?.data as { title?: string } | undefined)?.title ?? id),
+            name: names.label('plot_thread', (threads?.items?.find((th) => th.document_id === id)?.data as { title?: string } | undefined)?.title ?? id),
           }))}
           onClose={() => setMerging(false)}
           onMerged={() => { setMerging(false); merge.cancel() }}
@@ -186,6 +190,7 @@ export default function PlotThreadsPage() {
           entityType="plot_thread"
           mode="edit"
           existingData={editData}
+          documentId={editId}
           onClose={() => setEditData(null)}
           onCreated={() => setEditData(null)}
         />

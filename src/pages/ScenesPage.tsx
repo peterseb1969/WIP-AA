@@ -53,7 +53,9 @@ import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 import MediaSection, { Avatar } from '../components/MediaSection'
 import Markdown from '../components/Markdown'
-import { useAttachments, useCharacterPortraits } from '../lib/media'
+import { useAttachments, usePortraitOf } from '../lib/media'
+import { useEntityNames } from '../lib/entityNames'
+import { renameByCopy, NameTakenError } from '../lib/rename'
 
 // ── Data interfaces ──────────────────────────────────────
 
@@ -332,6 +334,7 @@ function MetadataStrip({
   onToggle: () => void
 }) {
   const { t } = useTranslation()
+  const names = useEntityNames()
 
   return (
     <div className="bg-white border-b border-gray-200">
@@ -367,7 +370,7 @@ function MetadataStrip({
           {scene.location ? (
             <span className="flex items-center gap-1">
               <MapPin className="w-3 h-3" />
-              {scene.location}
+              {names.label('location', scene.location)}
             </span>
           ) : null}
           {scene.story_time_raw ? (
@@ -421,7 +424,7 @@ function MetadataStrip({
               {scene.characters?.length ? (
                 scene.characters.map((c, i) => (
                   <span key={i} className="px-1.5 py-0.5 bg-primary/5 rounded text-xs text-primary">
-                    {String(c)}
+                    {names.label('character', c)}
                   </span>
                 ))
               ) : (
@@ -458,17 +461,16 @@ function CharactersPanel({
 }) {
   const { t } = useTranslation()
   const [expandedChar, setExpandedChar] = useState<string | null>(null)
-  const portraits = useCharacterPortraits()
+  const portraitOfName = usePortraitOf()
+  const names = useEntityNames()
 
-  // Match character docs by name
+  // Match character docs to the scene's references by term (spellings differ).
   const present = useMemo(() => {
-    return characterNames.map((name) => {
-      const doc = characterDocs.find(
-        (d) => d.data.name.toLowerCase() === name.toLowerCase()
-      )
-      return { name, doc: doc?.data }
+    return characterNames.map((stored) => {
+      const doc = characterDocs.find((d) => names.same('character', d.data.name, stored))
+      return { name: names.label('character', stored), stored, doc: doc?.data }
     })
-  }, [characterNames, characterDocs])
+  }, [characterNames, characterDocs, names])
 
   if (present.length === 0) {
     return (
@@ -484,7 +486,7 @@ function CharactersPanel({
             onClick={() => setExpandedChar(expandedChar === c.name ? null : c.name)}
             className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-surface rounded transition-colors"
           >
-            <Avatar fileId={portraits.get(c.name.toLowerCase())} name={c.name} className="w-7 h-7" textClassName="text-xs font-medium" />
+            <Avatar fileId={portraitOfName(c.stored)} name={c.name} className="w-7 h-7" textClassName="text-xs font-medium" />
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-text truncate">{c.name}</div>
               {c.doc?.role ? (
@@ -597,21 +599,20 @@ function ContextPanel({
     if (analysis) setTab('analysis')
   }, [analysis?.startedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Find location doc matching scene.location
+  const names = useEntityNames()
+
+  // Documents are matched to the scene's references by term (spellings differ).
   const locationDoc = useMemo(
-    () => locationDocs.find((l) => l.data.name.toLowerCase() === (scene.location ?? '').toLowerCase()),
-    [locationDocs, scene.location]
+    () => (scene.location ? locationDocs.find((l) => names.same('location', l.data.name, scene.location)) : undefined),
+    [locationDocs, scene.location, names]
   )
 
-  // Find threads matching scene.plot_threads
   const activeThreads = useMemo(
     () =>
       threadDocs.filter((item) =>
-        scene.plot_threads?.some(
-          (pt) => String(pt).toLowerCase() === item.data.title.toLowerCase()
-        )
+        scene.plot_threads?.some((pt) => names.same('plot_thread', item.data.title, pt))
       ),
-    [threadDocs, scene.plot_threads]
+    [threadDocs, scene.plot_threads, names]
   )
 
   const { attachments } = useAttachments(sceneId)
@@ -668,7 +669,7 @@ function ContextPanel({
           <div className="p-3">
             {locationDoc ? (
               <div className="space-y-2 break-words">
-                <div className="font-medium text-sm text-text">{locationDoc.data.name}</div>
+                <div className="font-medium text-sm text-text">{names.label('location', locationDoc.data.name)}</div>
                 {locationDoc.data.type ? (
                   <StatusBadge label={locationDoc.data.type} colorClass="bg-blue-100 text-blue-800" />
                 ) : null}
@@ -687,7 +688,7 @@ function ContextPanel({
               </div>
             ) : (
               <div className="text-xs text-text-muted">
-                {scene.location ? t('scenes.no_location_doc', { name: scene.location }) : t('scenes.no_location_set')}
+                {scene.location ? t('scenes.no_location_doc', { name: names.label('location', scene.location) }) : t('scenes.no_location_set')}
               </div>
             )}
           </div>
@@ -699,7 +700,7 @@ function ContextPanel({
               activeThreads.map((item) => (
                 <div key={item.document_id} className="bg-surface rounded p-2 break-words">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-text">{item.data.title}</span>
+                    <span className="text-sm font-medium text-text">{names.label('plot_thread', item.data.title)}</span>
                     {item.data.status ? (
                       <StatusBadge
                         label={item.data.status}
@@ -1545,6 +1546,44 @@ function SceneEditor({
     throw new Error(`No free title found for "${base}".`)
   }, [wipClient])
 
+  // ── Rename (click the title) ────────────────────────────
+  // A scene's identity is its title, so a rename copies the scene under the
+  // new title and re-points the book structure and images (lib/rename.ts).
+  // It copies the SAVED scene, so it waits until there are no unsaved edits.
+  const [renaming, setRenaming] = useState(false)
+  const [titleDraft, setTitleDraft] = useState('')
+  const [renameError, setRenameError] = useState<string | null>(null)
+  const [renameBusy, setRenameBusy] = useState(false)
+  const startRename = () => {
+    setRenameError(null)
+    if (isDirty) { setRenameError(t('rename.save_first')); return }
+    setTitleDraft(sceneTitleShown(sceneData?.title))
+    setRenaming(true)
+  }
+  const commitRename = async () => {
+    const newTitle = titleDraft.trim()
+    if (!sceneData || !newTitle || newTitle === sceneTitleShown(sceneData.title)) { setRenaming(false); return }
+    setRenameBusy(true)
+    try {
+      const newId = await renameByCopy(wipClient, {
+        template: TEMPLATES.EVENT,
+        field: 'title',
+        documentId: sceneId,
+        newTitle,
+        data: sceneData as unknown as Record<string, unknown>,
+      })
+      undoStack?.replaceId(sceneId, newId)
+      try { localStorage.removeItem(draftKey) } catch { /* storage unavailable */ }
+      await queryClient.invalidateQueries()
+      setRenaming(false)
+      onNavigate(newId)
+    } catch (err) {
+      setRenameError(err instanceof NameTakenError ? t('rename.taken', { name: err.owner }) : err instanceof Error ? err.message : String(err))
+    } finally {
+      setRenameBusy(false)
+    }
+  }
+
   // ── Merge with the previous / next scene ────────────────
   const undoStack = useStructureUndo()
   const [mergeOpen, setMergeOpen] = useState(false)
@@ -1932,11 +1971,31 @@ function SceneEditor({
           <span className="hidden sm:inline">{t('common.scenes')}</span>
         </button>
 
-        <div className="flex-1 min-w-0">
-          <h2 className="text-sm font-semibold text-text truncate">
-            {sceneTitleShown(sceneData.title)}
-            {isDirty ? <span className="text-amber-500 ml-1">*</span> : null}
-          </h2>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          {renaming ? (
+            <input
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitRename()
+                if (e.key === 'Escape') { setRenaming(false); setRenameError(null) }
+              }}
+              onBlur={() => { if (!renameBusy) commitRename() }}
+              disabled={renameBusy}
+              autoFocus
+              className="text-sm font-semibold text-text border border-primary rounded px-2 py-0.5 min-w-0 w-72 focus:outline-none"
+            />
+          ) : (
+            <h2
+              onClick={startRename}
+              title={t('rename.click_to_rename')}
+              className="text-sm font-semibold text-text truncate cursor-text hover:bg-surface rounded px-1 -mx-1"
+            >
+              {sceneTitleShown(sceneData.title)}
+              {isDirty ? <span className="text-amber-500 ml-1">*</span> : null}
+            </h2>
+          )}
+          {renameError ? <span className="text-xs text-red-600 truncate">{renameError}</span> : null}
         </div>
 
         {/* Save button */}

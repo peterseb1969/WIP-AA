@@ -1,5 +1,8 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useCreateDocument, useTerms, useWipClient } from '@wip/react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEntityNames, type NameKind } from '../lib/entityNames'
+import { relabelEntity, renameByCopy, NameTakenError } from '../lib/rename'
 import { useTranslation } from 'react-i18next'
 import { X, Plus } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
@@ -288,6 +291,16 @@ function TagsInput({
   )
 }
 
+// ── Renaming ─────────────────────────────────────────────
+
+/** Each entity's identity field — what a rename changes. */
+const IDENTITY_FIELD: Record<string, string> = {
+  character: 'name', location: 'name', plot_thread: 'title',
+  chapter: 'title', scene: 'title', note: 'title', world_rule: 'name',
+}
+/** Entities named by a vocabulary term: renamed by relabelling the term (see lib/rename.ts). */
+const NAME_KIND: Record<string, NameKind> = { character: 'character', location: 'location', plot_thread: 'plot_thread' }
+
 // ── Main Modal Component ─────────────────────────────────
 
 export default function CreateEntityModal({
@@ -297,6 +310,7 @@ export default function CreateEntityModal({
   defaults,
   mode = 'create',
   existingData,
+  documentId,
 }: {
   entityType: string
   onClose: () => void
@@ -305,11 +319,15 @@ export default function CreateEntityModal({
   defaults?: Record<string, unknown>
   mode?: 'create' | 'edit'
   existingData?: Record<string, unknown>
+  /** The edited document — needed to rename it without creating a duplicate. */
+  documentId?: string
 }) {
   const { t } = useTranslation()
   const config = ENTITY_CONFIGS[entityType]!
   const wipClient = useWipClient()
   const createDoc = useCreateDocument()
+  const queryClient = useQueryClient()
+  const names = useEntityNames()
   const [submitting, setSubmitting] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -332,7 +350,21 @@ export default function CreateEntityModal({
     return initial
   })
 
+  // A term-named entity's document keeps the name it was created with; the
+  // name shown — and edited — is its term's current label. The vocabularies
+  // load after the form, so fill the label in once they arrive (unless the
+  // writer has already started typing).
+  const idField = IDENTITY_FIELD[entityType]
+  const nameKind = NAME_KIND[entityType]
+  const storedName = mode === 'edit' && idField ? existingData?.[idField] : undefined
+  const shownName = nameKind && storedName != null ? names.label(nameKind, storedName) : undefined
+  const nameTouched = useRef(false)
+  useEffect(() => {
+    if (shownName && idField && !nameTouched.current) setFormData((prev) => ({ ...prev, [idField]: shownName }))
+  }, [shownName, idField])
+
   const setField = (name: string, value: unknown) => {
+    if (name === idField) nameTouched.current = true
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
@@ -366,6 +398,26 @@ export default function CreateEntityModal({
           if (val !== '' && val != null) data[f.name] = val
         }
       })
+
+      // Renaming: never submit the document under a new identity (that would
+      // create a second entity) — see lib/rename.ts.
+      if (mode === 'edit' && existingData && idField) {
+        const newName = String(data[idField] ?? '').trim()
+        if (nameKind) {
+          if (newName && newName !== shownName) {
+            await relabelEntity(wipClient, nameKind, String(existingData[idField]), newName)
+            await queryClient.invalidateQueries()
+          }
+          data[idField] = existingData[idField]
+        } else if (documentId && newName && newName !== existingData[idField]) {
+          const newId = await renameByCopy(wipClient, { template: config.templateId, field: idField, documentId, newTitle: newName, data })
+          await queryClient.invalidateQueries()
+          setSubmitting(false)
+          onCreated?.(newId)
+          onClose()
+          return
+        }
+      }
 
       // Auto-create terms in index terminologies before creating the document
       // In edit mode, skip auto-term-creation for fields whose value hasn't changed
@@ -404,7 +456,9 @@ export default function CreateEntityModal({
         }
       )
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : t('entities.save_failed'))
+      setSaveError(err instanceof NameTakenError
+        ? t(nameKind ? 'rename.taken_merge' : 'rename.taken', { name: err.owner })
+        : err instanceof Error ? err.message : t('entities.save_failed'))
       setSubmitting(false)
     }
   }

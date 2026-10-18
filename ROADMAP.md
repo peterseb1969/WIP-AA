@@ -1,7 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
 
 ## Backlog
 - (empty — see Ideas)
@@ -18,6 +17,7 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Rename without duplicates: characters, locations and plot threads are renamed by relabelling their term (old name kept as an alias; no document changes; the UI shows labels everywhere); chapters, notes and world rules (Edit form) and scenes (click the title in the scene editor) are copied under the new title, the book structure and images re-pointed, the old document retired. A name already in use is refused (with a pointer to Merge for characters, locations and threads). Also: "Appears in", portraits and the scene editor's Characters/Location/Threads tabs match entities by term id instead of spelling, which fixes them for multi-word names in imported books (2026-10-19)
 - Merge characters, locations and plot threads: "Merge…" on each list page, select two or more, choose which one to keep; a preview lists every change (scenes, chapters' point of view, threads, notes, world rules, other characters' relationships, images, fields filled). The kept entry keeps its details and fills only its empty fields; references are rewritten to its name (WIP cannot redirect names, CASE-904); images move; the old names become aliases; the others are removed; the changed scenes are re-checked. No undo (not a priority) (2026-10-18)
 - Analysis results and Ask bar answers render as formatted text (Markdown: headings, bold/italic, lists, quotes, tables, links, code); raw HTML in Claude's output is shown as text, never rendered (2026-10-18)
 - Chapter numbering: a Number button on each chapter (Chapters page) sets its rule: continue the count, restart at a chosen number, or no number (prologue, interlude, epilogue). Numbers are computed from the book order plus these rules, so they follow drag-and-drop and undo. Titles that are only a number ("Chapter 5", "Kapitel 5") show as untitled with the computed number, and scene titles drop the imported "ChN " prefix (display only, stored titles unchanged). Model: AA_CHAPTER_SLOT v2 (`number_start`, `unnumbered`), AA_BOOK_STRUCTURE v2 (2026-10-18)
