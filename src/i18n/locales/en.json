@@ -232,7 +232,10 @@
     "analysis_hint": "Pick a prompt from the \u2728 menu in the toolbar to analyse this scene.",
     "analysing": "Analysing...",
     "no_prompts": "No prompts yet.",
-    "manage_prompts": "Manage prompts..."
+    "manage_prompts": "Manage prompts...",
+    "move_to_chapter": "Move this scene to another chapter",
+    "no_chapter": "No chapter",
+    "no_chapters_yet": "Create a chapter first (Chapters page)"
   },
   "corkboard": {
     "title": "Corkboard",

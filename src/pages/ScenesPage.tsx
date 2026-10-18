@@ -36,7 +36,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
-import { useBookStructure, type BookStructure } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor, type BookStructure } from '../lib/useBookStructure'
 import { useResizableWidth } from '../lib/useResizableWidth'
 import { buildUserMessage, runAnalysis, type PromptData } from '../lib/analysis'
 import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
@@ -304,16 +304,23 @@ function SceneSelector({
 
 function MetadataStrip({
   scene,
-  chapterTitle,
-  chapterNumber,
   sceneNumber,
+  chapterOptions,
+  currentChapterId,
+  onMoveToChapter,
+  moving,
+  moveError,
   expanded,
   onToggle,
 }: {
   scene: EventData
-  chapterTitle?: string
-  chapterNumber?: number
   sceneNumber?: number
+  /** Every chapter, in book order; chapters not yet in the structure last. */
+  chapterOptions: Array<{ id: string; label: string }>
+  currentChapterId?: string
+  onMoveToChapter: (chapterId: string) => void
+  moving: boolean
+  moveError: string | null
   expanded: boolean
   onToggle: () => void
 }) {
@@ -321,21 +328,36 @@ function MetadataStrip({
 
   return (
     <div className="bg-white border-b border-gray-200">
-      {/* Compact strip — always visible */}
-      <button
-        onClick={onToggle}
-        className="w-full flex items-center gap-4 px-4 py-2.5 text-left hover:bg-surface/50 transition-colors"
-      >
+      {/* Compact strip — always visible. The chapter picker sits outside the
+          toggle button (a select can't live inside a button). */}
+      <div className="w-full flex items-center gap-4 px-4 py-2.5 hover:bg-surface/50 transition-colors">
         <div className="flex items-center gap-2 text-sm">
           <BookOpen className="w-3.5 h-3.5 text-text-muted" />
-          <span className="text-text-muted">
-            {t('dashboard.ch_short', { number: chapterNumber ?? '?' })}
-            {chapterTitle ? `: ${chapterTitle}` : ''}
-          </span>
-          <span className="text-text-light">·</span>
-          <span className="text-text-muted">Scene {sceneNumber ?? '?'}</span>
+          <select
+            value={currentChapterId ?? ''}
+            onChange={(e) => { if (e.target.value) onMoveToChapter(e.target.value) }}
+            disabled={moving || !chapterOptions.length}
+            title={chapterOptions.length ? t('scenes.move_to_chapter') : t('scenes.no_chapters_yet')}
+            className="max-w-64 truncate text-sm text-text-muted bg-transparent border border-transparent hover:border-gray-200 rounded px-1 py-0.5 cursor-pointer focus:outline-none focus:border-primary disabled:opacity-60"
+          >
+            {!currentChapterId && <option value="">{t('scenes.no_chapter')}</option>}
+            {chapterOptions.map((o) => (
+              <option key={o.id} value={o.id}>{o.label}</option>
+            ))}
+          </select>
+          {currentChapterId ? (
+            <>
+              <span className="text-text-light">·</span>
+              <span className="text-text-muted">Scene {sceneNumber ?? '?'}</span>
+            </>
+          ) : null}
+          {moveError ? <span className="text-xs text-red-600">{moveError}</span> : null}
         </div>
 
+      <button
+        onClick={onToggle}
+        className="flex-1 flex items-center gap-4 text-left min-w-0"
+      >
         <div className="flex items-center gap-3 text-xs text-text-muted flex-1 min-w-0">
           {scene.location ? (
             <span className="flex items-center gap-1">
@@ -363,6 +385,7 @@ function MetadataStrip({
           <ChevronDown className="w-4 h-4 text-text-muted flex-shrink-0" />
         )}
       </button>
+      </div>
 
       {/* Expanded metadata */}
       {expanded ? (
@@ -1310,6 +1333,32 @@ function SceneEditor({
   const [splitting, setSplitting] = useState(false)
   const wipClient = useWipClient()
 
+  // ── Chapter assignment ──────────────────────────────────
+  const structureEditor = useStructureEditor()
+  const [moveError, setMoveError] = useState<string | null>(null)
+  const chapterOptions = useMemo(() => {
+    const placed = structure?.getChapterIds() ?? []
+    const byId = new Map(chapters.map((c) => [c.document_id, c]))
+    const opts = placed.map((id, i) => ({
+      id,
+      label: `${t('dashboard.ch_short', { number: i + 1 })}${byId.get(id)?.data.title ? `: ${byId.get(id)!.data.title}` : ''}`,
+    }))
+    chapters
+      .filter((c) => !placed.includes(c.document_id))
+      .forEach((c) => opts.push({ id: c.document_id, label: c.data.title || c.document_id }))
+    return opts
+  }, [structure, chapters, t])
+
+  // Moves the scene to the end of the chosen chapter.
+  const handleMoveToChapter = useCallback(async (chapterId: string) => {
+    setMoveError(null)
+    try {
+      await structureEditor.moveScene(sceneId, chapterId)
+    } catch (err) {
+      setMoveError(err instanceof Error ? err.message : String(err))
+    }
+  }, [structureEditor, sceneId])
+
   // ── Analysis (prompt library) ───────────────────────────
   const { data: promptDocs } = useDocuments({
     template_id: TEMPLATES.PROMPT,
@@ -1816,9 +1865,12 @@ function SceneEditor({
       {/* Metadata strip */}
       <MetadataStrip
         scene={sceneData}
-        chapterTitle={chapter?.data.title}
-        chapterNumber={chapterNumber}
         sceneNumber={sceneNumber}
+        chapterOptions={chapterOptions}
+        currentChapterId={scenePosition?.chapterId}
+        onMoveToChapter={handleMoveToChapter}
+        moving={structureEditor.isSaving}
+        moveError={moveError}
         expanded={metadataExpanded}
         onToggle={() => setMetadataExpanded(!metadataExpanded)}
       />

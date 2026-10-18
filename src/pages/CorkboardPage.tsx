@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { useDocuments, useUpdateDocument } from '@wip/react'
+import { useDocuments } from '@wip/react'
 import {
   LayoutGrid,
   PenTool,
@@ -9,7 +9,7 @@ import {
   Palette,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
-import { useBookStructure } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor } from '../lib/useBookStructure'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 
@@ -86,7 +86,8 @@ function SceneCard({
   dnd?: {
     onDragStart: () => void
     onDragEnd: () => void
-    onDropBefore: () => void
+    /** Absent for cards that can be dragged but not dropped on (no chapter). */
+    onDropBefore?: () => void
     isDropTarget: boolean
     setDropTarget: (on: boolean) => void
   }
@@ -104,9 +105,9 @@ function SceneCard({
         dnd.onDragStart()
       } : undefined}
       onDragEnd={dnd?.onDragEnd}
-      onDragOver={dnd ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.setDropTarget(true) } : undefined}
-      onDragLeave={dnd ? () => dnd.setDropTarget(false) : undefined}
-      onDrop={dnd ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.onDropBefore() } : undefined}
+      onDragOver={dnd?.onDropBefore ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.setDropTarget(true) } : undefined}
+      onDragLeave={dnd?.onDropBefore ? () => dnd.setDropTarget(false) : undefined}
+      onDrop={dnd?.onDropBefore ? (e) => { e.preventDefault(); e.stopPropagation(); dnd.onDropBefore!() } : undefined}
       className={`block bg-white rounded-lg border border-gray-200 border-l-4 ${colorClass} p-3 hover:shadow-md hover:border-gray-300 transition-all cursor-pointer group ${
         dnd?.isDropTarget ? 'ring-2 ring-primary ring-offset-2' : ''
       }`}
@@ -167,32 +168,22 @@ export default function CorkboardPage() {
   const [colorBy, setColorBy] = useState<ColorBy>('chapter_status')
   const [filterChapter, setFilterChapter] = useState<number | null>(null)
 
-  const { structure, structureDocId } = useBookStructure()
-  const updateDoc = useUpdateDocument()
+  const { structure } = useBookStructure()
+  const structureEditor = useStructureEditor()
   const [dragId, setDragId] = useState<string | null>(null)
   // A scene id (drop before that card) or `end:<chapterIndex>` (append).
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [moveError, setMoveError] = useState<string | null>(null)
 
-  // Move a scene to a new position in the book structure: before
-  // `beforeId` in its chapter, or at the end of `chapterIndex` when
-  // beforeId is null. Saved as a merge PATCH of `chapters` only.
+  // Move a scene before `beforeId` in the chapter at `chapterIndex`, or to
+  // its end when beforeId is null — including scenes not yet in any chapter.
   const moveScene = (sceneId: string, chapterIndex: number, beforeId: string | null) => {
     setDropTarget(null)
-    if (!structure || !structureDocId || sceneId === beforeId) return
-    const chapters = structure.raw.chapters.map((slot) => ({
-      ...slot,
-      scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
-    }))
-    const target = chapters[chapterIndex]
-    if (!target) return
-    const at = beforeId ? target.scene_ids.indexOf(beforeId) : -1
-    target.scene_ids.splice(at >= 0 ? at : target.scene_ids.length, 0, sceneId)
+    const chapterId = structure?.raw.chapters[chapterIndex]?.chapter_id
+    if (!chapterId) return
     setMoveError(null)
-    updateDoc.mutate(
-      { documentId: structureDocId, patch: { chapters } },
-      { onError: (err) => setMoveError(err.message || t('corkboard.move_failed')) },
-    )
+    structureEditor.moveScene(sceneId, chapterId, beforeId).catch((err) =>
+      setMoveError(err instanceof Error ? err.message : t('corkboard.move_failed')))
   }
 
   const { data: events, isLoading } = useDocuments({
@@ -310,13 +301,16 @@ export default function CorkboardPage() {
         byChapter.get(ch)!.push(e)
       })
       return [...byChapter.entries()]
-        .sort(([a], [b]) => a - b)
+        // Chapters in book order; scenes outside every chapter (0) last.
+        .sort(([a], [b]) => (a || Infinity) - (b || Infinity))
         .map(([num, evts]) => {
           // Look up the chapter document to get title/status
           const chapterId = structure?.raw.chapters[num - 1]?.chapter_id
           const ch = chapterId ? chapterMap.get(chapterId) : undefined
           return {
-            label: `${t('corkboard.group_chapter')} ${num}${ch?.title ? `: ${ch.title}` : ''}`,
+            label: num === 0
+              ? t('scenes.unassigned')
+              : `${t('corkboard.group_chapter')} ${num}${ch?.title ? `: ${ch.title}` : ''}`,
             status: ch?.status,
             // 0 = scenes missing from the structure; those can't be a drop target.
             chapterIndex: num > 0 ? num - 1 : undefined,
@@ -445,9 +439,9 @@ export default function CorkboardPage() {
         </div>
       </div>
 
-      {groupBy === 'chapter' && structureDocId ? (
+      {groupBy === 'chapter' && structure ? (
         <p className="text-xs text-text-muted -mt-3 mb-4">
-          {updateDoc.isPending ? t('corkboard.saving_order') : t('corkboard.drag_hint')}
+          {structureEditor.isSaving ? t('corkboard.saving_order') : t('corkboard.drag_hint')}
         </p>
       ) : null}
       {moveError ? (
@@ -459,7 +453,9 @@ export default function CorkboardPage() {
         <div className="space-y-6">
           {groups.map((group) => {
             const chapterIndex = 'chapterIndex' in group ? group.chapterIndex : undefined
-            const canDrop = groupBy === 'chapter' && chapterIndex !== undefined && !!structureDocId
+            const canDrop = groupBy === 'chapter' && chapterIndex !== undefined
+            // Scenes outside every chapter can be dragged into one, not onto each other.
+            const canDrag = groupBy === 'chapter'
             const endKey = `end:${chapterIndex}`
             return (
             <div key={group.label}>
@@ -492,10 +488,10 @@ export default function CorkboardPage() {
                     key={event.document_id}
                     event={event}
                     colorClass={getColorClass(event.document_id, event.data)}
-                    dnd={canDrop ? {
+                    dnd={canDrag ? {
                       onDragStart: () => setDragId(event.document_id),
                       onDragEnd: () => { setDragId(null); setDropTarget(null) },
-                      onDropBefore: () => { if (dragId) moveScene(dragId, chapterIndex!, event.document_id) },
+                      onDropBefore: canDrop ? () => { if (dragId) moveScene(dragId, chapterIndex!, event.document_id) } : undefined,
                       isDropTarget: dropTarget === event.document_id && dragId !== event.document_id,
                       setDropTarget: (on) => setDropTarget(on ? event.document_id : null),
                     } : undefined}

@@ -233,7 +233,10 @@
     "analysis_hint": "W\u00e4hle einen Prompt im \u2728-Men\u00fc der Werkzeugleiste, um diese Szene zu analysieren.",
     "analysing": "Analysiere...",
     "no_prompts": "Noch keine Prompts.",
-    "manage_prompts": "Prompts verwalten..."
+    "manage_prompts": "Prompts verwalten...",
+    "move_to_chapter": "Szene in ein anderes Kapitel verschieben",
+    "no_chapter": "Kein Kapitel",
+    "no_chapters_yet": "Lege zuerst ein Kapitel an (Kapitel-Seite)"
   },
   "corkboard": {
     "title": "Pinnwand",

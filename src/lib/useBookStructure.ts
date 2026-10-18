@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useDocuments, useCreateDocument } from '@wip/react'
+import { useDocuments, useCreateDocument, useUpdateDocument } from '@wip/react'
 import { NAMESPACE, TEMPLATES } from './constants'
 
 export interface ChapterSlot {
@@ -90,6 +90,64 @@ export function useBookStructure() {
 /** Hook to get the createDocument mutator for updating the structure */
 export function useUpdateStructure() {
   return useCreateDocument()
+}
+
+/**
+ * Edits to the book structure (chapter order and each chapter's scenes).
+ *
+ * Writes are a merge PATCH of `chapters` on the existing AA_BOOK_STRUCTURE
+ * document. A book that has none yet (no import was ever run) gets one
+ * created on the first edit, titled after the project. Chapters that exist
+ * as documents but are missing from the structure (created on the Chapters
+ * page before chapters were added to it) are appended when first used.
+ */
+export function useStructureEditor() {
+  const { structure, structureDocId } = useBookStructure()
+  const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active', namespace: NAMESPACE })
+  const createDoc = useCreateDocument()
+  const updateDoc = useUpdateDocument()
+
+  const save = async (chapters: ChapterSlot[]) => {
+    if (structureDocId) {
+      await updateDoc.mutateAsync({ documentId: structureDocId, patch: { chapters } })
+    } else {
+      const title = (projects?.items?.[0]?.data as { title?: string } | undefined)?.title || 'Book'
+      await createDoc.mutateAsync({
+        template_id: TEMPLATES.BOOK_STRUCTURE,
+        namespace: NAMESPACE,
+        data: { book_title: title, chapters },
+      })
+    }
+  }
+
+  const currentChapters = () =>
+    (structure?.raw.chapters ?? []).map((slot) => ({ ...slot, scene_ids: [...slot.scene_ids] }))
+
+  /** Move a scene into `chapterId` — before `beforeId`, or at the end. */
+  const moveScene = (sceneId: string, chapterId: string, beforeId: string | null = null) => {
+    if (sceneId === beforeId) return Promise.resolve()
+    const chapters = currentChapters().map((slot) => ({
+      ...slot,
+      scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
+    }))
+    let target = chapters.find((slot) => slot.chapter_id === chapterId)
+    if (!target) {
+      target = { chapter_id: chapterId, scene_ids: [] }
+      chapters.push(target)
+    }
+    const at = beforeId ? target.scene_ids.indexOf(beforeId) : -1
+    target.scene_ids.splice(at >= 0 ? at : target.scene_ids.length, 0, sceneId)
+    return save(chapters)
+  }
+
+  /** Append a chapter (no-op if it is already in the structure). */
+  const addChapter = (chapterId: string) => {
+    const chapters = currentChapters()
+    if (chapters.some((slot) => slot.chapter_id === chapterId)) return Promise.resolve()
+    return save([...chapters, { chapter_id: chapterId, scene_ids: [] }])
+  }
+
+  return { moveScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
 }
 
 export { TEMPLATES }

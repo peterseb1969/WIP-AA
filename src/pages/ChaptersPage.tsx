@@ -4,7 +4,7 @@ import { useDocuments, useDeleteDocument } from '@wip/react'
 import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
-import { useBookStructure } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor } from '../lib/useBookStructure'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
@@ -169,6 +169,7 @@ export default function ChaptersPage() {
   const deleteDoc = useDeleteDocument()
 
   const { structure, isLoading: loadingStructure } = useBookStructure()
+  const structureEditor = useStructureEditor()
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -312,6 +313,11 @@ export default function ChaptersPage() {
         <CreateEntityModal
           entityType={showCreate}
           onClose={() => setShowCreate(null)}
+          onCreated={(id) => {
+            // New chapters join the book structure (at the end) so scenes can
+            // be placed in them and they show up in book order everywhere.
+            if (showCreate === 'chapter' && id) structureEditor.addChapter(id)
+          }}
         />
       ) : null}
 
