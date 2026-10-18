@@ -1578,6 +1578,13 @@ function SceneEditor({
     const secondHtml = jsonToHtml(secondHalf)
 
     setSplitting(true)
+    // The split writes both halves itself. Autosave must stay out of it: a
+    // pending idle save, or the save-on-leave when we navigate to the new
+    // scene, would otherwise write the editor's FULL text back over the
+    // first half. Block it for the duration; restored if the split fails.
+    const wasDirty = isDirtyRef.current
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    savingRef.current = true
     try {
       // The new scene goes into the book structure right after this one;
       // a scene missing from the structure would be created but never shown.
@@ -1617,12 +1624,14 @@ function SceneEditor({
       }
       const newSceneId = created.document_id
 
-      // 2. Save the first half to the current scene
-      await createDocument.mutateAsync({
-        template_id: TEMPLATES.EVENT,
-        namespace: NAMESPACE,
-        data: { ...sceneData, prose: firstHtml },
-      })
+      // 2. Save the first half to the current scene (prose only), and make
+      //    the editor hold exactly that, so nothing counts as unsaved.
+      await saveClient.documents.updateDocument(sceneId, { prose: firstHtml })
+      editor.commands.setContent(firstHtml, { emitUpdate: false })
+      baselineHtmlRef.current = editor.getHTML()
+      isDirtyRef.current = false
+      setIsDirty(false)
+      dirtySinceRef.current = null
 
       // 3. Update book structure — insert new scene after current scene
       const newChapters = structure.raw.chapters.map((slot, ci) => {
@@ -1645,11 +1654,15 @@ function SceneEditor({
       // Navigate to the new scene
       onNavigate(newSceneId)
     } catch (err: any) {
+      // Unsaved edits stay unsaved (and get autosaved) if the split failed
+      // before the first half was written.
+      if (wasDirty && editor.getHTML() !== baselineHtmlRef.current) isDirtyRef.current = true
       alert(`Split failed: ${err.message || 'Unknown error'}`)
     } finally {
+      savingRef.current = false
       setSplitting(false)
     }
-  }, [editor, sceneData, structure, structureDocId, sceneId, createDocument, uniqueSceneTitle, draftKey, onNavigate])
+  }, [editor, sceneData, structure, structureDocId, sceneId, createDocument, uniqueSceneTitle, draftKey, onNavigate, saveClient])
 
   // ── Validation ──────────────────────────────────────────
   const handleValidate = useCallback(() => {
