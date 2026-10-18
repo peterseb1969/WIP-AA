@@ -1,6 +1,11 @@
 # AuthorAssist Roadmap
 
 ## Next Up
+- **Test coverage** (Peter, 2026-10-19) — The app has no automated tests (no test script, no test files); every feature so far was verified by hand in a browser against throwaway namespaces. Required by the WIP guardrails' Testing Contract (`docs/WIP_DevGuardrails.md`, Guide 7) before the app counts as done. In order of value:
+  1. **Unit tests, no WIP needed** (Vitest): the pure logic — chapter numbering and drop positions (`useBookStructure.ts`), number-only titles (`titles.ts`), the scene check (`validateSceneAnnotations`), name resolution (`entityNames.ts`), merge planning with a mocked client (reference rewrite, de-duplication, self-relationships, fill-empty-fields), rename conflict checks, Markdown rendering never emitting raw HTML.
+  2. **Data-layer tests against a scratch namespace** (bootstrap from `server/seed`, delete afterwards): the bootstrap itself (fresh, and the in-place template upgrade), media upload + attach + permanent delete, merge, rename by relabel and by copy, structure moves with if_match. These automate the hand-run scratch rigs of 2026-10-18/19; the seed data must mirror real imported books (entity documents store the display name, references store the term value — the mismatch that hid the "Appears in" bug).
+  3. **End-to-end** (Playwright, against the dev install): create → view → update for one entity; Corkboard and chapter drag (pointer events); scene autosave/split/merge — where the regressions of 2026-10-18 (split overwritten by autosave, phantom drafts) were only caught by hand.
+  Plus an `npm test` script, and running the unit tests before every commit.
 
 ## Backlog
 - (empty — see Ideas)
