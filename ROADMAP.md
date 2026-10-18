@@ -1,7 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Undo for structure moves** (agreed 2026-10-18) — After any move (Corkboard drag, Move dialog): a notice "Moved 'X' to Chapter N · Undo" for a few seconds, Cmd/Ctrl+Z while visible, and an in-session undo stack for several steps. Undo restores the previous `chapters` of AA_BOOK_STRUCTURE with a PATCH using `if_match` on the structure's version, so it never overwrites someone else's later change (it says so instead). Build once in `useStructureEditor` so every move gets it
 - **Move dialog replaces the chapter dropdown** (agreed 2026-10-18) — The header shows the chapter as text plus a **Move…** button (also in the toolbar). The dialog picks the chapter (current preselected) and the position: *At the beginning* / *After "Scene X"* / *At the end* (default). Moving within the same chapter = reordering. The dialog is the confirmation (no extra "Are you sure?"); the Undo notice follows. Reason: a select that acts on change can move a scene by accident (arrow keys change it in some browsers)
 - **Autosave with explicit Save** (agreed 2026-10-18; settles the deferred auto-save decision) — Save to WIP after 45 s without typing, at most every 5 min of continuous typing, when leaving the scene, and when the tab is hidden (`visibilitychange`). The Save button stays: it shows the state ("Save" while changes are pending, "Saved 14:02" otherwise), and Cmd/Ctrl+S saves (today it opens the browser's "Save page" dialog). The local draft stays only as a crash backup; the floating reminder is replaced by a notice that appears only when a save has *failed*
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
@@ -22,6 +21,7 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Undo for scene moves: notice with Undo after every Corkboard/picker move, Cmd/Ctrl+Z outside text fields, multi-step, refuses (if_match) when the order changed meanwhile (2026-10-18)
 - Move scenes between chapters: chapter picker in the scene editor header; new chapters join the book structure; unassigned scenes draggable on the Corkboard (2026-10-18)
 - Unsaved-draft reminder floats and skips the open scene, so the editor no longer jumps while typing (2026-10-18)
 - Analyse button + prompt library: ✨ menu in the scene editor runs a prompt from the library (AA_PROMPT documents, /prompts) and shows Claude's answer in an Analysis tab; four starter prompts; context built from the open scene incl. unsaved prose (2026-10-18)

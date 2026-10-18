@@ -20,3 +20,6 @@ Peter set an Anthropic key on the deployed app (runtime override, not persistabl
 
 ## 13:51 — Peter's ToDos 1 and 2 done (9032443, 53225aa)
 Remaining Next Up: merge characters/locations, Markdown rendering for analysis, rename-without-duplicates. Context ~65%: next YAC should start from ROADMAP/KNOWN_ISSUES + this report.
+
+## 14:10 — undo shipped; remaining agreed work for the next session
+Undo done (fc53046). Next Up order: Move dialog (replaces the chapter <select>; record moves via useStructureEditor.moveScene(scene, chapter, before, label) so undo comes free), then autosave + explicit Save (spec in ROADMAP), then merge, Markdown, rename. Context ~70%: stop here.
