@@ -1,15 +1,10 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- (empty — pick from the Backlog)
+- **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
 
 ## Backlog
-- **Analyse button + Prompt Library** — AI-powered scene analysis with editable prompt library. Each analysis type (Continuity Check, Character Voice, Style Polish, Plot Intelligence, etc.) is a prompt definition with: name, context selector (which WIP entities to include), system prompt, user prompt template with placeholders, output format. Prompts stored as WIP documents (AA_PROMPT template) or local JSON for v1. UI: dropdown on Analyse button to pick analysis type, "Manage Prompts..." opens library editor. Results in Scene Editor context panel AI tab. Requires Anthropic API key — optional enhancement, not a gate
-- **Relationship creation UI** — Inline on detail pages. "Add Relationship" button on entity detail views opens a picker: select target entity + relationship type. Consistent with existing edit pattern
-- **Cross-entity stats on detail pages** — SQL via WIP reporting layer (`client.reporting.runQuery()`). Depends on `useReportQuery` hook in @wip/react. Reusable `<CrossReferences>` component on Location/Character/PlotThread detail pages
-- **Corkboard identity crisis** — Currently read-only but the name implies drag-and-drop rearrangement. Either: (a) add DnD and earn the name, or (b) rename to "Story Map" / "Overview" and keep it read-only
-- **Resizable scene editor sidebar** — Context panel has fixed width, cannot be resized
-- **Project metadata editing** — Dashboard shows project info but no way to edit it
+- (empty — see Ideas)
 
 ## Backlog (Non-Code)
 - **End User Manual** — Writer-facing documentation covering all 11 pages, import workflow, scene editing, validation, alias management, and entity CRUD. Should be approachable for non-technical users
@@ -22,6 +17,13 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Analyse button + prompt library: ✨ menu in the scene editor runs a prompt from the library (AA_PROMPT documents, /prompts) and shows Claude's answer in an Analysis tab; four starter prompts; context built from the open scene incl. unsaved prose (2026-10-18)
+- Corkboard drag-and-drop: reorder scenes within and across chapters in chapter view; empty chapters stay visible as drop targets (2026-10-18)
+- "Appears in" cross-references on character, location and plot-thread pages: scenes, notes and world rules that reference the entity, via the WIP reporting layer (2026-10-18)
+- Relationship creation: add/remove a character's relationships on the detail page (2026-10-18)
+- Resizable scene editor side panel (drag the left edge, double-click to reset) (2026-10-18)
+- Project details: create and edit on the Dashboard; edit forms no longer drop fields they don't show (2026-10-18)
+- AA_NOTE `linked_plot_threads` restored in the seeds and on `aa` (notes linked to plot threads failed to save) (2026-10-18)
 - Alias collision check: adding an alias that another entity already answers to (as value, label or alias, case-insensitive) shows who owns it, with Add anyway / Cancel (2026-10-17)
 - Deploy contract: `/api/app-config` route; the SPA reads its namespace from it at boot (no hard-coded `aa`); AA's own ports 3014/5180 as defaults (2026-10-17)
 - Bootstrap: namespace-prefixed `AA_BOOTSTRAP_RECORD` (legacy `BOOTSTRAP_RECORD` still accepted), "incomplete" state with idempotent resume, bootstrap follows `WIP_NAMESPACE` (2026-10-17)

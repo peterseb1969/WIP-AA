@@ -97,3 +97,46 @@
 **Tests:** tsc + vite build clean; browser on scratch namespace: collision flagged case-insensitively, Cancel saves nothing, free alias saves, Add anyway saves.
 **What:** Exact defStore.searchTerms over the terminology before saving; owner shown; Add anyway / Cancel; en+de strings; dropped as-any on updateTerm.
 **Why:** Bug 3 from KNOWN_ISSUES.
+
+## 991d1ea — feat(dashboard): create and edit the project; edit forms keep unshown fields
+**Time:** 13:07 · **Files:** 4 files changed, 123 insertions(+), 12 deletions(-)
+**Tests:** browser on scratch ns: create + rename project (one active), character edit keeps arc_summary/relationships
+**What:** Project form + Dashboard buttons; shared modal edit-mode starts from existing data; save errors shown.
+**Why:** Roadmap #6. Discovered the modal dropped every unshown field on edit (data loss on any edit).
+**PoNIF:** #3 — AA_PROJECT identity = title; rename creates a new doc, old one retired.
+
+## 9f0db22 — feat(scenes): resizable context panel
+**Time:** 13:07 · **Files:** 2 files changed, 63 insertions(+), 2 deletions(-)
+**Tests:** synthetic pointer events (test window stuck at 547px, below md): drag, clamps, persistence, reset
+**What/Why:** Roadmap #5.
+
+## 4dd4da2 — feat(characters): add and remove relationships
+**Time:** 13:07 · **Files:** 1 file changed, 168 insertions(+), 31 deletions(-)
+**Tests:** browser on scratch ns: add, remove, stored array
+**What/Why:** Roadmap #2 — merge PATCH of the relationships array.
+
+## c2fceb2 — feat: "Appears in" cross-references
+**Time:** 13:07 · **Files:** 6 files changed, 115 insertions(+)
+**Tests:** SQL checked read-only on aa; browser on scratch ns for all three kinds
+**What/Why:** Roadmap #3 via useReportQuery. **Discovered:** reporting tables only exist after a template's first synced doc (aa has no doc_aa_note); useReportQuery's option type wrongly requires queryKey.
+
+## 375ca44 — feat(corkboard): drag cards to reorder scenes
+**Time:** 13:07 · **Files:** 3 files changed, 98 insertions(+), 7 deletions(-)
+**Tests:** DragEvent dispatch (automated mouse drags don't fire HTML5 DnD): cross-chapter, into empty chapter, within chapter, no-drag in other views
+**What/Why:** Roadmap #4. **Discovered:** empty chapters vanished from the board — fixed in the same commit.
+
+## 285a2c8 — data-model: AA_PROMPT + AA_PROMPT_CONTEXT; AA_NOTE gains linked_plot_threads
+**Time:** 13:07 · **Files:** 6 files changed, 194 insertions(+), 2 deletions(-)
+**Tests:** scratch bootstrap re-run (created/versioned, rest unchanged); same payloads on aa → created/updated; AA_NOTE v1 deactivated; aa docs still 139
+**What/Why:** Approved by Peter (AskUserQuestion, 2026-10-18). Live bug: AA_NOTE on aa lacked linked_plot_threads → notes with thread links failed unknown_field.
+**PoNIF:** #2 — template update leaves v1 active; deactivated explicitly.
+
+## ecba662 — feat: Analyse button and prompt library
+**Time:** 13:07 · **Files:** 11 files changed, 654 insertions(+), 23 deletions(-)
+**Tests:** browser on scratch ns up to the Claude call (message captured from fetch; no-key error shown). Real Claude response untested (no key locally).
+**What/Why:** Roadmap #1.
+
+## 36a81de — fix(cross-refs): match on data_json; list notes for plot threads
+**Time:** 13:07 · **Files:** 1 file changed, 7 insertions(+), 3 deletions(-)
+**Tests:** browser on scratch ns: thread shows scenes + note
+**Discovered:** reporting entity view doc_aa_note lacked the v2 column that doc_aa_note__v2 had — possible WIP reporting-sync issue, not filed.
