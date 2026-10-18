@@ -69,3 +69,9 @@
 **What/Why:** Peter: A1 + B1, no fix for existing data. Interpreted as "don't rewrite stored data"; the term-id matching is code-only and was included (flagged to Peter).
 **PoNIF:** #3 (resolved-referent identity: term-named entities keep identity across a label change; string-titled ones can't — copy + re-point).
 **Discovered:** Live bugs in aa from mixed spellings (entity doc = display name, references = term value): "Appears in" empty for every character, AliasManager couldn't find multi-word terms, portraits missing for multi-word names in lists, scene-editor Characters tab couldn't expand multi-word characters, relationship picker didn't hide self. All fixed by term-id matching. Also: fc96e42 had dropped the KNOWN_ISSUES "Unverified / technical debt" heading — restored in ecea23a.
+
+## a90fcbb — fix(server): unknown API routes answer 404 JSON, not index.html (CASE-888)
+**Time:** 00:33 (2026-10-19)
+**Files:** 1 file changed (server/index.ts)
+**Tests:** tsc clean; vite build; production server (NODE_ENV=production, port 3098, base /apps/aa): missing /api, /server-api, /mcp, /auth, /wip/api/<unknown> → 404 JSON for GET/POST/DELETE; /, /scenes, /characters?x=1, /apiary → index.html; /api/health, /api/app-config, /server-api/bootstrap/status unchanged; real POST /api/analyse keeps its own 400.
+**What/Why:** CASE-888 umbrella (scaffold fix from CASE-834 doesn't reach existing apps). Commented CASE-888#2 with the verification table; case stays open for the other five apps.
