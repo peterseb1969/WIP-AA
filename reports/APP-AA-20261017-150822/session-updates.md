@@ -14,3 +14,6 @@ Peter asked for roadmap backlog items 1-6, order my choice. Done + committed: pr
 
 ## 13:07 — roadmap 1-6 done
 All six backlog features shipped (commits 991d1ea..36a81de) and verified in a browser on scratch namespace dev-aa-feat (deleted). Live aa changed only by the approved model change (AA_PROMPT, AA_PROMPT_CONTEXT, AA_NOTE v2 / v1 deactivated). Open: real Claude response for Analyse untested (no key); rename-creates-duplicate bug now Next Up; reporting entity-view column lag worth a BE-YAC case (Peter to decide).
+
+## 13:41 — Analyse verified with a real key; "platform bug" was by design; Peter's ToDos recorded
+Peter set an Anthropic key on the deployed app (runtime override, not persistable). Style Polish via the container's /api/analyse on a real aa scene (read-only): German, 10 suggestions, ~17 s, Markdown output (plain-text rendering is now a ToDo). The reporting entity-view "lag" is WIP's documented intersection-of-columns design (cross_version_view opt-in) — reproduced on a fresh namespace, then found the design in reporting_sync source; corrected KNOWN_ISSUES and the CrossReferences comment. Lesson: read the platform source before calling a platform bug. Peter's ToDos (ROADMAP Next Up): draft banner must not shift the editor; move scenes between chapters (incl. unassigned scenes, Corkboard DnD); merge characters/locations any time.

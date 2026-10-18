@@ -18,11 +18,11 @@
 ### Browser-unverified changes (2026-10-17)
 Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. Still unverified: the error screen `main.tsx` shows when `/api/app-config` can't be loaded.
 
-### Analyse with a real Claude response (2026-10-18)
-Everything up to the Claude call was tested in a browser (prompt library, starter prompts, the ✨ menu, the exact message sent, the "no API key" error). No Anthropic key was configured locally, so a real analysis result has not been seen yet. The Analysis tab lives in the scene editor's side panel, which is hidden below the `md` breakpoint (768px), so on narrow screens the result is not visible.
+### Analyse (2026-10-18)
+Tested in a browser up to the Claude call (prompt library, starter prompts, the ✨ menu, the exact message sent, the "no API key" error). The Claude call itself was then tested against the deployed app with a real key: Style Polish on "Ch2 Scene 1" returned ten concrete suggestions in German in about 17 s. The answer is Markdown, which the Analysis tab shows as plain text (ROADMAP Next Up). The key set in Settings on the deployed dev app is a runtime override (`persistable: false`), so it is lost when the container restarts; persisting it needs `ANTHROPIC_API_KEY_FILE` on a writable mount in the app's manifest (see CLAUDE.md, MCP section). The Analysis tab lives in the scene editor's side panel, which is hidden below the `md` breakpoint (768px), so on narrow screens the result is not visible.
 
-### Reporting entity view can lag a new template version
-After AA_NOTE gained `linked_plot_threads` in v2, the per-version table `doc_aa_note__v2` had the column but the entity view `doc_aa_note` did not. The app's cross-reference queries match on `data_json` instead, which avoids it. Looks like a reporting-sync issue on the WIP side; not reported upstream yet.
+### Reporting entity view only has columns shared by every template version
+Not a bug, WIP's documented design: the `doc_<value>` entity view carries only the columns all versions share with the same type. A field added in a later version (AA_NOTE's `linked_plot_threads` in v2) is only in `doc_<value>__v<N>`, unless the template opts in via `reporting.cross_version_view.columns`. The app's cross-reference queries match on `data_json`, which holds every version's data. Reproduced on a fresh namespace on 2026-10-18. The agent-facing `wip://conventions` resource doesn't mention this rule, which is how it got mistaken for a bug.
 
 ### `as any` casts around the WIP client
 Several `useTerms(...)` / `useTerminologies(...)` call sites cast their params to `any`, so `tsc` cannot check them against the client. `AliasManager`'s `updateTerm` call is typed again, and alias saving was retested in a browser with @wip/client 0.60.0 (2026-10-17).

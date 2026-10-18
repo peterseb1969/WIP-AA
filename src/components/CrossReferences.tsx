@@ -14,9 +14,10 @@ interface RefQuery {
 
 // Every query takes the entity's term value as $1 and returns
 // (document_id, name). Fields are matched in data_json, not their own
-// columns: the entity view's columns can lag a template version (a field
-// added in v2 was missing from doc_aa_note while its __v2 table had it),
-// while data_json always holds the document's data.
+// columns: by design the doc_<value> entity view only carries columns that
+// every template version shares (a field added in AA_NOTE v2 is absent
+// from doc_aa_note unless the template opts in via
+// reporting.cross_version_view), while data_json holds every version's data.
 const has = (field: string) => `data_json->'${field}' @> jsonb_build_array($1::text)`
 
 const QUERIES: Record<EntityKind, RefQuery[]> = {

@@ -1,6 +1,10 @@
 # AuthorAssist Roadmap
 
 ## Next Up
+- **Unsaved-changes notice must not move the editor** (Peter, 2026-10-18) — When a scene gets unsaved changes, the "Unsaved draft" banner appears above the content (`UnsavedDraftBanner` in `Layout`) and pushes the editor down while you type. Show it somewhere that doesn't shift the layout (e.g. an overlay, the toolbar, or the existing status bar)
+- **Move scenes between chapters** (Peter, 2026-10-18) — No way today to assign a scene to a chapter or move it to another one. A scene created while no chapter existed sits outside the book structure and can never be placed. Add a chapter picker to the scene (editor and/or create form) that updates AA_BOOK_STRUCTURE; scenes not in the structure should also become draggable on the Corkboard (currently only scenes already in a chapter can be dragged)
+- **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
+- **Render analysis results as Markdown** — Claude answers with headings, bold and lists; the Analysis tab shows them as plain text (raw `#`, `**`)
 - **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
 
 ## Backlog
@@ -13,7 +17,6 @@
 - **Book import/export** — Export the full book as a single file (e.g. Markdown, EPUB, or plain text) and reimport from exported format. Round-trip fidelity for backup and external editing workflows
 - **AI-based scene validation** — Second validation mechanism complementing regex-based ValidateSceneAnnotations. Uses AI to detect entities mentioned indirectly (pronouns, descriptions, nicknames not in aliases) and flag semantic issues (character in wrong location, timeline inconsistencies). Design TBD
 - **Full-text prose search** — Index scene prose for keyword/phrase search across the entire manuscript
-- **Entity merge outside import** — Merge duplicates from entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions." Depends on ValidateSceneAnnotations
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
