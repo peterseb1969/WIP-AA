@@ -1,8 +1,6 @@
 # AuthorAssist Roadmap
 
 ## Next Up
-- **Unsaved-changes notice must not move the editor** (Peter, 2026-10-18) — When a scene gets unsaved changes, the "Unsaved draft" banner appears above the content (`UnsavedDraftBanner` in `Layout`) and pushes the editor down while you type. Show it somewhere that doesn't shift the layout (e.g. an overlay, the toolbar, or the existing status bar)
-- **Move scenes between chapters** (Peter, 2026-10-18) — No way today to assign a scene to a chapter or move it to another one. A scene created while no chapter existed sits outside the book structure and can never be placed. Add a chapter picker to the scene (editor and/or create form) that updates AA_BOOK_STRUCTURE; scenes not in the structure should also become draggable on the Corkboard (currently only scenes already in a chapter can be dragged)
 - **Merge characters and locations at any time** (Peter, 2026-10-18; was an Idea) — Merge duplicates from the entity list pages (Characters, Locations, Plot Threads — same select/merge UX as import). Warning: "Only name and aliases will be kept." Mechanism: absorb term aliases onto survivor, delete absorbed document/term, then scoped ValidateSceneAnnotations on scenes referencing absorbed entity only. Progress modal: "Checking N scenes... Found M suggestions."
 - **Render analysis results as Markdown** — Claude answers with headings, bold and lists; the Analysis tab shows them as plain text (raw `#`, `**`)
 - **Rename without duplicates** — Renaming a chapter, character, location, thread, note or rule through Edit creates a second entity (identity = name/title). Needs a real rename: create, re-point references (book structure ids, term values in scenes/notes/rules), retire the old one. See KNOWN_ISSUES
@@ -20,6 +18,8 @@
 - ~~**Test Ask Bar with valid API key**~~ — Verified working. Produces comprehensive cross-document synthesis (tested with full character profile query)
 
 ## Done
+- Move scenes between chapters: chapter picker in the scene editor header; new chapters join the book structure; unassigned scenes draggable on the Corkboard (2026-10-18)
+- Unsaved-draft reminder floats and skips the open scene, so the editor no longer jumps while typing (2026-10-18)
 - Analyse button + prompt library: ✨ menu in the scene editor runs a prompt from the library (AA_PROMPT documents, /prompts) and shows Claude's answer in an Analysis tab; four starter prompts; context built from the open scene incl. unsaved prose (2026-10-18)
 - Corkboard drag-and-drop: reorder scenes within and across chapters in chapter view; empty chapters stay visible as drop targets (2026-10-18)
 - "Appears in" cross-references on character, location and plot-thread pages: scenes, notes and world rules that reference the entity, via the WIP reporting layer (2026-10-18)
