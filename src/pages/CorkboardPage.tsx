@@ -10,8 +10,9 @@ import {
   GripVertical,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
-import { useBookStructure, useStructureEditor, chapterDropBefore, chapterNumberAfterMove } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor, chapterDropBefore, displayNumberAfterMove } from '../lib/useBookStructure'
 import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
+import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 import { Avatar } from '../components/MediaSection'
@@ -115,7 +116,7 @@ function SceneCard({
     >
       <div className="flex items-start justify-between gap-1 mb-1.5">
         <h4 className="text-sm font-semibold text-text line-clamp-2 leading-tight">
-          {event.data.title}
+          {sceneTitleShown(event.data.title)}
         </h4>
         <PenTool className="w-3 h-3 text-text-light opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
       </div>
@@ -221,7 +222,10 @@ export default function CorkboardPage() {
         setChapterDrop(undefined)
         if (!target) return
         setMoveError(null)
-        const label = t('undo.moved_chapter', { chapter: title, number: chapterNumberAfterMove(ids, chapterId, target.before) })
+        const number = displayNumberAfterMove(structure?.raw.chapters ?? [], chapterId, target.before)
+        const label = number != null
+          ? t('undo.moved_chapter', { chapter: title, number })
+          : t('undo.moved_chapter_plain', { chapter: title })
         structureEditor.moveChapter(chapterId, target.before, label).catch((err) =>
           setMoveError(err instanceof Error ? err.message : t('corkboard.move_failed')))
       },
@@ -235,7 +239,10 @@ export default function CorkboardPage() {
     setMoveError(null)
     // (events and chapterMap are declared below; this only runs on drop.)
     const sceneTitle = (events?.items?.find((e) => e.document_id === sceneId)?.data as { title?: string } | undefined)?.title ?? ''
-    const label = t('undo.moved', { scene: sceneTitle, chapter: t('dashboard.ch_short', { number: chapterIndex + 1 }) })
+    const label = t('undo.moved', {
+      scene: sceneTitleShown(sceneTitle),
+      chapter: chapterLabel(t, structure?.getDisplayNumber(chapterId), chapterMap.get(chapterId)?.title),
+    })
     structureEditor.moveScene(sceneId, chapterId, beforeId, label).catch((err) =>
       setMoveError(err instanceof Error ? err.message : t('corkboard.move_failed')))
   }
@@ -364,9 +371,10 @@ export default function CorkboardPage() {
           return {
             label: num === 0
               ? t('scenes.unassigned')
-              : `${t('corkboard.group_chapter')} ${num}${ch?.title ? `: ${ch.title}` : ''}`,
+              : chapterLabel(t, chapterId ? structure?.getDisplayNumber(chapterId) : undefined, ch?.title, true),
             chapterId,
-            chapterTitle: ch?.title || t('common.untitled'),
+            // Named as shown now: undo labels must still make sense after the numbers change.
+            chapterTitle: chapterLabel(t, chapterId ? structure?.getDisplayNumber(chapterId) : undefined, ch?.title, true),
             status: ch?.status,
             // 0 = scenes missing from the structure; those can't be a drop target.
             chapterIndex: num > 0 ? num - 1 : undefined,
@@ -488,7 +496,7 @@ export default function CorkboardPage() {
             <option value="">{t('corkboard.all_chapters')}</option>
             {sortedChapters.map((ch) => (
               <option key={ch.document_id} value={'structureNumber' in ch ? (ch.structureNumber as number) : 0}>
-                Ch. {'structureNumber' in ch ? String(ch.structureNumber) : '?'}{ch.data.title ? `: ${ch.data.title}` : ''}
+                {chapterLabel(t, structure?.getDisplayNumber(ch.document_id), ch.data.title)}
               </option>
             ))}
           </select>
@@ -530,7 +538,7 @@ export default function CorkboardPage() {
             const lineBelow = canDragChapter && chapterDrop === null && chapterId === structure?.raw.chapters.at(-1)?.chapter_id
             return (
             <div
-              key={group.label}
+              key={chapterId ?? group.label}
               data-chapter-group={canDragChapter ? chapterId : undefined}
               className={`relative ${drag?.kind === 'chapter' && drag.id === chapterId ? 'opacity-40' : ''}`}
             >

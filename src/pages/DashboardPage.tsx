@@ -18,6 +18,7 @@ import {
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import { useBookStructure } from '../lib/useBookStructure'
+import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 
@@ -101,12 +102,12 @@ export default function DashboardPage() {
     if (!structure || !chapters?.items?.length) return []
     // Use structure ordering: iterate structure chapters and look up the chapter data
     return structure.raw.chapters
-      .map((slot, index) => {
+      .map((slot) => {
         const chData = chapterDataMap.get(slot.chapter_id)
         if (!chData) return null
         return {
           document_id: slot.chapter_id,
-          chapterNumber: index + 1,
+          displayNumber: structure.getDisplayNumber(slot.chapter_id),
           data: chData,
         }
       })
@@ -194,14 +195,14 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {events.items.map((event) => {
                 const d = event.data as Record<string, unknown>
-                const chNum = structure?.getChapterNumberForScene(event.document_id)
+                const chNum = structure?.getDisplayNumberForScene(event.document_id)
                 return (
                   <Link
                     key={event.document_id}
                     to={`/scenes?id=${event.document_id}`}
                     className="block p-2 rounded hover:bg-surface transition-colors"
                   >
-                    <div className="font-medium text-sm text-text">{String(d.title)}</div>
+                    <div className="font-medium text-sm text-text">{sceneTitleShown(String(d.title))}</div>
                     <div className="text-xs text-text-muted mt-0.5">
                       {chNum != null && t('dashboard.ch_short', { number: chNum })}
                       {d.location != null && ` — ${String(d.location)}`}
@@ -266,7 +267,7 @@ export default function DashboardPage() {
                     to="/chapters"
                     className="flex items-center gap-1.5 p-2 rounded border border-gray-100 hover:border-primary/30 transition-colors"
                   >
-                    <span className="text-sm font-medium text-text">{t('dashboard.ch_short', { number: ch.chapterNumber })}</span>
+                    <span className="text-sm font-medium text-text">{chapterLabel(t, ch.displayNumber, ch.data.title)}</span>
                     <StatusBadge label={status} colorClass={CHAPTER_STATUS_COLORS[status]} />
                   </Link>
                 )

@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure } from '../lib/useBookStructure'
+import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 import { Avatar } from '../components/MediaSection'
@@ -57,7 +58,7 @@ function TimelineEvent({ event }: { event: { document_id: string; data: EventDat
       className="block bg-white rounded-lg border border-gray-200 p-3 hover:border-primary/30 hover:shadow-sm transition-all"
     >
       <div className="flex items-start justify-between gap-2 mb-1">
-        <h4 className="text-sm font-semibold text-text line-clamp-1">{event.data.title}</h4>
+        <h4 className="text-sm font-semibold text-text line-clamp-1">{sceneTitleShown(event.data.title)}</h4>
         {event.data.event_type ? (
           <StatusBadge
             label={event.data.event_type}
@@ -299,13 +300,12 @@ export default function TimelinePage() {
           <div className="space-y-6">
             {grouped.map(([key, groupEvents]) => {
               // For chapter zoom, look up chapter title from the first event's chapter
-              const chapterTitle = zoomLevel === 'chapter' && key > 0
-                ? (() => {
-                    const firstEvent = groupEvents[0]
-                    const chId = firstEvent ? structure?.getChapterForScene(firstEvent.document_id) : undefined
-                    return chId ? chapterDataMap.get(chId)?.title : undefined
-                  })()
+              // Groups are keyed by chapter POSITION (for order); shown is the
+              // chapter's display number and title.
+              const chId = zoomLevel === 'chapter' && key > 0 && groupEvents[0]
+                ? structure?.getChapterForScene(groupEvents[0].document_id)
                 : undefined
+              const displayNumber = chId ? structure?.getDisplayNumber(chId) : undefined
 
               return (
                 <div key={key} className="relative">
@@ -314,14 +314,14 @@ export default function TimelinePage() {
                     <div className="w-9 h-9 rounded-full bg-primary/10 border-2 border-primary flex items-center justify-center z-10 relative">
                       <span className="text-xs font-bold text-primary">
                         {zoomLevel === 'chapter'
-                          ? key
+                          ? (chId ? displayNumber ?? '–' : '?')
                           : key === 0 ? '?' : key}
                       </span>
                     </div>
                     <div>
                       <span className="text-sm font-semibold text-text">
                         {zoomLevel === 'chapter'
-                          ? `${t('corkboard.group_chapter')} ${key}${chapterTitle ? `: ${chapterTitle}` : ''}`
+                          ? (chId ? chapterLabel(t, displayNumber, chapterDataMap.get(chId)?.title, true) : t('scenes.unassigned'))
                           : groupEvents[0]?.data.story_time_raw ?? t('timeline.time_point', { number: key })
                         }
                       </span>

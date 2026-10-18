@@ -136,7 +136,8 @@
     "pov_label": "POV: {{character}}",
     "drag_hint": "Drag a chapter to reorder the book. Chapter numbers follow the order.",
     "drag_title": "Drag to move this chapter, click to show its scenes and images",
-    "move_failed": "Moving the chapter failed."
+    "move_failed": "Moving the chapter failed.",
+    "untitled_unnumbered": "Untitled chapter"
   },
   "plot_threads": {
     "title": "Plot Threads",
@@ -688,7 +689,8 @@
     "failed": "Undo failed: {{message}}",
     "history": "Undo history",
     "history_hint": "Return to the state before:",
-    "merged": "Merged \u201c{{a}}\u201d + \u201c{{b}}\u201d"
+    "merged": "Merged \u201c{{a}}\u201d + \u201c{{b}}\u201d",
+    "moved_chapter_plain": "{{chapter}} moved"
   },
   "move": {
     "button": "Move\u2026",
@@ -755,5 +757,21 @@
     "delete_usage_one": "Attached to {{count}} place:",
     "delete_usage_other": "Attached to {{count}} places:",
     "delete_confirm": "Delete permanently"
+  },
+  "numbering": {
+    "title": "Chapter numbering",
+    "button": "Number",
+    "button_title": "Set how this chapter is numbered",
+    "continue": "Continue numbering",
+    "continue_hint": "One more than the chapter before (the first chapter is 1).",
+    "start": "Start numbering at",
+    "start_hint": "This chapter gets this number; the chapters after it count on from it.",
+    "none": "No number",
+    "none_hint": "For a prologue, interlude or epilogue. The count skips this chapter.",
+    "restarts_at": "numbering restarts at {{number}}",
+    "unnumbered": "no number",
+    "undo_continue": "{{chapter}}: numbering continues",
+    "undo_start": "{{chapter}}: numbering starts at {{number}}",
+    "undo_none": "{{chapter}}: no number"
   }
 }

@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDocuments, useDeleteDocument } from '@wip/react'
-import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2, GripVertical } from 'lucide-react'
+import { BookOpen, PenTool, ChevronDown, ChevronRight, Plus, Pencil, Trash2, GripVertical, Hash } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, CHAPTER_STATUS_COLORS } from '../lib/constants'
-import { useBookStructure, useStructureEditor, chapterDropBefore, chapterNumberAfterMove } from '../lib/useBookStructure'
+import { useBookStructure, useStructureEditor, chapterDropBefore, displayNumberAfterMove, ruleOf, type NumberingRule } from '../lib/useBookStructure'
+import { chapterLabel, chapterTitleShown, sceneTitleShown } from '../lib/titles'
 import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
@@ -31,23 +32,29 @@ interface EventData {
 
 function ChapterRow({
   chapterId,
-  chapterNumber,
+  displayNumber,
+  rule,
   data,
   scenes,
   expanded,
   onToggle,
   onEdit,
   onDelete,
+  onNumbering,
   dnd,
 }: {
   chapterId: string
-  chapterNumber: number
+  /** The number shown (rules applied); null = unnumbered, undefined = not in the book structure. */
+  displayNumber: number | null | undefined
+  /** This chapter's numbering rule; absent when the book has no structure. */
+  rule?: NumberingRule
   data: ChapterData
   scenes: Array<{ document_id: string; data: EventData }>
   expanded: boolean
   onToggle: () => void
   onEdit: () => void
   onDelete: () => void
+  onNumbering?: () => void
   /** Present when chapters can be reordered (the book has a structure). */
   dnd?: {
     chapterId: string
@@ -85,16 +92,23 @@ function ChapterRow({
           <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
         )}
 
-        <span className="text-lg font-semibold text-primary w-12">
-          {chapterNumber}
+        <span className={`text-lg font-semibold w-12 ${displayNumber != null ? 'text-primary' : 'text-text-light'}`}>
+          {displayNumber ?? '–'}
         </span>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="font-medium text-text truncate">
-              {data.title || t('common.untitled')}
+              {chapterTitleShown(data.title) || (displayNumber != null
+                ? t('scenes.chapter_label', { number: displayNumber })
+                : t('chapters_page.untitled_unnumbered'))}
             </span>
             <StatusBadge label={status} colorClass={CHAPTER_STATUS_COLORS[status]} />
+            {rule?.kind === 'start' ? (
+              <span className="text-xs text-text-light">{t('numbering.restarts_at', { number: rule.number })}</span>
+            ) : rule?.kind === 'none' ? (
+              <span className="text-xs text-text-light">{t('numbering.unnumbered')}</span>
+            ) : null}
           </div>
           {data.pov_character ? (
             <div className="text-xs text-text-muted mt-0.5">
@@ -105,6 +119,16 @@ function ChapterRow({
 
         <div className="flex items-center gap-4 text-sm text-text-muted flex-shrink-0">
           <span>{t('common.scene_count', { count: scenes.length })}</span>
+          {onNumbering ? (
+            <button
+              onClick={(e) => { e.stopPropagation(); onNumbering() }}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
+              title={t('numbering.button_title')}
+            >
+              <Hash className="w-3 h-3" />
+              {t('numbering.button')}
+            </button>
+          ) : null}
           <button
             onClick={(e) => { e.stopPropagation(); onEdit() }}
             className="flex items-center gap-1 px-2 py-1 text-xs text-text-muted hover:text-primary hover:border-primary border border-transparent rounded transition-colors"
@@ -154,7 +178,7 @@ function ChapterRow({
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-text truncate">
-                  {scene.data.title}
+                  {sceneTitleShown(scene.data.title)}
                 </div>
                 <div className="text-xs text-text-muted">
                   {scene.data.location ? `${scene.data.location}` : ''}
@@ -200,6 +224,8 @@ export default function ChaptersPage() {
   const [drag, setDrag] = useState<{ id: string; title: string; x: number; y: number } | null>(null)
   const [dropBefore, setDropBefore] = useState<string | null | undefined>(undefined)
   const [moveError, setMoveError] = useState<string | null>(null)
+  // Chapter whose Numbering dialog is open.
+  const [numbering, setNumbering] = useState<{ chapterId: string; title: string } | null>(null)
 
   const { data: chapters, isLoading: loadingChapters } = useDocuments({
     template_id: TEMPLATES.CHAPTER,
@@ -254,7 +280,10 @@ export default function ChaptersPage() {
         setDropBefore(undefined)
         if (!target) return
         setMoveError(null)
-        const label = t('undo.moved_chapter', { chapter: title, number: chapterNumberAfterMove(ids, chapterId, target.before) })
+        const number = displayNumberAfterMove(structure?.raw.chapters ?? [], chapterId, target.before)
+        const label = number != null
+          ? t('undo.moved_chapter', { chapter: title, number })
+          : t('undo.moved_chapter_plain', { chapter: title })
         structureEditor.moveChapter(chapterId, target.before, label).catch((err) =>
           setMoveError(err instanceof Error ? err.message : t('chapters_page.move_failed')))
       },
@@ -280,17 +309,24 @@ export default function ChaptersPage() {
 
   // Build ordered chapter list from structure
   const orderedChapters = structure
-    ? structure.raw.chapters.map((slot, index) => {
+    ? structure.raw.chapters.map((slot) => {
         const ch = chapterMap.get(slot.chapter_id)
         const scenes = slot.scene_ids
           .map((sid) => eventMap.get(sid))
           .filter(Boolean) as Array<{ document_id: string; data: EventData }>
-        return { chapterId: slot.chapter_id, chapterNumber: index + 1, chapter: ch, scenes }
+        return {
+          chapterId: slot.chapter_id,
+          displayNumber: structure.getDisplayNumber(slot.chapter_id),
+          rule: ruleOf(slot) as NumberingRule | undefined,
+          chapter: ch,
+          scenes,
+        }
       })
     : // Fallback: no structure yet, show chapters unordered
       [...(chapters?.items ?? [])].map((ch) => ({
         chapterId: ch.document_id,
-        chapterNumber: 0,
+        displayNumber: undefined,
+        rule: undefined as NumberingRule | undefined,
         chapter: { document_id: ch.document_id, data: ch.data as unknown as ChapterData },
         scenes: [] as Array<{ document_id: string; data: EventData }>,
       }))
@@ -345,7 +381,9 @@ export default function ChaptersPage() {
               <ChapterRow
                 key={entry.chapterId}
                 chapterId={entry.chapterId}
-                chapterNumber={entry.chapterNumber}
+                displayNumber={entry.displayNumber}
+                rule={entry.rule}
+                onNumbering={structure ? () => setNumbering({ chapterId: entry.chapterId, title: chapterLabel(t, entry.displayNumber, entry.chapter!.data.title, true) }) : undefined}
                 data={entry.chapter.data}
                 scenes={entry.scenes}
                 expanded={expandedChapters.has(entry.chapterId)}
@@ -354,7 +392,8 @@ export default function ChaptersPage() {
                 onDelete={() => setConfirmDelete(entry.chapterId)}
                 dnd={structure ? {
                   chapterId: entry.chapterId,
-                  onPointerDown: (e) => startChapterPress(e, entry.chapterId, entry.chapter!.data.title || t('common.untitled')),
+                  // Named as shown now: undo labels must still make sense after the numbers change.
+                  onPointerDown: (e) => startChapterPress(e, entry.chapterId, chapterLabel(t, entry.displayNumber, entry.chapter!.data.title, true)),
                   isDragging: drag?.id === entry.chapterId,
                   lineAbove: dropBefore === entry.chapterId,
                   lineBelow: dropBefore === null && entry.chapterId === structure.raw.chapters.at(-1)?.chapter_id,
@@ -393,6 +432,19 @@ export default function ChaptersPage() {
         </div>
       ) : null}
 
+      {numbering && structure ? (
+        <NumberingDialog
+          title={numbering.title}
+          rule={ruleOf(structure.raw.chapters.find((slot) => slot.chapter_id === numbering.chapterId) ?? { chapter_id: '', scene_ids: [] })}
+          suggestedStart={structure.getDisplayNumber(numbering.chapterId) ?? 1}
+          onClose={() => setNumbering(null)}
+          onSave={(rule) => structureEditor.setNumbering(numbering.chapterId, rule, t(`numbering.undo_${rule.kind}`, {
+            chapter: numbering.title,
+            number: rule.kind === 'start' ? rule.number : undefined,
+          }))}
+        />
+      ) : null}
+
       {showCreate ? (
         <CreateEntityModal
           entityType={showCreate}
@@ -414,6 +466,82 @@ export default function ChaptersPage() {
           onCreated={() => setEditData(null)}
         />
       ) : null}
+    </div>
+  )
+}
+
+/**
+ * A chapter's numbering rule: continue the count from the chapter before,
+ * restart it here at a chosen number (later chapters count on from it), or
+ * no number at all (prologue, interlude, epilogue).
+ */
+function NumberingDialog({ title, rule, suggestedStart, onClose, onSave }: {
+  title: string
+  rule: NumberingRule
+  suggestedStart: number
+  onClose: () => void
+  onSave: (rule: NumberingRule) => Promise<void>
+}) {
+  const { t } = useTranslation()
+  const [kind, setKind] = useState<NumberingRule['kind']>(rule.kind)
+  const [start, setStart] = useState(String(rule.kind === 'start' ? rule.number : suggestedStart))
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const startNumber = Number(start)
+  const valid = kind !== 'start' || (Number.isInteger(startNumber) && start.trim() !== '')
+
+  const save = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      await onSave(kind === 'start' ? { kind, number: startNumber } : { kind })
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setBusy(false)
+    }
+  }
+
+  const option = (value: NumberingRule['kind'], label: string, hint: string, extra?: React.ReactNode) => (
+    <label className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${kind === value ? 'border-primary bg-primary/5' : 'border-gray-200 hover:border-gray-300'}`}>
+      <input type="radio" name="numbering" checked={kind === value} onChange={() => setKind(value)} className="mt-1" />
+      <span className="flex-1">
+        <span className="block text-sm font-medium text-text">{label}</span>
+        <span className="block text-xs text-text-muted">{hint}</span>
+        {extra}
+      </span>
+    </label>
+  )
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-lg font-semibold text-text mb-1">{t('numbering.title')}</h3>
+        <p className="text-sm text-text-muted mb-4">{title}</p>
+        <div className="space-y-2 mb-4">
+          {option('continue', t('numbering.continue'), t('numbering.continue_hint'))}
+          {option('start', t('numbering.start'), t('numbering.start_hint'), kind === 'start' ? (
+            <input
+              type="number"
+              value={start}
+              onChange={(e) => setStart(e.target.value)}
+              autoFocus
+              className="mt-2 w-24 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:border-primary"
+            />
+          ) : null)}
+          {option('none', t('numbering.none'), t('numbering.none_hint'))}
+        </div>
+        {error ? <div className="mb-3 text-sm text-red-600">{error}</div> : null}
+        <div className="flex justify-end gap-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors">
+            {t('common.cancel')}
+          </button>
+          <button onClick={save} disabled={busy || !valid}
+            className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50">
+            {busy ? t('common.saving') : t('common.save')}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

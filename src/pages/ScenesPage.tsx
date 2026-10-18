@@ -41,6 +41,7 @@ import {
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, useStructureEditor, type BookStructure } from '../lib/useBookStructure'
 import { useResizableWidth } from '../lib/useResizableWidth'
+import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import { buildUserMessage, runAnalysis, type PromptData } from '../lib/analysis'
 import { useStructureUndo } from '../lib/structureUndo'
 import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
@@ -154,12 +155,12 @@ function SceneSelector({
   const { orderedChapters, unassigned } = useMemo(() => {
     if (!structure) {
       // No structure yet — all scenes are unassigned
-      return { orderedChapters: [] as Array<{ chapterId: string; chapterDoc: { document_id: string; data: ChapterData } | undefined; chapterNumber: number; scenes: Array<{ document_id: string; data: EventData }> }>, unassigned: [...events] }
+      return { orderedChapters: [] as Array<{ chapterId: string; chapterDoc: { document_id: string; data: ChapterData } | undefined; displayNumber: number | null | undefined; scenes: Array<{ document_id: string; data: EventData }> }>, unassigned: [...events] }
     }
 
     const assignedSceneIds = new Set(structure.getAllSceneIds())
 
-    const ordered = structure.raw.chapters.map((slot, index) => {
+    const ordered = structure.raw.chapters.map((slot) => {
       const chapterDoc = chapterMap.get(slot.chapter_id)
       const scenes = slot.scene_ids
         .map((sid) => eventMap.get(sid))
@@ -167,7 +168,7 @@ function SceneSelector({
       return {
         chapterId: slot.chapter_id,
         chapterDoc,
-        chapterNumber: index + 1,
+        displayNumber: structure.getDisplayNumber(slot.chapter_id),
         scenes,
       }
     })
@@ -205,8 +206,7 @@ function SceneSelector({
                 <div className="flex items-center gap-3">
                   <BookOpen className="w-4 h-4 text-primary" />
                   <span className="font-semibold text-text">
-                    {t('scenes.chapter_label', { number: ch.chapterNumber })}
-                    {ch.chapterDoc?.data.title ? `: ${ch.chapterDoc.data.title}` : ''}
+                    {chapterLabel(t, ch.displayNumber, ch.chapterDoc?.data.title, true)}
                   </span>
                   <span className="text-xs text-text-muted">{t('common.scene_count', { count: ch.scenes.length })}</span>
                 </div>
@@ -233,7 +233,7 @@ function SceneSelector({
                         {i + 1}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-text truncate">{scene.data.title}</div>
+                        <div className="text-sm font-medium text-text truncate">{sceneTitleShown(scene.data.title)}</div>
                         <div className="text-xs text-text-muted mt-0.5">
                           {scene.data.location ? scene.data.location : ''}
                           {scene.data.characters?.length
@@ -281,7 +281,7 @@ function SceneSelector({
                   ?
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-text truncate">{scene.data.title}</div>
+                  <div className="text-sm font-medium text-text truncate">{sceneTitleShown(scene.data.title)}</div>
                   <div className="text-xs text-text-muted mt-0.5">
                     {scene.data.location ? scene.data.location : ''}
                     {scene.data.characters?.length
@@ -802,7 +802,7 @@ function ContinuityStrip({
           <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{t('scenes.previous')}</div>
           {prevScene ? (
             <>
-              <div className="text-xs font-medium text-text truncate">{prevScene.title}</div>
+              <div className="text-xs font-medium text-text truncate">{sceneTitleShown(prevScene.title)}</div>
               {prevScene.summary ? (
                 <div className="text-[11px] text-text-muted line-clamp-1 mt-0.5">{prevScene.summary}</div>
               ) : null}
@@ -823,7 +823,7 @@ function ContinuityStrip({
           <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{t('scenes.next')}</div>
           {nextScene ? (
             <>
-              <div className="text-xs font-medium text-text truncate">{nextScene.title}</div>
+              <div className="text-xs font-medium text-text truncate">{sceneTitleShown(nextScene.title)}</div>
               {nextScene.summary ? (
                 <div className="text-[11px] text-text-muted line-clamp-1 mt-0.5">{nextScene.summary}</div>
               ) : null}
@@ -860,7 +860,7 @@ function FlowView({
     return map
   }, [events])
 
-  const chapterNum = structure?.getChapterNumber(chapterId)
+  const chapterNum = structure?.getDisplayNumber(chapterId)
 
   // Get ordered scenes for this chapter from structure
   const scenes = useMemo(() => {
@@ -882,7 +882,7 @@ function FlowView({
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-xl font-bold text-text">
-            {t('scenes.chapter_label', { number: chapterNum ?? '?' })}
+            {chapterLabel(t, chapterNum, undefined, true)}
           </h2>
           <p className="text-sm text-text-muted mt-1">{t('scenes.flow_subtitle')}</p>
         </div>
@@ -915,7 +915,7 @@ function FlowView({
               {/* Subtle scene label on hover */}
               <div className="absolute -left-8 top-0 opacity-0 group-hover:opacity-100 transition-opacity">
                 <div className="text-[10px] text-text-light -rotate-90 origin-left translate-y-4 whitespace-nowrap">
-                  {scene.title}
+                  {sceneTitleShown(scene.title)}
                 </div>
               </div>
             </div>
@@ -1130,7 +1130,7 @@ function SceneEditor({
   )
 
   const chapterNumber = useMemo(
-    () => structure?.getChapterNumberForScene(sceneId),
+    () => structure?.getDisplayNumberForScene(sceneId),
     [structure, sceneId]
   )
 
@@ -1451,9 +1451,9 @@ function SceneEditor({
   const chapterOptions = useMemo(() => {
     const placed = structure?.getChapterIds() ?? []
     const byId = new Map(chapters.map((c) => [c.document_id, c]))
-    const opts = placed.map((id, i) => ({
+    const opts = placed.map((id) => ({
       id,
-      label: `${t('dashboard.ch_short', { number: i + 1 })}${byId.get(id)?.data.title ? `: ${byId.get(id)!.data.title}` : ''}`,
+      label: chapterLabel(t, structure?.getDisplayNumber(id), byId.get(id)?.data.title),
     }))
     chapters
       .filter((c) => !placed.includes(c.document_id))
@@ -1467,13 +1467,9 @@ function SceneEditor({
   const handleMove = useCallback(async (chapterId: string, beforeId: string | null) => {
     setMoveError(null)
     try {
-      const placed = structure?.getChapterIds() ?? []
-      const at = placed.indexOf(chapterId)
-      const chapterLabel = at >= 0
-        ? t('dashboard.ch_short', { number: at + 1 })
-        : chapterOptions.find((o) => o.id === chapterId)?.label ?? ''
+      const target = chapterOptions.find((o) => o.id === chapterId)?.label ?? ''
       await structureEditor.moveScene(sceneId, chapterId, beforeId,
-        t('undo.moved', { scene: sceneData?.title ?? '', chapter: chapterLabel }))
+        t('undo.moved', { scene: sceneTitleShown(sceneData?.title), chapter: target }))
       setMoveOpen(false)
     } catch (err) {
       setMoveError(err instanceof Error ? err.message : String(err))
@@ -1885,7 +1881,7 @@ function SceneEditor({
         {/* Minimal top bar */}
         <div className="flex items-center justify-between px-6 py-3 text-white/60">
           <div className="text-sm">
-            {sceneData.title}
+            {sceneTitleShown(sceneData.title)}
             {isDirty ? <span className="text-amber-400 ml-1">*</span> : null}
           </div>
           <div className="flex items-center gap-4">
@@ -1937,7 +1933,7 @@ function SceneEditor({
 
         <div className="flex-1 min-w-0">
           <h2 className="text-sm font-semibold text-text truncate">
-            {sceneData.title}
+            {sceneTitleShown(sceneData.title)}
             {isDirty ? <span className="text-amber-500 ml-1">*</span> : null}
           </h2>
         </div>
@@ -2127,7 +2123,7 @@ function SceneEditor({
           chapters={chapterOptions}
           currentChapterId={scenePosition?.chapterId}
           scenesInChapter={(id) => structure?.getScenesForChapter(id) ?? []}
-          titleOf={(id) => eventMap.get(id)?.data.title ?? id}
+          titleOf={(id) => sceneTitleShown(eventMap.get(id)?.data.title) || id}
           saving={structureEditor.isSaving}
           onMove={handleMove}
           onClose={() => setMoveOpen(false)}
@@ -2148,7 +2144,7 @@ function SceneEditor({
           <div className="bg-surface border-t border-gray-100 px-4 py-1.5 flex items-center justify-between text-xs text-text-muted">
             <span>{t('common.words', { count: currentWordCount })}</span>
             <span>
-              {t('dashboard.ch_short', { number: chapterNumber ?? '?' })} · Scene {sceneNumber ?? '?'}
+              {chapterNumber != null ? `${t('dashboard.ch_short', { number: chapterNumber })} · ` : ''}Scene {sceneNumber ?? '?'}
             </span>
           </div>
         </div>

@@ -6,6 +6,19 @@ import { useStructureUndo } from './structureUndo'
 export interface ChapterSlot {
   chapter_id: string
   scene_ids: string[]
+  /** Numbering restarts at this number here (and counts on from it). */
+  number_start?: number | null
+  /** This chapter has no number (prologue, interlude, epilogue); the count skips it. */
+  unnumbered?: boolean | null
+}
+
+/** A chapter's numbering rule, as the Numbering dialog offers it. */
+export type NumberingRule = { kind: 'continue' } | { kind: 'start'; number: number } | { kind: 'none' }
+
+export function ruleOf(slot: ChapterSlot): NumberingRule {
+  if (slot.unnumbered) return { kind: 'none' }
+  if (slot.number_start != null) return { kind: 'start', number: slot.number_start }
+  return { kind: 'continue' }
 }
 
 export interface BookStructureData {
@@ -19,14 +32,25 @@ export interface BookStructure {
   chapterCount: number
   /** Total scene count across all chapters */
   sceneCount: number
-  /** Get 1-based chapter number for a chapter document_id */
+  /**
+   * 1-based POSITION of a chapter in the book. For ordering, grouping and
+   * filtering; what the writer sees is getDisplayNumber.
+   */
   getChapterNumber(chapterId: string): number | undefined
   /** Get chapter_id and indices for a scene document_id */
   getScenePosition(sceneId: string): { chapterIndex: number; sceneIndex: number; chapterId: string } | undefined
   /** Get chapter_id that contains a scene */
   getChapterForScene(sceneId: string): string | undefined
-  /** Get 1-based chapter number for a scene */
+  /** 1-based POSITION of the chapter containing a scene (see getChapterNumber). */
   getChapterNumberForScene(sceneId: string): number | undefined
+  /**
+   * The chapter's number as shown: counted in book order, restarting where a
+   * chapter sets number_start, skipping unnumbered chapters. null = no
+   * number; undefined = not in the structure.
+   */
+  getDisplayNumber(chapterId: string): number | null | undefined
+  /** Display number of the chapter containing a scene. */
+  getDisplayNumberForScene(sceneId: string): number | null | undefined
   /** Get ordered scene_ids for a chapter document_id */
   getScenesForChapter(chapterId: string): string[]
   /** Get all chapter_ids in order */
@@ -40,7 +64,15 @@ function buildStructure(data: BookStructureData): BookStructure {
   const chapterIndexMap = new Map<string, number>()
   const scenePositionMap = new Map<string, { chapterIndex: number; sceneIndex: number; chapterId: string }>()
 
+  const displayNumbers = new Map<string, number | null>()
+  let next = 1
   data.chapters.forEach((slot, ci) => {
+    if (slot.unnumbered) {
+      displayNumbers.set(slot.chapter_id, null)
+    } else {
+      if (slot.number_start != null) next = slot.number_start
+      displayNumbers.set(slot.chapter_id, next++)
+    }
     chapterIndexMap.set(slot.chapter_id, ci)
     slot.scene_ids.forEach((sid, si) => {
       scenePositionMap.set(sid, { chapterIndex: ci, sceneIndex: si, chapterId: slot.chapter_id })
@@ -60,6 +92,11 @@ function buildStructure(data: BookStructureData): BookStructure {
     getChapterNumberForScene: (id) => {
       const pos = scenePositionMap.get(id)
       return pos !== undefined ? pos.chapterIndex + 1 : undefined
+    },
+    getDisplayNumber: (id) => displayNumbers.get(id),
+    getDisplayNumberForScene: (id) => {
+      const pos = scenePositionMap.get(id)
+      return pos !== undefined ? displayNumbers.get(pos.chapterId) : undefined
     },
     getScenesForChapter: (id) => {
       const idx = chapterIndexMap.get(id)
@@ -102,11 +139,17 @@ export function chapterDropBefore(ids: string[], draggedId: string, overId: stri
   return before
 }
 
-/** The 1-based chapter number `draggedId` gets when moved before `before` (null = end). */
-export function chapterNumberAfterMove(ids: string[], draggedId: string, before: string | null) {
-  if (before === null) return ids.length
-  const at = ids.indexOf(before)
-  return at > ids.indexOf(draggedId) ? at : at + 1
+/**
+ * The number `draggedId` will show after moving before `before` (null = the
+ * end), with the book's numbering rules applied; null when it is unnumbered.
+ */
+export function displayNumberAfterMove(chapters: ChapterSlot[], draggedId: string, before: string | null) {
+  const moving = chapters.find((slot) => slot.chapter_id === draggedId)
+  if (!moving) return undefined
+  const rest = chapters.filter((slot) => slot.chapter_id !== draggedId)
+  const at = before ? rest.findIndex((slot) => slot.chapter_id === before) : -1
+  rest.splice(at >= 0 ? at : rest.length, 0, moving)
+  return buildStructure({ book_title: '', chapters: rest }).getDisplayNumber(draggedId)
 }
 
 /** Hook to get the createDocument mutator for updating the structure */
@@ -207,6 +250,28 @@ export function useStructureEditor() {
     return { previous, documentId: saved.documentId, version: saved.version }
   }
 
+  /**
+   * Set a chapter's numbering rule (Numbering dialog). Numbers are computed,
+   * so this one slot changes and every later number follows; undoable like
+   * a move.
+   */
+  const setNumbering = async (chapterId: string, rule: NumberingRule, label: string) => {
+    const previous = currentChapters()
+    const chapters = currentChapters().map((slot) => {
+      if (slot.chapter_id !== chapterId) return slot
+      // The `chapters` array is replaced whole by the PATCH, so leaving the
+      // fields out of the slot clears them.
+      const { number_start: _n, unnumbered: _u, ...rest } = slot
+      if (rule.kind === 'start') return { ...rest, number_start: rule.number }
+      if (rule.kind === 'none') return { ...rest, unnumbered: true }
+      return rest
+    })
+    const saved = await save(chapters)
+    if (saved.documentId && saved.version != null) {
+      undo?.record({ label, documentId: saved.documentId, previous, version: saved.version })
+    }
+  }
+
   /** Append a chapter (no-op if it is already in the structure). */
   const addChapter = (chapterId: string) => {
     const chapters = currentChapters()
@@ -214,7 +279,7 @@ export function useStructureEditor() {
     return save([...chapters, { chapter_id: chapterId, scene_ids: [] }]).then(() => undefined)
   }
 
-  return { moveScene, moveChapter, removeScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
+  return { moveScene, moveChapter, setNumbering, removeScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
 }
 
 export { TEMPLATES }

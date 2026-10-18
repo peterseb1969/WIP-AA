@@ -137,7 +137,8 @@
     "pov_label": "Perspektive: {{character}}",
     "drag_hint": "Ziehe ein Kapitel, um das Buch umzuordnen. Die Kapitelnummern folgen der Reihenfolge.",
     "drag_title": "Ziehen, um dieses Kapitel zu verschieben; klicken, um seine Szenen und Bilder zu zeigen",
-    "move_failed": "Verschieben des Kapitels fehlgeschlagen."
+    "move_failed": "Verschieben des Kapitels fehlgeschlagen.",
+    "untitled_unnumbered": "Kapitel ohne Titel"
   },
   "plot_threads": {
     "title": "Handlungsstr\u00e4nge",
@@ -689,7 +690,8 @@
     "failed": "R\u00fcckg\u00e4ngig fehlgeschlagen: {{message}}",
     "history": "Verlauf",
     "history_hint": "Zur\u00fcck zum Stand vor:",
-    "merged": "\u201e{{a}}\u201c + \u201e{{b}}\u201c zusammengef\u00fchrt"
+    "merged": "\u201e{{a}}\u201c + \u201e{{b}}\u201c zusammengef\u00fchrt",
+    "moved_chapter_plain": "{{chapter}} verschoben"
   },
   "move": {
     "button": "Verschieben\u2026",
@@ -756,5 +758,21 @@
     "delete_usage_one": "Angeh\u00e4ngt an {{count}} Stelle:",
     "delete_usage_other": "Angeh\u00e4ngt an {{count}} Stellen:",
     "delete_confirm": "Endg\u00fcltig l\u00f6schen"
+  },
+  "numbering": {
+    "title": "Kapitelnummerierung",
+    "button": "Nummer",
+    "button_title": "Festlegen, wie dieses Kapitel nummeriert wird",
+    "continue": "Nummerierung fortsetzen",
+    "continue_hint": "Eins mehr als das Kapitel davor (das erste Kapitel ist 1).",
+    "start": "Nummerierung beginnt bei",
+    "start_hint": "Dieses Kapitel bekommt diese Nummer; die folgenden z\u00e4hlen von dort weiter.",
+    "none": "Keine Nummer",
+    "none_hint": "F\u00fcr Prolog, Zwischenspiel oder Epilog. Die Z\u00e4hlung \u00fcberspringt dieses Kapitel.",
+    "restarts_at": "Nummerierung beginnt neu bei {{number}}",
+    "unnumbered": "ohne Nummer",
+    "undo_continue": "{{chapter}}: Nummerierung fortgesetzt",
+    "undo_start": "{{chapter}}: Nummerierung ab {{number}}",
+    "undo_none": "{{chapter}}: ohne Nummer"
   }
 }
