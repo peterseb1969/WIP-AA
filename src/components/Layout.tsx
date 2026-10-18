@@ -103,11 +103,12 @@ export default function Layout() {
           <h1 className="text-sm font-medium text-text-muted truncate">
             {projectTitle ?? 'AuthorAssist'}
           </h1>
-          <StructureUndoControl />
+          <div className="ml-auto flex items-center gap-1">
+            {/* Unsaved scene drafts (a save failed) and structure undo */}
+            <UnsavedDraftBanner />
+            <StructureUndoControl />
+          </div>
         </header>
-
-        {/* Unsaved scene drafts — global reminder */}
-        <UnsavedDraftBanner />
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">

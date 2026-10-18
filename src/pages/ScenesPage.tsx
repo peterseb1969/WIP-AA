@@ -1229,10 +1229,13 @@ function SceneEditor({
   }, [draftKey, sceneData?.title])
 
   // Flush current editor content to localStorage immediately
+  // Only real unsaved changes get a backup — writing one for an unchanged
+  // scene left a "draft" identical to the saved text that nothing ever
+  // removed, so the unsaved-draft reminder showed it forever.
   const flushDraft = useCallback(() => {
     if (!editor) return
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current)
-    if (editor.getText().trim()) {
+    if (isDirtyRef.current && editor.getText().trim()) {
       writeDraft(editor.getHTML())
     }
   }, [editor, writeDraft])

@@ -162,7 +162,7 @@ export function StructureUndoControl() {
   const last = u.entries[u.entries.length - 1]
   const iconBtn = 'p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-surface transition-colors disabled:opacity-40'
   return (
-    <div ref={boxRef} className="ml-auto flex items-center gap-1 text-sm relative">
+    <div ref={boxRef} className="flex items-center gap-1 text-sm relative">
       {u.error ? (
         <span className="flex items-center gap-1 text-red-600 truncate max-w-80" title={u.error}>
           <span className="truncate">{u.error}</span>
