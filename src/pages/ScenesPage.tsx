@@ -35,14 +35,17 @@ import {
   Sparkles,
   Loader2,
   ArrowRightLeft,
+  Merge,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, useStructureEditor, type BookStructure } from '../lib/useBookStructure'
 import { useResizableWidth } from '../lib/useResizableWidth'
 import { buildUserMessage, runAnalysis, type PromptData } from '../lib/analysis'
+import { useStructureUndo } from '../lib/structureUndo'
 import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
 import CreateEntityModal from '../components/CreateEntityModal'
 import MoveSceneDialog from '../components/MoveSceneDialog'
+import MergeSceneDialog from '../components/MergeSceneDialog'
 import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
@@ -1283,6 +1286,18 @@ function SceneEditor({
     }
   }, [editor, saveClient, sceneId, draftKey, queryClient])
 
+  // When the saved prose changes from outside the editor (an undo of a
+  // merge, another tab) and the writer has no unsaved edits, show it —
+  // otherwise the next keystroke would autosave the stale text back.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed || isDirtyRef.current || savingRef.current) return
+    const saved = sceneData?.prose ?? ''
+    if (saved !== baselineHtmlRef.current && saved !== editor.getHTML()) {
+      editor.commands.setContent(saved, { emitUpdate: false })
+      baselineHtmlRef.current = editor.getHTML()
+    }
+  }, [editor, sceneData?.prose])
+
   // Schedule autosave on every change.
   useEffect(() => {
     if (!editor) return
@@ -1520,6 +1535,84 @@ function SceneEditor({
     }
     throw new Error(`No free title found for "${base}".`)
   }, [wipClient])
+
+  // ── Merge with the previous / next scene ────────────────
+  const undoStack = useStructureUndo()
+  const [mergeOpen, setMergeOpen] = useState(false)
+  const [mergeError, setMergeError] = useState<string | null>(null)
+  const [merging, setMerging] = useState(false)
+
+  /**
+   * Text is joined in reading order (earlier + later); the scene whose
+   * title and details are kept survives, the other is taken out of the
+   * structure and soft-deleted. Order of writes, safest first: kept scene
+   * (now holds both texts), delete the other, then the structure — a
+   * failure part-way can duplicate text but never lose it. Autosave is held
+   * off for the duration, as in split.
+   */
+  const handleMerge = useCallback(async (otherId: string, otherIsNext: boolean, keepEarlier: boolean) => {
+    const other = eventMap.get(otherId)
+    if (!editor || !sceneData || !other) return
+    setMergeError(null)
+    setMerging(true)
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    savingRef.current = true
+    try {
+      const cur = { id: sceneId, data: { ...sceneData, prose: editor.getHTML() } as EventData }
+      const oth = { id: otherId, data: other.data }
+      const [earlier, later] = otherIsNext ? [cur, oth] : [oth, cur]
+      const kept = keepEarlier ? earlier : later
+      const removed = keepEarlier ? later : earlier
+      const union = (a?: unknown[], b?: unknown[]) => [...new Set([...(a ?? []), ...(b ?? [])].map(String))]
+      const merged = {
+        prose: (earlier.data.prose ?? '') + (later.data.prose ?? ''),
+        characters: union(earlier.data.characters, later.data.characters),
+        plot_threads: union(earlier.data.plot_threads, later.data.plot_threads),
+        summary: [earlier.data.summary, later.data.summary].filter(Boolean).join(' '),
+      }
+      const keptBefore = {
+        prose: kept.data.prose ?? '',
+        characters: kept.data.characters ?? [],
+        plot_threads: kept.data.plot_threads ?? [],
+        summary: kept.data.summary ?? '',
+      }
+      const keptResult = await saveClient.documents.updateDocument(kept.id, merged)
+      await saveClient.documents.deleteDocument(removed.id)
+      const order = await structureEditor.removeScene(removed.id)
+      if (order.documentId && order.version != null && keptResult.version != null) {
+        undoStack?.record({
+          label: t('undo.merged', { a: earlier.data.title, b: later.data.title }),
+          documentId: order.documentId,
+          previous: order.previous,
+          version: order.version,
+          merge: {
+            templateId: TEMPLATES.EVENT,
+            namespace: NAMESPACE,
+            removed: { data: removed.data as unknown as Record<string, unknown> },
+            kept: { id: kept.id, fields: keptBefore, version: keptResult.version },
+          },
+        })
+      }
+      // Nothing in the open editor is unsaved any more.
+      if (kept.id === sceneId) {
+        editor.commands.setContent(merged.prose, { emitUpdate: false })
+        baselineHtmlRef.current = editor.getHTML()
+      }
+      isDirtyRef.current = false
+      setIsDirty(false)
+      dirtySinceRef.current = null
+      localStorage.removeItem(draftKey)
+      notifyDraftChange()
+      await queryClient.invalidateQueries()
+      setMergeOpen(false)
+      if (kept.id !== sceneId) onNavigate(kept.id)
+    } catch (err) {
+      setMergeError(err instanceof Error ? err.message : String(err))
+    } finally {
+      savingRef.current = false
+      setMerging(false)
+    }
+  }, [editor, sceneData, sceneId, eventMap, saveClient, structureEditor, undoStack, draftKey, queryClient, onNavigate, t])
 
   const handleSplit = useCallback(async () => {
     if (!editor || !sceneData || !structure || !structureDocId) return
@@ -1864,6 +1957,16 @@ function SceneEditor({
           <Scissors className="w-3.5 h-3.5" />
         </button>
 
+        {/* Merge with the previous / next scene */}
+        <button
+          onClick={() => { setMergeError(null); setMergeOpen(true) }}
+          disabled={!prevScene && !nextScene}
+          className="text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
+          title={t('merge.button')}
+        >
+          <Merge className="w-3.5 h-3.5" />
+        </button>
+
         {/* Move to another chapter / position */}
         <button
           onClick={() => setMoveOpen(true)}
@@ -1994,6 +2097,17 @@ function SceneEditor({
         expanded={metadataExpanded}
         onToggle={() => setMetadataExpanded(!metadataExpanded)}
       />
+      {mergeOpen && (
+        <MergeSceneDialog
+          current={{ title: sceneData.title, words: currentWordCount }}
+          prev={prevScene ? { id: prevScene.document_id, title: prevScene.data.title, words: wordCount((prevScene.data.prose ?? '').replace(/<[^>]+>/g, ' ')) } : undefined}
+          next={nextScene ? { id: nextScene.document_id, title: nextScene.data.title, words: wordCount((nextScene.data.prose ?? '').replace(/<[^>]+>/g, ' ')) } : undefined}
+          saving={merging}
+          error={mergeError}
+          onMerge={handleMerge}
+          onClose={() => setMergeOpen(false)}
+        />
+      )}
       {moveOpen && (
         <MoveSceneDialog
           sceneId={sceneId}

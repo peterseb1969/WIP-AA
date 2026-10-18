@@ -674,12 +674,13 @@
   },
   "undo": {
     "undo": "R\u00fcckg\u00e4ngig",
-    "shortcut": "R\u00fcckg\u00e4ngig (Cmd/Strg+Z)",
+    "shortcut": "Cmd/Strg+Z",
     "moved": "{{scene}} \u2192 {{chapter}}",
     "conflict": "Die Kapitelreihenfolge wurde inzwischen ge\u00e4ndert \u2014 die Verschiebung wurde nicht r\u00fcckg\u00e4ngig gemacht.",
     "failed": "R\u00fcckg\u00e4ngig fehlgeschlagen: {{message}}",
     "history": "Verlauf",
-    "history_hint": "Zur\u00fcck zum Stand vor:"
+    "history_hint": "Zur\u00fcck zum Stand vor:",
+    "merged": "\u201e{{a}}\u201c + \u201e{{b}}\u201c zusammengef\u00fchrt"
   },
   "move": {
     "button": "Verschieben\u2026",
@@ -693,5 +694,16 @@
     "only_scene": "Als einzige Szene",
     "move": "Verschieben",
     "moving": "Wird verschoben\u2026"
+  },
+  "merge": {
+    "button": "Mit der vorherigen oder n\u00e4chsten Szene zusammenf\u00fchren",
+    "title": "\u201e{{scene}}\u201c zusammenf\u00fchren",
+    "with_previous": "Mit der vorherigen Szene",
+    "with_next": "Mit der n\u00e4chsten Szene",
+    "none_in_chapter": "keine in diesem Kapitel",
+    "keep": "Titel und Details behalten von",
+    "preview": "\u201e{{a}}\u201c + \u201e{{b}}\u201c \u2192 \u201e{{title}}\u201c, {{words}} W\u00f6rter",
+    "merge": "Zusammenf\u00fchren",
+    "merging": "Wird zusammengef\u00fchrt\u2026"
   }
 }

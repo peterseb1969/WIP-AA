@@ -152,6 +152,20 @@ export function useStructureEditor() {
     }
   }
 
+  /**
+   * Take a scene out of the structure (used by scene merge). Returns what
+   * undo needs; the caller records the undo entry, which spans documents.
+   */
+  const removeScene = async (sceneId: string) => {
+    const previous = currentChapters()
+    const chapters = currentChapters().map((slot) => ({
+      ...slot,
+      scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
+    }))
+    const saved = await save(chapters)
+    return { previous, documentId: saved.documentId, version: saved.version }
+  }
+
   /** Append a chapter (no-op if it is already in the structure). */
   const addChapter = (chapterId: string) => {
     const chapters = currentChapters()
@@ -159,7 +173,7 @@ export function useStructureEditor() {
     return save([...chapters, { chapter_id: chapterId, scene_ids: [] }]).then(() => undefined)
   }
 
-  return { moveScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
+  return { moveScene, removeScene, addChapter, isSaving: createDoc.isPending || updateDoc.isPending }
 }
 
 export { TEMPLATES }

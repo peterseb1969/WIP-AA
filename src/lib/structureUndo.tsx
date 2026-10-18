@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useUpdateDocument } from '@wip/react'
+import { useUpdateDocument, useWipClient, wipKeys } from '@wip/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Undo2, History, X } from 'lucide-react'
 import type { ChapterSlot } from './useBookStructure'
 
@@ -20,13 +21,25 @@ import type { ChapterSlot } from './useBookStructure'
  * be undone, never covering the page.
  */
 
-interface UndoEntry {
+export interface UndoEntry {
   label: string
   documentId: string
   /** Chapter order before the move — what undo restores. */
   previous: ChapterSlot[]
   /** Structure version the move produced; undo requires it to be current. */
   version: number
+  /**
+   * Set for a scene merge, which changed documents as well as the order.
+   * Undo re-creates the removed scene from its snapshot (WIP reactivates the
+   * soft-deleted document: same id, since the identity — the title — is the
+   * same), then restores the order, then the kept scene's merged fields.
+   */
+  merge?: {
+    templateId: string
+    namespace: string
+    removed: { data: Record<string, unknown> }
+    kept: { id: string; fields: Record<string, unknown>; version: number }
+  }
 }
 
 interface StructureUndo {
@@ -59,6 +72,8 @@ function isEditableTarget(target: EventTarget | null) {
 export function StructureUndoProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const updateDoc = useUpdateDocument()
+  const wip = useWipClient()
+  const queryClient = useQueryClient()
   const [stack, setStack] = useState<UndoEntry[]>(loadStack)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -83,11 +98,24 @@ export function StructureUndoProvider({ children }: { children: ReactNode }) {
     try {
       while (remaining.length > index) {
         const entry = remaining[remaining.length - 1]!
+        // Merge undo, safest order: bring the removed scene back first (no
+        // text can be lost if a later step fails), then order, then kept.
+        if (entry.merge) {
+          await wip.documents.createDocument({
+            template_id: entry.merge.templateId,
+            namespace: entry.merge.namespace,
+            data: entry.merge.removed.data,
+          })
+        }
         const result = await updateDoc.mutateAsync({
           documentId: entry.documentId,
           patch: { chapters: entry.previous },
           ifMatch: expected,
         })
+        if (entry.merge) {
+          await wip.documents.updateDocument(entry.merge.kept.id, entry.merge.kept.fields, { ifMatch: entry.merge.kept.version })
+          queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
+        }
         remaining = remaining.slice(0, -1)
         if (result.version != null) expected = result.version
         const below = remaining[remaining.length - 1]
@@ -102,7 +130,7 @@ export function StructureUndoProvider({ children }: { children: ReactNode }) {
     } finally {
       setBusy(false)
     }
-  }, [stack, busy, updateDoc, t])
+  }, [stack, busy, updateDoc, wip, queryClient, t])
 
   const undo = useCallback(() => undoTo(stack.length - 1), [undoTo, stack.length])
 
