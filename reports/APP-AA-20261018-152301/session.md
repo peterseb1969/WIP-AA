@@ -19,3 +19,4 @@ Continues from APP-AA-20261017-150822 (via /wip-wake).
 - [x] CASE-899 filed: @wip/client keepalive 64 KB bug
 - [x] Images on chapters, notes, world rules + Image library with permanent delete (e4246e6)
 - [x] CASE-900 filed: relationships template filter ignores namespace
+- [x] Chapter numbering, option C (41544b6 model on aa, 9d7c862 UI)

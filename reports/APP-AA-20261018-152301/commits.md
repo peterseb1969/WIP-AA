@@ -30,3 +30,19 @@
 **Why:** Peter: continue with chapters, notes, world rules; library page with a true delete.
 **PoNIF:** #4 (bulk delete of edges checks per-item results before erasing the file); #1 (retain mode: documents retired, not erased).
 **Discovered:** relationships endpoint resolves a bare `template=` value without honouring `namespace=` (picked aa's AA_ATTACHED_TO from a scratch namespace) — app now passes ns:VALUE; recorded in KNOWN_ISSUES, not reported. CASE-899 filed for the @wip/client keepalive bug.
+
+## 41544b6 — data-model: chapter numbering rules on AA_CHAPTER_SLOT (v2)
+**Time:** 21:55
+**Files:** 3 files changed (slot seed + data-model mirror, bootstrap version pinning)
+**Tests:** fresh bootstrap (slot v1 with new fields, structure pinned 1); upgrade rehearsal on a hand-built v1 namespace (slot v2, structure v2 pinned 2, migrate dry-run/apply 1/1, v1s deactivated, PATCH with number_start/unnumbered ok, create via latest ok, wrong type rejected); aa: v1 seeds re-posted → unchanged (aa matched), upgrade, migrate 1/1 (structure doc v46 on template v2, 13 slots), v1s deactivated.
+**What/Why:** Peter chose option C (numbering rules on the structure, computed numbers).
+**PoNIF:** #2 (update ≠ replace: deactivated v1s explicitly; migrate_documents to re-pin); nested template version pinning (CASE-493) — bootstrap now pins the version created in the same run.
+**Discovered:** deactivating AA_BOOK_STRUCTURE v1 after migration still reports "1 dependent document" (the doc's own inactive v1 row); force was safe after checking the live doc is on v2. Template upsert's migration hint says "not eligible" for a pin-only change, yet the migrate dry-run passes. AA's bootstrap has no SEED_DIR override (module-relative seed path).
+
+## 9d7c862 — feat(chapters): numbering rules; number-only titles show the computed number
+**Time:** 22:41
+**Files:** 10 files changed
+**Tests:** tsc clean; tsx check of title regexes + displayNumberAfterMove; browser on scratch ns (deleted after): Prologue → no number (–, 1..4), restart at 10 (–,1,2,10,11), drag 2nd chapter to end (–,1,10,11,12; rule travels), undo history back to before the restart (–,1,2,3,4), Corkboard groups/filter/cards, Timeline by chapter, scene list, editor header/breadcrumb/footer ("Ch. 10"), German strings.
+**What:** getDisplayNumber(+ForScene), NumberingRule/ruleOf/setNumbering (undoable), displayNumberAfterMove, titles.ts (chapterTitleShown, sceneTitleShown, chapterLabel), Numbering dialog, display sites on Chapters/Corkboard/Scenes/Dashboard/Timeline.
+**Why:** Peter: option C + display-only handling of number-only titles.
+**Discovered:** Corkboard keyed groups by label — two untitled unnumbered chapters would collide; now keyed by chapter id. With the ChN prefix hidden, scenes in different chapters can read identically ("Scene 1") in flat/character views.
