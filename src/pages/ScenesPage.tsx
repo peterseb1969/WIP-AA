@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
@@ -32,10 +32,13 @@ import {
   XCircle,
   AlertTriangle,
   EyeOff,
+  Sparkles,
+  Loader2,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, type BookStructure } from '../lib/useBookStructure'
 import { useResizableWidth } from '../lib/useResizableWidth'
+import { buildUserMessage, runAnalysis, type PromptData } from '../lib/analysis'
 import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
 import CreateEntityModal from '../components/CreateEntityModal'
 import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
@@ -495,7 +498,36 @@ function CharactersPanel({
 
 // ── Context Panel (right, tabbed) ────────────────────────
 
-type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'validate'
+type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'validate' | 'analysis'
+
+/** One run of a library prompt against the open scene. */
+interface AnalysisState {
+  promptName: string
+  startedAt: number
+  status: 'running' | 'done' | 'error'
+  text?: string
+}
+
+function AnalysisPanel({ analysis }: { analysis: AnalysisState | null }) {
+  const { t } = useTranslation()
+  if (!analysis) {
+    return <p className="text-sm text-text-muted">{t('scenes.analysis_hint')}</p>
+  }
+  return (
+    <div className="space-y-2">
+      <div className="text-xs font-medium text-text-light uppercase tracking-wide">{analysis.promptName}</div>
+      {analysis.status === 'running' ? (
+        <div className="flex items-center gap-2 text-sm text-text-muted">
+          <Loader2 className="w-4 h-4 animate-spin" /> {t('scenes.analysing')}
+        </div>
+      ) : analysis.status === 'error' ? (
+        <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{analysis.text}</div>
+      ) : (
+        <div className="text-sm text-text whitespace-pre-wrap leading-relaxed">{analysis.text}</div>
+      )}
+    </div>
+  )
+}
 
 function ContextPanel({
   scene,
@@ -509,6 +541,7 @@ function ContextPanel({
   onValidationDismiss,
   onValidationRemove,
   onValidationUnsuppress,
+  analysis,
 }: {
   scene: EventData
   characterDocs: Array<{ document_id: string; data: CharacterDocData }>
@@ -521,9 +554,15 @@ function ContextPanel({
   onValidationDismiss: (result: AnnotationResult) => void
   onValidationRemove: (result: AnnotationResult) => void
   onValidationUnsuppress: (result: AnnotationResult) => void
+  analysis: AnalysisState | null
 }) {
   const { t } = useTranslation()
   const [tab, setTab] = useState<ContextTab>('characters')
+
+  // Starting an analysis brings its tab to the front.
+  useEffect(() => {
+    if (analysis) setTab('analysis')
+  }, [analysis?.startedAt]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Find location doc matching scene.location
   const locationDoc = useMemo(
@@ -553,6 +592,7 @@ function ContextPanel({
     { key: 'rules', labelKey: 'scenes.panel_rules', icon: Globe, count: ruleDocs.length },
     { key: 'notes', labelKey: 'scenes.panel_notes', icon: StickyNote, count: noteDocs.length },
     { key: 'validate', labelKey: 'scenes.panel_validate', icon: ShieldCheck, count: validationActionCount, highlight: (validationActionCount ?? 0) > 0 },
+    { key: 'analysis', labelKey: 'scenes.panel_analysis', icon: Sparkles },
   ]
 
   return (
@@ -681,6 +721,7 @@ function ContextPanel({
           </div>
         ) : null}
 
+        {tab === 'analysis' ? <AnalysisPanel analysis={analysis} /> : null}
         {tab === 'validate' ? (
           <ValidationPanel
             results={validationResults ?? []}
@@ -1269,6 +1310,55 @@ function SceneEditor({
   const [splitting, setSplitting] = useState(false)
   const wipClient = useWipClient()
 
+  // ── Analysis (prompt library) ───────────────────────────
+  const { data: promptDocs } = useDocuments({
+    template_id: TEMPLATES.PROMPT,
+    status: 'active',
+    page_size: 100,
+    namespace: NAMESPACE,
+  })
+  const prompts = useMemo(
+    () => (promptDocs?.items ?? [])
+      .map((p) => p.data as unknown as PromptData)
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [promptDocs],
+  )
+  const [analysisMenuOpen, setAnalysisMenuOpen] = useState(false)
+  const [analysis, setAnalysis] = useState<AnalysisState | null>(null)
+
+  const handleAnalyse = useCallback(async (prompt: PromptData) => {
+    if (!sceneData || !editor) return
+    setAnalysisMenuOpen(false)
+    setPanelCollapsed(false)
+    const startedAt = Date.now()
+    setAnalysis({ promptName: prompt.name, startedAt, status: 'running' })
+    const inScene = (names: unknown[] | undefined) => new Set((names ?? []).map((n) => String(n).toLowerCase()))
+    const sceneChars = inScene(sceneData.characters)
+    const sceneThreads = inScene(sceneData.plot_threads)
+    const user = buildUserMessage(prompt, {
+      scene: sceneData as unknown as Record<string, unknown>,
+      proseText: editor.getText({ blockSeparator: '\n\n' }),
+      characters: characterDocs.filter((c) => sceneChars.has(c.data.name.toLowerCase())).map((c) => c.data as unknown as Record<string, unknown>),
+      location: locationDocs.find((l) => l.data.name.toLowerCase() === (sceneData.location ?? '').toLowerCase())?.data as unknown as Record<string, unknown> | undefined,
+      plotThreads: threadDocs.filter((th) => sceneThreads.has(th.data.title.toLowerCase())).map((th) => th.data as unknown as Record<string, unknown>),
+      worldRules: ruleDocs.map((r) => r.data as unknown as Record<string, unknown>),
+      chapter: chapter?.data as unknown as Record<string, unknown> | undefined,
+      prevScene: prevScene?.data as unknown as Record<string, unknown> | undefined,
+      nextScene: nextScene?.data as unknown as Record<string, unknown> | undefined,
+    })
+    // Ignore a result that arrives after a newer run was started.
+    const finish = (next: Pick<AnalysisState, 'status' | 'text'>) =>
+      setAnalysis((cur) => (cur?.startedAt === startedAt ? { ...cur, ...next } : cur))
+    try {
+      finish({ status: 'done', text: await runAnalysis(prompt.system_prompt, user) })
+    } catch (err) {
+      finish({ status: 'error', text: err instanceof Error ? err.message : String(err) })
+    }
+  }, [sceneData, editor, characterDocs, locationDocs, threadDocs, ruleDocs, chapter, prevScene, nextScene])
+
+  // A finished analysis belongs to the scene it was run on.
+  useEffect(() => { setAnalysis(null) }, [sceneId])
+
   /** `base`, or `base` with " 2", " 3", … inserted before the closing
    *  parenthesis — the first title no scene in WIP has. Asks WIP rather
    *  than the loaded scene list, which is paged and may be stale. */
@@ -1629,6 +1719,42 @@ function SceneEditor({
           )}
         </button>
 
+        {/* Analyse — run a prompt from the library */}
+        <div className="relative">
+          <button
+            onClick={() => setAnalysisMenuOpen((o) => !o)}
+            className="text-text-muted hover:text-primary p-1 transition-colors"
+            title={t('scenes.analyse_btn')}
+          >
+            {analysis?.status === 'running'
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <Sparkles className="w-3.5 h-3.5" />}
+          </button>
+          {analysisMenuOpen && (
+            <div className="absolute left-0 top-full mt-1 z-30 w-56 bg-white rounded-lg border border-gray-200 shadow-lg py-1">
+              {prompts.map((p) => (
+                <button
+                  key={p.name}
+                  onClick={() => handleAnalyse(p)}
+                  className="block w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface"
+                  title={p.description}
+                >
+                  {p.name}
+                </button>
+              ))}
+              {!prompts.length && (
+                <p className="px-3 py-1.5 text-xs text-text-muted">{t('scenes.no_prompts')}</p>
+              )}
+              <Link
+                to="/prompts"
+                className="block border-t border-gray-100 mt-1 px-3 py-1.5 text-xs text-primary hover:bg-surface"
+              >
+                {t('scenes.manage_prompts')}
+              </Link>
+            </div>
+          )}
+        </div>
+
         {/* Delete */}
         {confirmDelete ? (
           <span className="inline-flex items-center gap-1.5">
@@ -1745,6 +1871,7 @@ function SceneEditor({
               onValidationDismiss={handleValidationDismiss}
               onValidationRemove={handleValidationRemove}
               onValidationUnsuppress={handleValidationUnsuppress}
+              analysis={analysis}
             />
           </div>
         ) : null}

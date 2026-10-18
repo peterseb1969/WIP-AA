@@ -7,6 +7,7 @@ import { wipProxy, appConfigHandler } from '@wip/proxy'
 import { createWipClient } from '@wip/client'
 import { initAgent, ask } from './agent.js'
 import { parseText, extractEntities } from './import.js'
+import { analyse } from './analyse.js'
 import bootstrapRoutes from './bootstrap.routes.js'
 import configRoutes from './config.routes.js'
 
@@ -103,6 +104,23 @@ router.post('/api/import/extract', async (req, res) => {
   } catch (err: any) {
     console.error('Extract error:', err)
     res.status(500).json({ error: err.message || 'Extraction failed' })
+  }
+})
+
+// --- Scene analysis (prompt library) ---
+// Body: { system: string, user: string } — built in the browser from the
+// chosen prompt and the scene's context.
+router.post('/api/analyse', async (req, res) => {
+  const { system, user } = req.body || {}
+  if (typeof system !== 'string' || typeof user !== 'string') {
+    res.status(400).json({ error: 'system and user are required' })
+    return
+  }
+  try {
+    res.json({ text: await analyse(system, user) })
+  } catch (err: any) {
+    console.error('Analyse error:', err)
+    res.status(500).json({ error: err.message || 'Analysis failed' })
   }
 })
 

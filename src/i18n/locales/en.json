@@ -41,7 +41,8 @@
     "notes": "Notes",
     "world_rules": "World Rules",
     "import": "Import Book",
-    "settings": "Settings"
+    "settings": "Settings",
+    "prompts": "Prompts"
   },
   "language": {
     "label": "Language",
@@ -225,7 +226,13 @@
     "char_personality": "Personality",
     "char_goals": "Goals",
     "loc_atmosphere": "Atmosphere",
-    "loc_rules": "Rules"
+    "loc_rules": "Rules",
+    "analyse_btn": "Analyse scene",
+    "panel_analysis": "Analysis",
+    "analysis_hint": "Pick a prompt from the \u2728 menu in the toolbar to analyse this scene.",
+    "analysing": "Analysing...",
+    "no_prompts": "No prompts yet.",
+    "manage_prompts": "Manage prompts..."
   },
   "corkboard": {
     "title": "Corkboard",
@@ -343,12 +350,27 @@
     "project": {
       "label": "Project",
       "fields": {
-        "title": { "label": "Title", "placeholder": "Book title" },
-        "author": { "label": "Author" },
-        "genre": { "label": "Genre" },
-        "time_system": { "label": "Time system" },
-        "description": { "label": "Description", "placeholder": "What is the book about?" },
-        "setting_summary": { "label": "Setting", "placeholder": "Where and when the story takes place" }
+        "title": {
+          "label": "Title",
+          "placeholder": "Book title"
+        },
+        "author": {
+          "label": "Author"
+        },
+        "genre": {
+          "label": "Genre"
+        },
+        "time_system": {
+          "label": "Time system"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "What is the book about?"
+        },
+        "setting_summary": {
+          "label": "Setting",
+          "placeholder": "Where and when the story takes place"
+        }
       }
     },
     "character": {
@@ -572,7 +594,31 @@
     },
     "new_title": "New {{entity}}",
     "edit_title": "Edit {{entity}}",
-    "create_btn": "Create {{entity}}"
+    "create_btn": "Create {{entity}}",
+    "prompt": {
+      "label": "Prompt",
+      "fields": {
+        "name": {
+          "label": "Name",
+          "placeholder": "e.g. Continuity Check"
+        },
+        "description": {
+          "label": "Description",
+          "placeholder": "What this analysis looks for"
+        },
+        "context": {
+          "label": "Send to Claude"
+        },
+        "system_prompt": {
+          "label": "System prompt",
+          "placeholder": "The role and rules for Claude"
+        },
+        "user_prompt": {
+          "label": "User prompt",
+          "placeholder": "{{context}}\n\nWhat should Claude do with \"{{scene_title}}\"?"
+        }
+      }
+    }
   },
   "settings": {
     "title": "Settings",
@@ -597,6 +643,26 @@
       "persist_unavailable": "Persistence unavailable (set ANTHROPIC_API_KEY_FILE to enable) \u2014 key applies to this session only",
       "validating": "Validating\u2026",
       "set_button": "Set key"
+    }
+  },
+  "prompts": {
+    "title": "Prompt Library",
+    "loading": "Loading prompts...",
+    "new": "New Prompt",
+    "intro": "Prompts drive the Analyse button in the scene editor. Each one chooses what part of the book to send to Claude and what to ask. In the user prompt, {{context}} is replaced by that material and {{scene_title}} by the scene's title.",
+    "empty": "No prompts yet. Add the starter prompts or create your own.",
+    "delete_confirm": "Delete?",
+    "add_starters_one": "Add {{count}} starter prompt",
+    "add_starters_other": "Add {{count}} starter prompts",
+    "context": {
+      "SCENE_PROSE": "Scene text",
+      "SCENE_DETAILS": "Scene details",
+      "CHARACTERS": "Characters",
+      "LOCATION": "Location",
+      "PLOT_THREADS": "Plot threads",
+      "WORLD_RULES": "World rules",
+      "CHAPTER": "Chapter",
+      "ADJACENT_SCENES": "Neighbouring scenes"
     }
   }
 }

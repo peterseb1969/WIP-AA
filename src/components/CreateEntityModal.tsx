@@ -109,6 +109,16 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       { name: 'linked_plot_threads', type: 'multi-select', terminologyId: TERMINOLOGIES.PLOT_THREADS },
     ],
   },
+  prompt: {
+    templateId: TEMPLATES.PROMPT,
+    fields: [
+      { name: 'name', type: 'text', required: true },
+      { name: 'description', type: 'text' },
+      { name: 'context', type: 'multi-select', terminologyId: TERMINOLOGIES.PROMPT_CONTEXT },
+      { name: 'system_prompt', type: 'textarea', required: true },
+      { name: 'user_prompt', type: 'textarea', required: true },
+    ],
+  },
   world_rule: {
     templateId: TEMPLATES.WORLD_RULE,
     fields: [

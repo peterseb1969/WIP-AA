@@ -23,6 +23,7 @@ export const TEMPLATES = {
   WORLD_RULE: 'AA_WORLD_RULE',
   BOOK_STRUCTURE: 'AA_BOOK_STRUCTURE',
   CHAPTER_SLOT: 'AA_CHAPTER_SLOT',
+  PROMPT: 'AA_PROMPT',
 } as const
 
 /** Terminology values (synonyms) — stable across bootstrap */
@@ -39,6 +40,7 @@ export const TERMINOLOGIES = {
   CHARACTERS: 'AA_CHARACTERS',
   LOCATIONS: 'AA_LOCATIONS',
   PLOT_THREADS: 'AA_PLOT_THREADS',
+  PROMPT_CONTEXT: 'AA_PROMPT_CONTEXT',
 } as const
 
 /** Status colors for chapter status badges */

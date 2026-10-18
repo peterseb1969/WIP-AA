@@ -41,7 +41,8 @@
     "notes": "Notizen",
     "world_rules": "Weltregeln",
     "import": "Buch importieren",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "prompts": "Prompts"
   },
   "language": {
     "label": "Sprache",
@@ -226,7 +227,13 @@
     "char_personality": "Pers\u00f6nlichkeit",
     "char_goals": "Ziele",
     "loc_atmosphere": "Atmosph\u00e4re",
-    "loc_rules": "Regeln"
+    "loc_rules": "Regeln",
+    "analyse_btn": "Szene analysieren",
+    "panel_analysis": "Analyse",
+    "analysis_hint": "W\u00e4hle einen Prompt im \u2728-Men\u00fc der Werkzeugleiste, um diese Szene zu analysieren.",
+    "analysing": "Analysiere...",
+    "no_prompts": "Noch keine Prompts.",
+    "manage_prompts": "Prompts verwalten..."
   },
   "corkboard": {
     "title": "Pinnwand",
@@ -335,21 +342,36 @@
     "add_placeholder": "Alias hinzuf\u00fcgen...",
     "add_title": "Alias hinzuf\u00fcgen",
     "remove_title": "\"{{alias}}\" entfernen",
-    "collision": "\"{{alias}}\" wird bereits von {{owners}} verwendet. Die Szenenprüfung würde beide finden.",
-    "collision_check_failed": "Konnte nicht prüfen, ob \"{{alias}}\" bereits anderweitig verwendet wird.",
-    "add_anyway": "Trotzdem hinzufügen"
+    "collision": "\"{{alias}}\" wird bereits von {{owners}} verwendet. Die Szenenpr\u00fcfung w\u00fcrde beide finden.",
+    "collision_check_failed": "Konnte nicht pr\u00fcfen, ob \"{{alias}}\" bereits anderweitig verwendet wird.",
+    "add_anyway": "Trotzdem hinzuf\u00fcgen"
   },
   "entities": {
     "save_failed": "Speichern fehlgeschlagen.",
     "project": {
       "label": "Projekt",
       "fields": {
-        "title": { "label": "Titel", "placeholder": "Buchtitel" },
-        "author": { "label": "Autor" },
-        "genre": { "label": "Genre" },
-        "time_system": { "label": "Zeitsystem" },
-        "description": { "label": "Beschreibung", "placeholder": "Worum geht es im Buch?" },
-        "setting_summary": { "label": "Schauplatz", "placeholder": "Wo und wann die Geschichte spielt" }
+        "title": {
+          "label": "Titel",
+          "placeholder": "Buchtitel"
+        },
+        "author": {
+          "label": "Autor"
+        },
+        "genre": {
+          "label": "Genre"
+        },
+        "time_system": {
+          "label": "Zeitsystem"
+        },
+        "description": {
+          "label": "Beschreibung",
+          "placeholder": "Worum geht es im Buch?"
+        },
+        "setting_summary": {
+          "label": "Schauplatz",
+          "placeholder": "Wo und wann die Geschichte spielt"
+        }
       }
     },
     "character": {
@@ -573,7 +595,31 @@
     },
     "new_title": "{{entity}} erstellen",
     "edit_title": "{{entity}} bearbeiten",
-    "create_btn": "{{entity}} erstellen"
+    "create_btn": "{{entity}} erstellen",
+    "prompt": {
+      "label": "Prompt",
+      "fields": {
+        "name": {
+          "label": "Name",
+          "placeholder": "z. B. Kontinuit\u00e4tspr\u00fcfung"
+        },
+        "description": {
+          "label": "Beschreibung",
+          "placeholder": "Worauf diese Analyse achtet"
+        },
+        "context": {
+          "label": "An Claude senden"
+        },
+        "system_prompt": {
+          "label": "System-Prompt",
+          "placeholder": "Rolle und Regeln f\u00fcr Claude"
+        },
+        "user_prompt": {
+          "label": "Benutzer-Prompt",
+          "placeholder": "{{context}}\n\nWas soll Claude mit \u201e{{scene_title}}\u201c tun?"
+        }
+      }
+    }
   },
   "settings": {
     "title": "Einstellungen",
@@ -598,6 +644,26 @@
       "persist_unavailable": "Speichern nicht verf\u00fcgbar (ANTHROPIC_API_KEY_FILE setzen) \u2014 Schl\u00fcssel gilt nur f\u00fcr diese Sitzung",
       "validating": "Wird gepr\u00fcft\u2026",
       "set_button": "Schl\u00fcssel setzen"
+    }
+  },
+  "prompts": {
+    "title": "Prompt-Bibliothek",
+    "loading": "Prompts werden geladen...",
+    "new": "Neuer Prompt",
+    "intro": "Prompts steuern den Analysieren-Knopf im Szeneneditor. Jeder legt fest, welcher Teil des Buchs an Claude geht und was gefragt wird. Im Benutzer-Prompt wird {{context}} durch dieses Material und {{scene_title}} durch den Szenentitel ersetzt.",
+    "empty": "Noch keine Prompts. F\u00fcge die Start-Prompts hinzu oder erstelle eigene.",
+    "delete_confirm": "L\u00f6schen?",
+    "add_starters_one": "{{count}} Start-Prompt hinzuf\u00fcgen",
+    "add_starters_other": "{{count}} Start-Prompts hinzuf\u00fcgen",
+    "context": {
+      "SCENE_PROSE": "Szenentext",
+      "SCENE_DETAILS": "Szenendetails",
+      "CHARACTERS": "Figuren",
+      "LOCATION": "Schauplatz",
+      "PLOT_THREADS": "Handlungsstr\u00e4nge",
+      "WORLD_RULES": "Weltregeln",
+      "CHAPTER": "Kapitel",
+      "ADJACENT_SCENES": "Nachbarszenen"
     }
   }
 }

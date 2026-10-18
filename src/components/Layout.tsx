@@ -18,6 +18,7 @@ import {
   Globe,
   Upload,
   Settings,
+  Sparkles,
   Menu,
   X,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ const NAV_ITEMS = [
   { to: '/plot-threads', labelKey: 'nav.plot_threads', icon: GitBranch },
   { to: '/notes', labelKey: 'nav.notes', icon: StickyNote },
   { to: '/world-rules', labelKey: 'nav.world_rules', icon: Globe },
+  { to: '/prompts', labelKey: 'nav.prompts', icon: Sparkles },
   { to: '/import', labelKey: 'nav.import', icon: Upload },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ] as const
