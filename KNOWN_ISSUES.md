@@ -35,5 +35,5 @@ The production bundle is ~930 kB (Vite warns above 500 kB). Code-splitting the p
 
 ## Deferred decisions
 
-### Scene auto-save vs explicit save
-Current approach: localStorage auto-backup + explicit Save button for WIP persistence. Question of whether to add true auto-save to WIP (creates many versions) is deferred.
+### Scene auto-save vs explicit save — decided 2026-10-18
+Autosave to WIP (45 s idle, max every 5 min while typing, on leave/hide) plus an explicit Save that shows the state and answers Cmd/Ctrl+S. See ROADMAP Next Up.
