@@ -41,3 +41,6 @@ Renumbering has an open design question (title numbers vs a number field; title 
 
 ## 14:46 — split/autosave regression fixed (f38f551)
 Save-on-leave rewrote the full text over a split's first half when the editor had unsaved edits. Fixed + verified. aa's only split (Ch1 Scene 1, 14:37) is intact. Peter's "odd chapter splitting" may be something else — asked for specifics.
+
+## 15:00 — phantom drafts fixed (30fbfd9)
+Peter's screenshot (repo screenshot/ folder) showed the floating draft card. Both drafts in his browser equalled WIP: Back/Prev/Next wrote backups for clean scenes. Fixed + self-cleaning + reminder moved to the top bar. Possibly what Peter meant by "odd splitting": a second split of a scene puts "(continued 2)" before "(continued)" — order correct, naming confusing. Asked.
