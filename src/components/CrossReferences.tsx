@@ -13,8 +13,11 @@ interface RefQuery {
 }
 
 // Every query takes the entity's term value as $1 and returns
-// (document_id, name). Array fields are jsonb in the reporting tables.
-const has = (column: string) => `${column} @> jsonb_build_array($1::text)`
+// (document_id, name). Fields are matched in data_json, not their own
+// columns: the entity view's columns can lag a template version (a field
+// added in v2 was missing from doc_aa_note while its __v2 table had it),
+// while data_json always holds the document's data.
+const has = (field: string) => `data_json->'${field}' @> jsonb_build_array($1::text)`
 
 const QUERIES: Record<EntityKind, RefQuery[]> = {
   character: [
@@ -23,12 +26,13 @@ const QUERIES: Record<EntityKind, RefQuery[]> = {
     { group: 'world_rules', to: () => '/world-rules', sql: `SELECT document_id, name FROM doc_aa_world_rule WHERE status = 'active' AND ${has('related_characters')} ORDER BY name` },
   ],
   location: [
-    { group: 'scenes', to: (id) => `/scenes?id=${id}`, sql: `SELECT document_id, title AS name FROM doc_aa_event WHERE status = 'active' AND location = $1 ORDER BY story_time_sort NULLS LAST, title` },
+    { group: 'scenes', to: (id) => `/scenes?id=${id}`, sql: `SELECT document_id, title AS name FROM doc_aa_event WHERE status = 'active' AND data_json->>'location' = $1 ORDER BY story_time_sort NULLS LAST, title` },
     { group: 'notes', to: () => '/notes', sql: `SELECT document_id, title AS name FROM doc_aa_note WHERE status = 'active' AND ${has('linked_locations')} ORDER BY title` },
     { group: 'world_rules', to: () => '/world-rules', sql: `SELECT document_id, name FROM doc_aa_world_rule WHERE status = 'active' AND ${has('related_locations')} ORDER BY name` },
   ],
   plot_thread: [
     { group: 'scenes', to: (id) => `/scenes?id=${id}`, sql: `SELECT document_id, title AS name FROM doc_aa_event WHERE status = 'active' AND ${has('plot_threads')} ORDER BY story_time_sort NULLS LAST, title` },
+    { group: 'notes', to: () => '/notes', sql: `SELECT document_id, title AS name FROM doc_aa_note WHERE status = 'active' AND ${has('linked_plot_threads')} ORDER BY title` },
   ],
 }
 
