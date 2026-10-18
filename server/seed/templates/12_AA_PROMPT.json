@@ -1,0 +1,41 @@
+{
+  "value": "AA_PROMPT",
+  "label": "Analysis Prompt",
+  "description": "An editable scene-analysis prompt: what context to send to Claude and what to ask",
+  "identity_fields": [
+    "name"
+  ],
+  "fields": [
+    {
+      "name": "name",
+      "label": "Name",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "description",
+      "label": "Description",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "context",
+      "label": "Context",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_PROMPT_CONTEXT"
+    },
+    {
+      "name": "system_prompt",
+      "label": "System prompt",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "user_prompt",
+      "label": "User prompt",
+      "type": "string",
+      "mandatory": true
+    }
+  ]
+}

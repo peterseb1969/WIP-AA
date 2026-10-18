@@ -52,6 +52,13 @@
       "type": "array",
       "mandatory": false,
       "array_terminology_ref": "AA_LOCATIONS"
+    },
+    {
+      "name": "linked_plot_threads",
+      "label": "Linked Plot Threads",
+      "type": "array",
+      "mandatory": false,
+      "array_terminology_ref": "AA_PLOT_THREADS"
     }
   ]
 }

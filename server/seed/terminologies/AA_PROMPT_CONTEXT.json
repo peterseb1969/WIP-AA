@@ -1,0 +1,48 @@
+{
+  "value": "AA_PROMPT_CONTEXT",
+  "label": "Prompt Context",
+  "description": "Which parts of the book an analysis prompt sends to Claude",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "SCENE_PROSE",
+      "label": "Scene prose",
+      "aliases": []
+    },
+    {
+      "value": "SCENE_DETAILS",
+      "label": "Scene details",
+      "aliases": []
+    },
+    {
+      "value": "CHARACTERS",
+      "label": "Characters in the scene",
+      "aliases": []
+    },
+    {
+      "value": "LOCATION",
+      "label": "Scene location",
+      "aliases": []
+    },
+    {
+      "value": "PLOT_THREADS",
+      "label": "Plot threads in the scene",
+      "aliases": []
+    },
+    {
+      "value": "WORLD_RULES",
+      "label": "World rules",
+      "aliases": []
+    },
+    {
+      "value": "CHAPTER",
+      "label": "Chapter",
+      "aliases": []
+    },
+    {
+      "value": "ADJACENT_SCENES",
+      "label": "Previous and next scene",
+      "aliases": []
+    }
+  ]
+}
