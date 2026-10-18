@@ -106,22 +106,27 @@ export default function UnsavedDraftBanner() {
     notifyDraftChange()
   }, [])
 
-  const visible = drafts.filter((d) => !dismissed.has(d.sceneId))
+  // The scene open in the editor already shows its own unsaved state
+  // (status bar + Save button), so it is left out here. The reminders float
+  // over the page instead of taking layout space: a draft appearing while
+  // the writer types must never push the editor around.
+  const openSceneId = location.pathname === '/scenes' ? new URLSearchParams(location.search).get('id') : null
+  const visible = drafts.filter((d) => !dismissed.has(d.sceneId) && d.sceneId !== openSceneId)
   if (visible.length === 0) return null
 
   return (
-    <div className="space-y-0">
+    <div className="fixed z-30 bottom-20 left-4 lg:left-60 w-[min(28rem,calc(100vw-2rem))] space-y-2">
       {visible.map((d) => (
         <div
           key={d.sceneId}
-          className="w-full flex items-center gap-3 px-4 py-2.5 bg-red-50 border-b border-red-200"
+          className="flex items-center gap-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg shadow-lg"
         >
           <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
           <button
             onClick={() => handleResume(d.sceneId)}
             className="flex items-center gap-2 flex-1 min-w-0 text-left hover:underline"
           >
-            <span className="text-sm font-semibold text-red-700">{t('draft_banner.unsaved_draft')}</span>
+            <span className="text-sm font-semibold text-red-700 whitespace-nowrap">{t('draft_banner.unsaved_draft')}</span>
             <span className="text-sm text-red-700 truncate">{d.title}</span>
             <span className="text-xs text-red-400 flex-shrink-0">{t('draft_banner.click_resume')}</span>
           </button>
