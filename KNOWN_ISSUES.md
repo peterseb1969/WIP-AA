@@ -22,7 +22,7 @@
 ### Relationships `template` filter ignores the `namespace` parameter
 **Where:** `GET /documents/{id}/relationships?template=<VALUE>&namespace=<ns>` (document-store).
 **Symptom:** with the same edge type value in two namespaces (`aa` and a scratch copy), a bare `template=AA_ATTACHED_TO` plus `namespace=dev-aa-lib` returned 0 relationships, while `template=dev-aa-lib:AA_ATTACHED_TO` or the template's canonical id returned the expected 1 (2026-10-18). The bare value resolved to the other namespace's edge type.
-**Status:** worked around: the app always passes the namespace-qualified `ns:VALUE` form (`attachedToFilter` in `src/lib/media.ts`). Not reported upstream yet.
+**Status:** worked around: the app always passes the namespace-qualified `ns:VALUE` form (`attachedToFilter` in `src/lib/media.ts`). Reported as CASE-900 (2026-10-18).
 
 ## Unverified / technical debt
 
