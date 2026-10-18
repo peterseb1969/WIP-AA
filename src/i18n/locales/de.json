@@ -677,5 +677,18 @@
     "failed": "R\u00fcckg\u00e4ngig fehlgeschlagen: {{message}}",
     "history": "Verlauf",
     "history_hint": "Zur\u00fcck zum Stand vor:"
+  },
+  "move": {
+    "button": "Verschieben\u2026",
+    "title": "\u201e{{scene}}\u201c verschieben",
+    "chapter": "Kapitel",
+    "current": "(aktuell)",
+    "position": "Position",
+    "at_beginning": "Am Anfang",
+    "after": "Nach \u201e{{scene}}\u201c",
+    "at_end": "Am Ende",
+    "only_scene": "Als einzige Szene",
+    "move": "Verschieben",
+    "moving": "Wird verschoben\u2026"
   }
 }

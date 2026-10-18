@@ -676,5 +676,18 @@
     "failed": "Undo failed: {{message}}",
     "history": "Undo history",
     "history_hint": "Return to the state before:"
+  },
+  "move": {
+    "button": "Move\u2026",
+    "title": "Move \u201c{{scene}}\u201d",
+    "chapter": "Chapter",
+    "current": "(current)",
+    "position": "Position",
+    "at_beginning": "At the beginning",
+    "after": "After \u201c{{scene}}\u201d",
+    "at_end": "At the end",
+    "only_scene": "As the only scene",
+    "move": "Move",
+    "moving": "Moving\u2026"
   }
 }

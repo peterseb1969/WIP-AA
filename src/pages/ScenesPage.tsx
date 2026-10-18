@@ -34,6 +34,7 @@ import {
   EyeOff,
   Sparkles,
   Loader2,
+  ArrowRightLeft,
 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useBookStructure, useStructureEditor, type BookStructure } from '../lib/useBookStructure'
@@ -41,6 +42,7 @@ import { useResizableWidth } from '../lib/useResizableWidth'
 import { buildUserMessage, runAnalysis, type PromptData } from '../lib/analysis'
 import { useEntityTerms, validateSceneAnnotations, type AnnotationResult } from '../lib/useValidateScene'
 import CreateEntityModal from '../components/CreateEntityModal'
+import MoveSceneDialog from '../components/MoveSceneDialog'
 import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDraftBanner'
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
@@ -305,21 +307,19 @@ function SceneSelector({
 function MetadataStrip({
   scene,
   sceneNumber,
-  chapterOptions,
-  currentChapterId,
-  onMoveToChapter,
-  moving,
+  chapterLabel,
+  hasChapters,
+  onOpenMove,
   moveError,
   expanded,
   onToggle,
 }: {
   scene: EventData
   sceneNumber?: number
-  /** Every chapter, in book order; chapters not yet in the structure last. */
-  chapterOptions: Array<{ id: string; label: string }>
-  currentChapterId?: string
-  onMoveToChapter: (chapterId: string) => void
-  moving: boolean
+  /** "Ch. N: Title", or undefined when the scene is in no chapter. */
+  chapterLabel?: string
+  hasChapters: boolean
+  onOpenMove: () => void
   moveError: string | null
   expanded: boolean
   onToggle: () => void
@@ -328,29 +328,27 @@ function MetadataStrip({
 
   return (
     <div className="bg-white border-b border-gray-200">
-      {/* Compact strip — always visible. The chapter picker sits outside the
-          toggle button (a select can't live inside a button). */}
+      {/* Compact strip — always visible. The Move button sits outside the
+          toggle button (buttons can't nest). */}
       <div className="w-full flex items-center gap-4 px-4 py-2.5 hover:bg-surface/50 transition-colors">
         <div className="flex items-center gap-2 text-sm">
           <BookOpen className="w-3.5 h-3.5 text-text-muted" />
-          <select
-            value={currentChapterId ?? ''}
-            onChange={(e) => { if (e.target.value) onMoveToChapter(e.target.value) }}
-            disabled={moving || !chapterOptions.length}
-            title={chapterOptions.length ? t('scenes.move_to_chapter') : t('scenes.no_chapters_yet')}
-            className="max-w-64 truncate text-sm text-text-muted bg-transparent border border-transparent hover:border-gray-200 rounded px-1 py-0.5 cursor-pointer focus:outline-none focus:border-primary disabled:opacity-60"
-          >
-            {!currentChapterId && <option value="">{t('scenes.no_chapter')}</option>}
-            {chapterOptions.map((o) => (
-              <option key={o.id} value={o.id}>{o.label}</option>
-            ))}
-          </select>
-          {currentChapterId ? (
+          <span className="text-text-muted max-w-64 truncate">{chapterLabel ?? t('scenes.no_chapter')}</span>
+          {chapterLabel ? (
             <>
               <span className="text-text-light">·</span>
               <span className="text-text-muted">Scene {sceneNumber ?? '?'}</span>
             </>
           ) : null}
+          <button
+            onClick={onOpenMove}
+            disabled={!hasChapters}
+            title={hasChapters ? t('scenes.move_to_chapter') : t('scenes.no_chapters_yet')}
+            className="flex items-center gap-1 px-2 py-0.5 text-xs text-text-muted border border-gray-200 rounded hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
+          >
+            <ArrowRightLeft className="w-3 h-3" />
+            {t('move.button')}
+          </button>
           {moveError ? <span className="text-xs text-red-600">{moveError}</span> : null}
         </div>
 
@@ -1349,8 +1347,10 @@ function SceneEditor({
     return opts
   }, [structure, chapters, t])
 
-  // Moves the scene to the end of the chosen chapter.
-  const handleMoveToChapter = useCallback(async (chapterId: string) => {
+  const [moveOpen, setMoveOpen] = useState(false)
+
+  // Moves the scene into `chapterId`, before `beforeId` (null = at the end).
+  const handleMove = useCallback(async (chapterId: string, beforeId: string | null) => {
     setMoveError(null)
     try {
       const placed = structure?.getChapterIds() ?? []
@@ -1358,8 +1358,9 @@ function SceneEditor({
       const chapterLabel = at >= 0
         ? t('dashboard.ch_short', { number: at + 1 })
         : chapterOptions.find((o) => o.id === chapterId)?.label ?? ''
-      await structureEditor.moveScene(sceneId, chapterId, null,
+      await structureEditor.moveScene(sceneId, chapterId, beforeId,
         t('undo.moved', { scene: sceneData?.title ?? '', chapter: chapterLabel }))
+      setMoveOpen(false)
     } catch (err) {
       setMoveError(err instanceof Error ? err.message : String(err))
     }
@@ -1759,6 +1760,16 @@ function SceneEditor({
           <Scissors className="w-3.5 h-3.5" />
         </button>
 
+        {/* Move to another chapter / position */}
+        <button
+          onClick={() => setMoveOpen(true)}
+          disabled={!chapterOptions.length}
+          className="text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
+          title={t('scenes.move_to_chapter')}
+        >
+          <ArrowRightLeft className="w-3.5 h-3.5" />
+        </button>
+
         {/* Validate */}
         <button
           onClick={handleValidate}
@@ -1872,14 +1883,26 @@ function SceneEditor({
       <MetadataStrip
         scene={sceneData}
         sceneNumber={sceneNumber}
-        chapterOptions={chapterOptions}
-        currentChapterId={scenePosition?.chapterId}
-        onMoveToChapter={handleMoveToChapter}
-        moving={structureEditor.isSaving}
+        chapterLabel={scenePosition ? chapterOptions.find((o) => o.id === scenePosition.chapterId)?.label : undefined}
+        hasChapters={chapterOptions.length > 0}
+        onOpenMove={() => setMoveOpen(true)}
         moveError={moveError}
         expanded={metadataExpanded}
         onToggle={() => setMetadataExpanded(!metadataExpanded)}
       />
+      {moveOpen && (
+        <MoveSceneDialog
+          sceneId={sceneId}
+          sceneTitle={sceneData.title}
+          chapters={chapterOptions}
+          currentChapterId={scenePosition?.chapterId}
+          scenesInChapter={(id) => structure?.getScenesForChapter(id) ?? []}
+          titleOf={(id) => eventMap.get(id)?.data.title ?? id}
+          saving={structureEditor.isSaving}
+          onMove={handleMove}
+          onClose={() => setMoveOpen(false)}
+        />
+      )}
 
       {/* Main content area */}
       <div className="flex-1 flex min-h-0">
