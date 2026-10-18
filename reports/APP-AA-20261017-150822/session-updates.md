@@ -38,3 +38,6 @@ Next Up now: autosave + explicit Save (spec in ROADMAP), merge characters/locati
 
 ## 14:42 — autosave shipped (38b0460); Peter added chapter DnD + renumbering ToDos
 Renumbering has an open design question (title numbers vs a number field; title = identity) — recorded in ROADMAP.
+
+## 14:46 — split/autosave regression fixed (f38f551)
+Save-on-leave rewrote the full text over a split's first half when the editor had unsaved edits. Fixed + verified. aa's only split (Ch1 Scene 1, 14:37) is intact. Peter's "odd chapter splitting" may be something else — asked for specifics.
