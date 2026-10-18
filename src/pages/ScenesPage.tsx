@@ -52,6 +52,7 @@ import { notifyDraftChange, DRAFT_DISCARD_EVENT } from '../components/UnsavedDra
 import StatusBadge from '../components/StatusBadge'
 import BackLink from '../components/BackLink'
 import MediaSection, { Avatar } from '../components/MediaSection'
+import Markdown from '../components/Markdown'
 import { useAttachments, useCharacterPortraits } from '../lib/media'
 
 // ── Data interfaces ──────────────────────────────────────
@@ -541,10 +542,10 @@ interface AnalysisState {
 function AnalysisPanel({ analysis }: { analysis: AnalysisState | null }) {
   const { t } = useTranslation()
   if (!analysis) {
-    return <p className="text-sm text-text-muted">{t('scenes.analysis_hint')}</p>
+    return <p className="p-3 text-sm text-text-muted">{t('scenes.analysis_hint')}</p>
   }
   return (
-    <div className="space-y-2">
+    <div className="p-3 space-y-2">
       <div className="text-xs font-medium text-text-light uppercase tracking-wide">{analysis.promptName}</div>
       {analysis.status === 'running' ? (
         <div className="flex items-center gap-2 text-sm text-text-muted">
@@ -553,7 +554,7 @@ function AnalysisPanel({ analysis }: { analysis: AnalysisState | null }) {
       ) : analysis.status === 'error' ? (
         <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{analysis.text}</div>
       ) : (
-        <div className="text-sm text-text whitespace-pre-wrap leading-relaxed">{analysis.text}</div>
+        <Markdown className="text-text">{analysis.text ?? ''}</Markdown>
       )}
     </div>
   )

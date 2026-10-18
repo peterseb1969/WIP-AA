@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import Markdown from './Markdown'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -112,7 +113,9 @@ export default function AskBar() {
                 ? 'bg-blue-600 text-white'
                 : 'bg-gray-100 text-gray-800'
             }`}>
-              <div className="whitespace-pre-wrap">{msg.content}</div>
+              {msg.role === 'user'
+                ? <div className="whitespace-pre-wrap">{msg.content}</div>
+                : <Markdown>{msg.content}</Markdown>}
               {msg.toolCalls ? (
                 <div className="text-xs mt-1 opacity-60">{t('ask_bar.tool_calls', { count: msg.toolCalls })}</div>
               ) : null}
