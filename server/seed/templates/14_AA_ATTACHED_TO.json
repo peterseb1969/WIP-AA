@@ -1,0 +1,51 @@
+{
+  "value": "AA_ATTACHED_TO",
+  "label": "Media attached to",
+  "description": "A media item attached to a character, location, scene, chapter, plot thread, note or world rule, with its role there",
+  "usage": "relationship",
+  "source_templates": [
+    "AA_MEDIA"
+  ],
+  "target_templates": [
+    "AA_CHARACTER",
+    "AA_LOCATION",
+    "AA_EVENT",
+    "AA_CHAPTER",
+    "AA_PLOT_THREAD",
+    "AA_NOTE",
+    "AA_WORLD_RULE"
+  ],
+  "identity_fields": [
+    "source_ref",
+    "target_ref"
+  ],
+  "fields": [
+    {
+      "name": "source_ref",
+      "label": "Media",
+      "type": "reference",
+      "reference_type": "document",
+      "mandatory": true
+    },
+    {
+      "name": "target_ref",
+      "label": "Attached to",
+      "type": "reference",
+      "reference_type": "document",
+      "mandatory": true
+    },
+    {
+      "name": "role",
+      "label": "Role",
+      "type": "term",
+      "terminology_ref": "AA_MEDIA_ROLE",
+      "mandatory": true
+    },
+    {
+      "name": "sort_order",
+      "label": "Order",
+      "type": "integer",
+      "mandatory": false
+    }
+  ]
+}

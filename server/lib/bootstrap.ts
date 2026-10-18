@@ -380,6 +380,7 @@ function mapField(f: AnyObj): AnyObj {
   if (f.semantic_type) field.semantic_type = f.semantic_type
   if (f.full_text_indexed) field.full_text_indexed = f.full_text_indexed
   if (f.default_value !== undefined) field.default_value = f.default_value
+  if (f.file_config) field.file_config = f.file_config
 
   // Reference fields
   if (f.reference_type) field.reference_type = f.reference_type

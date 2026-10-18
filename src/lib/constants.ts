@@ -24,6 +24,9 @@ export const TEMPLATES = {
   BOOK_STRUCTURE: 'AA_BOOK_STRUCTURE',
   CHAPTER_SLOT: 'AA_CHAPTER_SLOT',
   PROMPT: 'AA_PROMPT',
+  MEDIA: 'AA_MEDIA',
+  /** Edge type: media → the entity it is attached to */
+  ATTACHED_TO: 'AA_ATTACHED_TO',
 } as const
 
 /** Terminology values (synonyms) — stable across bootstrap */
@@ -41,6 +44,7 @@ export const TERMINOLOGIES = {
   LOCATIONS: 'AA_LOCATIONS',
   PLOT_THREADS: 'AA_PLOT_THREADS',
   PROMPT_CONTEXT: 'AA_PROMPT_CONTEXT',
+  MEDIA_ROLE: 'AA_MEDIA_ROLE',
 } as const
 
 /** Status colors for chapter status badges */

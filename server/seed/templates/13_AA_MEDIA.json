@@ -1,0 +1,47 @@
+{
+  "value": "AA_MEDIA",
+  "label": "Media",
+  "description": "One stored file (image now, sound later) with its caption; attached to entities through AA_ATTACHED_TO",
+  "identity_fields": [
+    "file"
+  ],
+  "header_fields": [
+    "file",
+    "title",
+    "caption"
+  ],
+  "fields": [
+    {
+      "name": "file",
+      "label": "File",
+      "type": "file",
+      "mandatory": true,
+      "file_config": {
+        "allowed_types": [
+          "image/*",
+          "audio/*"
+        ],
+        "max_size_mb": 25,
+        "multiple": false
+      }
+    },
+    {
+      "name": "title",
+      "label": "Title",
+      "type": "string",
+      "mandatory": true
+    },
+    {
+      "name": "caption",
+      "label": "Caption",
+      "type": "string",
+      "mandatory": false
+    },
+    {
+      "name": "credit",
+      "label": "Credit / source",
+      "type": "string",
+      "mandatory": false
+    }
+  ]
+}

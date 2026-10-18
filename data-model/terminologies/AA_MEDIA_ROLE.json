@@ -1,0 +1,33 @@
+{
+  "value": "AA_MEDIA_ROLE",
+  "label": "Media Role",
+  "description": "What an attached file is for, on the entity it is attached to",
+  "extensible": false,
+  "terms": [
+    {
+      "value": "PORTRAIT",
+      "label": "Portrait",
+      "aliases": []
+    },
+    {
+      "value": "ILLUSTRATION",
+      "label": "Illustration",
+      "aliases": []
+    },
+    {
+      "value": "MAP",
+      "label": "Map",
+      "aliases": []
+    },
+    {
+      "value": "REFERENCE",
+      "label": "Reference",
+      "aliases": []
+    },
+    {
+      "value": "OTHER",
+      "label": "Other",
+      "aliases": []
+    }
+  ]
+}
