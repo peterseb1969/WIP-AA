@@ -671,9 +671,10 @@
   "undo": {
     "undo": "Undo",
     "shortcut": "Undo (Cmd/Ctrl+Z)",
-    "moved": "Moved \u201c{{scene}}\u201d to {{chapter}}",
-    "undone": "Undone: {{label}}",
+    "moved": "{{scene}} \u2192 {{chapter}}",
     "conflict": "The chapter order has changed since then \u2014 the move was not undone.",
-    "failed": "Undo failed: {{message}}"
+    "failed": "Undo failed: {{message}}",
+    "history": "Undo history",
+    "history_hint": "Return to the state before:"
   }
 }

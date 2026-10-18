@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useUpdateDocument } from '@wip/react'
-import { Undo2, X } from 'lucide-react'
+import { Undo2, History, X } from 'lucide-react'
 import type { ChapterSlot } from './useBookStructure'
 
 /**
@@ -11,8 +11,13 @@ import type { ChapterSlot } from './useBookStructure'
  * version it produced. Undo writes the old order back as a merge PATCH
  * with if_match on that version, so it can never overwrite a change made
  * since (another tab, another person): WIP answers concurrency_conflict and
- * the undo is refused with a message instead. The stack lives for the
- * session only.
+ * the undo is refused with a message instead.
+ *
+ * The stack lives above the router, so it survives page changes, and is
+ * mirrored to sessionStorage so it also survives a reload of the tab
+ * (the if_match check keeps a stale entry from doing harm). The control
+ * that offers it sits in the top bar — always there while something can
+ * be undone, never covering the page.
  */
 
 interface UndoEntry {
@@ -24,20 +29,27 @@ interface UndoEntry {
   version: number
 }
 
-interface Notice {
-  text: string
-  tone: 'info' | 'error'
-  /** Set when the notice offers Undo (the top of the stack). */
-  undoable: boolean
-}
-
 interface StructureUndo {
   record: (entry: UndoEntry) => void
+  /** Undo the moves from `index` (0 = oldest) to the newest, newest first. */
+  undoTo: (index: number) => Promise<void>
+  entries: UndoEntry[]
+  busy: boolean
+  error: string | null
+  clearError: () => void
 }
 
 const Ctx = createContext<StructureUndo | null>(null)
+const STORAGE_KEY = 'aa-structure-undo'
 
-const NOTICE_MS = 8000
+function loadStack(): UndoEntry[] {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as UndoEntry[]) : []
+  } catch {
+    return []
+  }
+}
 
 function isEditableTarget(target: EventTarget | null) {
   const el = target as HTMLElement | null
@@ -47,60 +59,57 @@ function isEditableTarget(target: EventTarget | null) {
 export function StructureUndoProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const updateDoc = useUpdateDocument()
-  const stack = useRef<UndoEntry[]>([])
-  const [notice, setNotice] = useState<Notice | null>(null)
+  const [stack, setStack] = useState<UndoEntry[]>(loadStack)
   const [busy, setBusy] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const show = useCallback((n: Notice) => {
-    setNotice(n)
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => setNotice(null), NOTICE_MS)
-  }, [])
+  useEffect(() => {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stack)) } catch { /* storage unavailable */ }
+  }, [stack])
 
   const record = useCallback((entry: UndoEntry) => {
-    stack.current.push(entry)
-    show({ text: entry.label, tone: 'info', undoable: true })
-  }, [show])
+    setStack((s) => [...s, entry])
+    setError(null)
+  }, [])
 
-  const undo = useCallback(async () => {
-    const entry = stack.current[stack.current.length - 1]
-    if (!entry || busy) return
+  const undoTo = useCallback(async (index: number) => {
+    if (busy || index < 0 || index >= stack.length) return
     setBusy(true)
+    setError(null)
+    let remaining = stack
+    // Each undo restores the order before one move. The structure is then at
+    // a new version, which the next-older entry must expect instead.
+    let expected = stack[stack.length - 1]!.version
     try {
-      const result = await updateDoc.mutateAsync({
-        documentId: entry.documentId,
-        patch: { chapters: entry.previous },
-        ifMatch: entry.version,
-      })
-      stack.current.pop()
-      // The structure now equals the state right after the next-older move,
-      // at a new version — that entry's undo must expect this version.
-      const below = stack.current[stack.current.length - 1]
-      if (below && result.version != null) below.version = result.version
-      show({
-        text: t('undo.undone', { label: entry.label }),
-        tone: 'info',
-        undoable: stack.current.length > 0,
-      })
+      while (remaining.length > index) {
+        const entry = remaining[remaining.length - 1]!
+        const result = await updateDoc.mutateAsync({
+          documentId: entry.documentId,
+          patch: { chapters: entry.previous },
+          ifMatch: expected,
+        })
+        remaining = remaining.slice(0, -1)
+        if (result.version != null) expected = result.version
+        const below = remaining[remaining.length - 1]
+        if (below) remaining = [...remaining.slice(0, -1), { ...below, version: expected }]
+        setStack(remaining)
+      }
     } catch (err) {
       const conflict = (err as { errorCode?: string }).errorCode === 'concurrency_conflict'
       // A changed structure invalidates every recorded step, not just this one.
-      if (conflict) stack.current = []
-      show({
-        text: conflict ? t('undo.conflict') : t('undo.failed', { message: err instanceof Error ? err.message : String(err) }),
-        tone: 'error',
-        undoable: false,
-      })
+      if (conflict) setStack([])
+      setError(conflict ? t('undo.conflict') : t('undo.failed', { message: err instanceof Error ? err.message : String(err) }))
     } finally {
       setBusy(false)
     }
-  }, [busy, updateDoc, show, t])
+  }, [stack, busy, updateDoc, t])
 
-  // Cmd/Ctrl+Z undoes a move while its notice is showing — but never while
-  // the focus is in a text field or the editor, where it must undo typing.
+  const undo = useCallback(() => undoTo(stack.length - 1), [undoTo, stack.length])
+
+  // Cmd/Ctrl+Z undoes the last move on any page — but never while the
+  // focus is in a text field or the editor, where it must undo typing.
   useEffect(() => {
-    if (!notice?.undoable) return
+    if (!stack.length) return
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !isEditableTarget(e.target)) {
         e.preventDefault()
@@ -109,42 +118,62 @@ export function StructureUndoProvider({ children }: { children: ReactNode }) {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [notice, undo])
-
-  const next = stack.current[stack.current.length - 1]
+  }, [stack.length, undo])
 
   return (
-    <Ctx.Provider value={{ record }}>
+    <Ctx.Provider value={{ record, undoTo, entries: stack, busy, error, clearError: () => setError(null) }}>
       {children}
-      {notice && (
-        <div
-          role="status"
-          className={`fixed z-50 bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-3 max-w-[calc(100vw-2rem)] px-4 py-2.5 rounded-lg shadow-lg text-sm ${
-            notice.tone === 'error' ? 'bg-red-50 border border-red-200 text-red-700' : 'bg-gray-900 text-white'
-          }`}
-        >
-          <span className="truncate">{notice.text}</span>
-          {notice.undoable && next ? (
-            <button
-              onClick={undo}
-              disabled={busy}
-              title={t('undo.shortcut')}
-              className="flex items-center gap-1 font-semibold text-amber-300 hover:text-amber-200 disabled:opacity-50 flex-shrink-0"
-            >
-              <Undo2 className="w-4 h-4" />
-              {t('undo.undo')}
-            </button>
-          ) : null}
-          <button onClick={() => setNotice(null)} className="opacity-60 hover:opacity-100 flex-shrink-0" title={t('common.close', { defaultValue: 'Close' })}>
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
     </Ctx.Provider>
   )
 }
 
-/** Record an undoable structure move (no-op outside the provider). */
+/** Record an undoable structure move (null outside the provider). */
 export function useStructureUndo() {
   return useContext(Ctx)
+}
+
+/**
+ * Top-bar control: an Undo icon for the last move and a history list —
+ * clicking an entry returns to the state before that move. Quiet by
+ * design: only errors are spelled out.
+ */
+export function StructureUndoControl() {
+  const { t } = useTranslation()
+  const u = useStructureUndo()
+  const [open, setOpen] = useState(false)
+  if (!u || (!u.entries.length && !u.error)) return null
+  const last = u.entries[u.entries.length - 1]
+  const iconBtn = 'p-1.5 rounded-lg text-text-muted hover:text-primary hover:bg-surface transition-colors disabled:opacity-40'
+  return (
+    <div className="ml-auto flex items-center gap-1 text-sm relative">
+      {u.error ? (
+        <span className="flex items-center gap-1 text-red-600 truncate max-w-80" title={u.error}>
+          <span className="truncate">{u.error}</span>
+          <button onClick={u.clearError} className="opacity-60 hover:opacity-100 flex-shrink-0"><X className="w-3.5 h-3.5" /></button>
+        </span>
+      ) : null}
+      {last ? (
+        <>
+          <button onClick={() => u.undoTo(u.entries.length - 1)} disabled={u.busy} className={iconBtn}
+            title={`${t('undo.undo')}: ${last.label} (${t('undo.shortcut')})`}>
+            <Undo2 className="w-4 h-4" />
+          </button>
+          <button onClick={() => setOpen((o) => !o)} disabled={u.busy} className={iconBtn} title={t('undo.history')}>
+            <History className="w-4 h-4" />
+          </button>
+          {open && (
+            <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-white rounded-lg border border-gray-200 shadow-lg py-1">
+              <div className="px-3 py-1 text-xs text-text-light">{t('undo.history_hint')}</div>
+              {u.entries.map((e, i) => ({ e, i })).reverse().map(({ e, i }) => (
+                <button key={i} onClick={() => { setOpen(false); u.undoTo(i) }}
+                  className="block w-full text-left px-3 py-1.5 text-sm text-text hover:bg-surface truncate">
+                  {e.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  )
 }

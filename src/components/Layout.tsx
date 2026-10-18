@@ -5,6 +5,7 @@ import { useDocuments } from '@wip/react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import UnsavedDraftBanner from './UnsavedDraftBanner'
 import LanguageSwitcher from './LanguageSwitcher'
+import { StructureUndoControl } from '../lib/structureUndo'
 import {
   PenTool,
   LayoutGrid,
@@ -102,6 +103,7 @@ export default function Layout() {
           <h1 className="text-sm font-medium text-text-muted truncate">
             {projectTitle ?? 'AuthorAssist'}
           </h1>
+          <StructureUndoControl />
         </header>
 
         {/* Unsaved scene drafts — global reminder */}
