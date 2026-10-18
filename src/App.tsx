@@ -18,6 +18,7 @@ import PlotThreadsPage from './pages/PlotThreadsPage'
 import NotesPage from './pages/NotesPage'
 import WorldRulesPage from './pages/WorldRulesPage'
 import PromptsPage from './pages/PromptsPage'
+import MediaLibraryPage from './pages/MediaLibraryPage'
 import ImportPage from './pages/ImportPage'
 import SettingsPage from './pages/SettingsPage'
 
@@ -47,6 +48,7 @@ export default function App() {
                 <Route path="/notes" element={<NotesPage />} />
                 <Route path="/world-rules" element={<WorldRulesPage />} />
                 <Route path="/prompts" element={<PromptsPage />} />
+                <Route path="/media" element={<MediaLibraryPage />} />
                 <Route path="/import" element={<ImportPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>

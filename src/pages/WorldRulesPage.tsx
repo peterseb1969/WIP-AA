@@ -5,6 +5,7 @@ import { Globe, Plus, Pencil, Trash2 } from 'lucide-react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
+import { MediaToggle } from '../components/MediaSection'
 
 interface WorldRuleData {
   name: string
@@ -140,6 +141,7 @@ export default function WorldRulesPage() {
                         ))}
                       </div>
                     ) : null}
+                    <MediaToggle entityId={rule.id} kind="world_rule" />
                   </div>
                 ))}
               </div>

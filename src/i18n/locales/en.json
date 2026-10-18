@@ -43,7 +43,8 @@
     "world_rules": "World Rules",
     "import": "Import Book",
     "settings": "Settings",
-    "prompts": "Prompts"
+    "prompts": "Prompts",
+    "media": "Images"
   },
   "language": {
     "label": "Language",
@@ -134,7 +135,7 @@
     "delete_confirm": "This will permanently delete this chapter. Scenes will remain but become unassigned.",
     "pov_label": "POV: {{character}}",
     "drag_hint": "Drag a chapter to reorder the book. Chapter numbers follow the order.",
-    "drag_title": "Drag to move this chapter, click to show its scenes",
+    "drag_title": "Drag to move this chapter, click to show its scenes and images",
     "move_failed": "Moving the chapter failed."
   },
   "plot_threads": {
@@ -738,6 +739,21 @@
       "MAP": "Map",
       "REFERENCE": "Reference",
       "OTHER": "Other"
-    }
+    },
+    "library_title": "Image library",
+    "library_hint": "Every image in the book. Add images here without attaching them, see where each one is used, or delete one for good.",
+    "library_empty": "No images in the book yet. Add some, or drop image files here.",
+    "filter_all": "All",
+    "filter_unattached": "Not attached",
+    "not_attached": "Not attached anywhere",
+    "toggle_one": "Images ({{count}})",
+    "toggle_other": "Images ({{count}})",
+    "shared_hint_library": "Title and caption are shown wherever this image is attached.",
+    "delete": "Delete permanently",
+    "delete_title": "Delete \u201c{{title}}\u201d permanently?",
+    "delete_body": "The image is removed from every place it is attached, and the stored file is erased. This cannot be undone.",
+    "delete_usage_one": "Attached to {{count}} place:",
+    "delete_usage_other": "Attached to {{count}} places:",
+    "delete_confirm": "Delete permanently"
   }
 }

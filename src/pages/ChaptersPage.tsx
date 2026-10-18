@@ -9,6 +9,7 @@ import { startPointerDrag, isUpperHalf } from '../lib/pointerDrag'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
+import MediaSection from '../components/MediaSection'
 
 interface ChapterData {
   title: string
@@ -29,6 +30,7 @@ interface EventData {
 }
 
 function ChapterRow({
+  chapterId,
   chapterNumber,
   data,
   scenes,
@@ -38,6 +40,7 @@ function ChapterRow({
   onDelete,
   dnd,
 }: {
+  chapterId: string
   chapterNumber: number
   data: ChapterData
   scenes: Array<{ document_id: string; data: EventData }>
@@ -75,14 +78,11 @@ function ChapterRow({
         {dnd ? (
           <GripVertical className="w-4 h-4 -ml-2 -mr-1 text-text-light group-hover/heading:text-text-muted flex-shrink-0 cursor-grab" />
         ) : null}
-        {scenes.length > 0 ? (
-          expanded ? (
-            <ChevronDown className="w-4 h-4 text-text-muted flex-shrink-0" />
-          ) : (
-            <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
-          )
+        {/* Every chapter expands now: besides its scenes it holds its images. */}
+        {expanded ? (
+          <ChevronDown className="w-4 h-4 text-text-muted flex-shrink-0" />
         ) : (
-          <div className="w-4 h-4 flex-shrink-0" />
+          <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
         )}
 
         <span className="text-lg font-semibold text-primary w-12">
@@ -173,6 +173,11 @@ function ChapterRow({
               </span>
             </Link>
           ))}
+        </div>
+      ) : null}
+      {expanded ? (
+        <div className="border-t border-gray-100 px-4 pt-4 pl-[4.5rem]">
+          <MediaSection entityId={chapterId} kind="chapter" />
         </div>
       ) : null}
     </div>
@@ -339,6 +344,7 @@ export default function ChaptersPage() {
             return (
               <ChapterRow
                 key={entry.chapterId}
+                chapterId={entry.chapterId}
                 chapterNumber={entry.chapterNumber}
                 data={entry.chapter.data}
                 scenes={entry.scenes}

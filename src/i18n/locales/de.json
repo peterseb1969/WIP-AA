@@ -43,7 +43,8 @@
     "world_rules": "Weltregeln",
     "import": "Buch importieren",
     "settings": "Einstellungen",
-    "prompts": "Prompts"
+    "prompts": "Prompts",
+    "media": "Bilder"
   },
   "language": {
     "label": "Sprache",
@@ -135,7 +136,7 @@
     "delete_confirm": "Dieses Kapitel wird unwiderruflich gel\u00f6scht. Szenen bleiben erhalten, werden aber keinem Kapitel zugeordnet.",
     "pov_label": "Perspektive: {{character}}",
     "drag_hint": "Ziehe ein Kapitel, um das Buch umzuordnen. Die Kapitelnummern folgen der Reihenfolge.",
-    "drag_title": "Ziehen, um dieses Kapitel zu verschieben; klicken, um seine Szenen zu zeigen",
+    "drag_title": "Ziehen, um dieses Kapitel zu verschieben; klicken, um seine Szenen und Bilder zu zeigen",
     "move_failed": "Verschieben des Kapitels fehlgeschlagen."
   },
   "plot_threads": {
@@ -739,6 +740,21 @@
       "MAP": "Karte",
       "REFERENCE": "Referenz",
       "OTHER": "Sonstiges"
-    }
+    },
+    "library_title": "Bildarchiv",
+    "library_hint": "Alle Bilder des Buchs. F\u00fcge hier Bilder hinzu, ohne sie anzuh\u00e4ngen, sieh nach, wo jedes verwendet wird, oder l\u00f6sche eines endg\u00fcltig.",
+    "library_empty": "Noch keine Bilder im Buch. F\u00fcge welche hinzu oder ziehe Bilddateien hierher.",
+    "filter_all": "Alle",
+    "filter_unattached": "Nicht angeh\u00e4ngt",
+    "not_attached": "Nirgends angeh\u00e4ngt",
+    "toggle_one": "Bilder ({{count}})",
+    "toggle_other": "Bilder ({{count}})",
+    "shared_hint_library": "Titel und Bildunterschrift erscheinen \u00fcberall, wo das Bild angeh\u00e4ngt ist.",
+    "delete": "Endg\u00fcltig l\u00f6schen",
+    "delete_title": "\u201e{{title}}\u201c endg\u00fcltig l\u00f6schen?",
+    "delete_body": "Das Bild wird \u00fcberall entfernt, wo es angeh\u00e4ngt ist, und die gespeicherte Datei wird gel\u00f6scht. Das kann nicht r\u00fcckg\u00e4ngig gemacht werden.",
+    "delete_usage_one": "Angeh\u00e4ngt an {{count}} Stelle:",
+    "delete_usage_other": "Angeh\u00e4ngt an {{count}} Stellen:",
+    "delete_confirm": "Endg\u00fcltig l\u00f6schen"
   }
 }

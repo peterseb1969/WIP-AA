@@ -17,7 +17,12 @@
 **Where:** every request the app sends through `@wip/client` 0.60.0 from the browser.
 **Symptom:** a request whose body is over 64 KB fails at once with `TypeError: Failed to fetch`; nothing reaches the server.
 **Root cause:** the client's `FetchTransport` sets `keepalive: true` on every request, and browsers refuse keepalive requests with bodies over 64 KB. Reproduced 2026-10-18 with plain `fetch`: a 60 KB form post with `keepalive` → 200, 70 KB with `keepalive` → "Failed to fetch", 70 KB without → 200.
-**Status:** Image upload works around it (`storeFile` in `src/lib/media.ts` posts with its own `fetch`). Not worked around anywhere else. The largest scene in `aa` is 13.5 KB (2026-10-18), so saves work today, but a scene of roughly 10,000 words would fail to save, and so would any other single write over 64 KB. The fix belongs in `@wip/client` (drop `keepalive`, or set it only for small bodies); it has not been reported to the library's owner yet.
+**Status:** Image upload works around it (`storeFile` in `src/lib/media.ts` posts with its own `fetch`). Not worked around anywhere else. The largest scene in `aa` is 13.5 KB (2026-10-18), so saves work today, but a scene of roughly 10,000 words would fail to save, and so would any other single write over 64 KB. The fix belongs in `@wip/client` (drop `keepalive`, or set it only for small bodies); reported as CASE-899 (2026-10-18).
+
+### Relationships `template` filter ignores the `namespace` parameter
+**Where:** `GET /documents/{id}/relationships?template=<VALUE>&namespace=<ns>` (document-store).
+**Symptom:** with the same edge type value in two namespaces (`aa` and a scratch copy), a bare `template=AA_ATTACHED_TO` plus `namespace=dev-aa-lib` returned 0 relationships, while `template=dev-aa-lib:AA_ATTACHED_TO` or the template's canonical id returned the expected 1 (2026-10-18). The bare value resolved to the other namespace's edge type.
+**Status:** worked around: the app always passes the namespace-qualified `ns:VALUE` form (`attachedToFilter` in `src/lib/media.ts`). Not reported upstream yet.
 
 ## Unverified / technical debt
 

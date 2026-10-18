@@ -22,6 +22,7 @@ import {
   Sparkles,
   Menu,
   X,
+  Images,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -35,6 +36,7 @@ const NAV_ITEMS = [
   { to: '/plot-threads', labelKey: 'nav.plot_threads', icon: GitBranch },
   { to: '/notes', labelKey: 'nav.notes', icon: StickyNote },
   { to: '/world-rules', labelKey: 'nav.world_rules', icon: Globe },
+  { to: '/media', labelKey: 'nav.media', icon: Images },
   { to: '/prompts', labelKey: 'nav.prompts', icon: Sparkles },
   { to: '/import', labelKey: 'nav.import', icon: Upload },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings },

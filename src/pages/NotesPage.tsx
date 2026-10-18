@@ -6,6 +6,7 @@ import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import BackLink from '../components/BackLink'
+import { MediaToggle } from '../components/MediaSection'
 
 interface NoteData {
   title: string
@@ -164,6 +165,7 @@ export default function NotesPage() {
                     </span>
                   ))}
                 </div>
+                <MediaToggle entityId={note.document_id} kind="note" />
               </div>
             )
           })}

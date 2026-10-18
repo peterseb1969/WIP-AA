@@ -6,7 +6,9 @@ import { NAMESPACE, TEMPLATES } from '../lib/constants'
 import { useAttachments, useMediaEditor, fileUrl, portraitOf, MEDIA_ROLES, type Attachment, type MediaRole } from '../lib/media'
 
 /** The AA_MEDIA template allows 25 MB per file. */
-const MAX_BYTES = 25 * 1024 * 1024
+export const MAX_BYTES = 25 * 1024 * 1024
+
+export type MediaEntityKind = 'character' | 'location' | 'scene' | 'plot_thread' | 'chapter' | 'note' | 'world_rule'
 
 /**
  * Images attached to an entity: a thumbnail grid with a lightbox, upload
@@ -17,7 +19,7 @@ const MAX_BYTES = 25 * 1024 * 1024
 export default function MediaSection({ entityId, kind, compact = false }: {
   entityId: string
   /** Characters get their first image as the portrait. */
-  kind: 'character' | 'location' | 'scene' | 'plot_thread'
+  kind: MediaEntityKind
   compact?: boolean
 }) {
   const { t } = useTranslation()
@@ -157,15 +159,18 @@ export default function MediaSection({ entityId, kind, compact = false }: {
       )}
 
       {viewing !== null && attachments.length ? (
-        <Lightbox items={attachments} index={Math.min(viewing, attachments.length - 1)} onIndex={setViewing} onClose={() => setViewing(null)} />
+        <Lightbox items={attachments.map((a) => ({ ...a, label: t(`media.role.${a.role}`) }))} index={Math.min(viewing, attachments.length - 1)} onIndex={setViewing} onClose={() => setViewing(null)} />
       ) : null}
       {editing ? (
         <EditDialog
-          attachment={editing}
           onClose={() => setEditing(null)}
+          fileId={editing.fileId}
+          title={editing.title}
+          caption={editing.caption}
+          role={editing.role}
           onSave={async (fields, role) => {
             if (fields.title !== editing.title || fields.caption !== (editing.caption ?? '')) await editor.editMedia(editing.mediaId, fields)
-            if (role !== editing.role) await editor.setRole(editing.edgeId, role)
+            if (role && role !== editing.role) await editor.setRole(editing.edgeId, role)
           }}
           onDetach={() => editor.detach(editing.edgeId)}
         />
@@ -185,8 +190,8 @@ export default function MediaSection({ entityId, kind, compact = false }: {
 }
 
 /** Full-size view; arrow keys / buttons step through, Escape or a click on the backdrop closes. */
-function Lightbox({ items, index, onIndex, onClose }: {
-  items: Attachment[]
+export function Lightbox({ items, index, onIndex, onClose }: {
+  items: Array<{ fileId: string; title: string; caption?: string; label?: string }>
   index: number
   onIndex: (i: number) => void
   onClose: () => void
@@ -230,23 +235,30 @@ function Lightbox({ items, index, onIndex, onClose }: {
         <div className="font-medium">{item.title}</div>
         {item.caption ? <div className="text-sm text-white/75 mt-1">{item.caption}</div> : null}
         <div className="text-xs text-white/50 mt-1">
-          {t(`media.role.${item.role}`)}{items.length > 1 ? ` · ${index + 1} / ${items.length}` : ''}
+          {[item.label, items.length > 1 ? `${index + 1} / ${items.length}` : ''].filter(Boolean).join(' · ')}
         </div>
       </div>
     </div>
   )
 }
 
-function EditDialog({ attachment, onClose, onSave, onDetach }: {
-  attachment: Attachment
+/**
+ * Edit an image's title and caption — and, when opened from an attachment,
+ * its role there and a "remove from here". The library opens it without.
+ */
+export function EditDialog({ fileId, title: initialTitle, caption: initialCaption, role: initialRole, onClose, onSave, onDetach }: {
+  fileId: string
+  title: string
+  caption?: string
+  role?: MediaRole
   onClose: () => void
-  onSave: (fields: { title: string; caption: string }, role: MediaRole) => Promise<void>
-  onDetach: () => Promise<void>
+  onSave: (fields: { title: string; caption: string }, role?: MediaRole) => Promise<void>
+  onDetach?: () => Promise<void>
 }) {
   const { t } = useTranslation()
-  const [title, setTitle] = useState(attachment.title)
-  const [caption, setCaption] = useState(attachment.caption ?? '')
-  const [role, setRole] = useState<MediaRole>(attachment.role)
+  const [title, setTitle] = useState(initialTitle)
+  const [caption, setCaption] = useState(initialCaption ?? '')
+  const [role, setRole] = useState<MediaRole | undefined>(initialRole)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -266,20 +278,22 @@ function EditDialog({ attachment, onClose, onSave, onDetach }: {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
       <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-4 mb-4">
-          <img src={fileUrl(attachment.fileId)} alt="" className="w-24 h-24 object-cover rounded border border-gray-100 flex-shrink-0" />
+          <img src={fileUrl(fileId)} alt="" className="w-24 h-24 object-cover rounded border border-gray-100 flex-shrink-0" />
           <div className="flex-1 space-y-3">
             <label className="block">
               <span className="text-xs font-medium text-text-muted">{t('media.field_title')}</span>
               <input value={title} onChange={(e) => setTitle(e.target.value)}
                 className="mt-1 w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary" />
             </label>
-            <label className="block">
-              <span className="text-xs font-medium text-text-muted">{t('media.field_role')}</span>
-              <select value={role} onChange={(e) => setRole(e.target.value as MediaRole)}
-                className="mt-1 w-full border border-gray-200 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-primary">
-                {MEDIA_ROLES.map((r) => <option key={r} value={r}>{t(`media.role.${r}`)}</option>)}
-              </select>
-            </label>
+            {role ? (
+              <label className="block">
+                <span className="text-xs font-medium text-text-muted">{t('media.field_role')}</span>
+                <select value={role} onChange={(e) => setRole(e.target.value as MediaRole)}
+                  className="mt-1 w-full border border-gray-200 rounded px-2 py-1.5 text-sm bg-white focus:outline-none focus:border-primary">
+                  {MEDIA_ROLES.map((r) => <option key={r} value={r}>{t(`media.role.${r}`)}</option>)}
+                </select>
+              </label>
+            ) : null}
           </div>
         </div>
         <label className="block mb-1">
@@ -287,18 +301,20 @@ function EditDialog({ attachment, onClose, onSave, onDetach }: {
           <textarea value={caption} onChange={(e) => setCaption(e.target.value)} rows={3}
             className="mt-1 w-full border border-gray-200 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-primary" />
         </label>
-        <p className="text-xs text-text-light mb-4">{t('media.shared_hint')}</p>
+        <p className="text-xs text-text-light mb-4">{t(role ? 'media.shared_hint' : 'media.shared_hint_library')}</p>
         {error ? <div className="mb-3 text-sm text-red-600">{error}</div> : null}
         <div className="flex items-center gap-2">
-          <button onClick={() => act(onDetach)} disabled={busy}
-            className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
-            {t('media.detach')}
-          </button>
+          {onDetach ? (
+            <button onClick={() => act(onDetach)} disabled={busy}
+              className="px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50">
+              {t('media.detach')}
+            </button>
+          ) : null}
           <div className="ml-auto flex gap-2">
             <button onClick={onClose} className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors">
               {t('common.cancel')}
             </button>
-            <button onClick={() => act(() => onSave({ title: title.trim() || attachment.title, caption: caption.trim() }, role))} disabled={busy}
+            <button onClick={() => act(() => onSave({ title: title.trim() || initialTitle, caption: caption.trim() }, role))} disabled={busy}
               className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50">
               {busy ? t('common.saving') : t('common.save')}
             </button>
@@ -347,6 +363,37 @@ function PickDialog({ attachedMediaIds, onClose, onPick }: {
           )}
         </div>
       </div>
+    </div>
+  )
+}
+
+/**
+ * For entities shown as cards in a list (notes, world rules): a quiet
+ * "Images (n)" toggle with small thumbnails, opening the full section in
+ * place. Keeps a list of many cards from turning into a wall of upload boxes.
+ */
+export function MediaToggle({ entityId, kind }: { entityId: string; kind: MediaEntityKind }) {
+  const { t } = useTranslation()
+  const { attachments } = useAttachments(entityId)
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="mt-3">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-2 text-xs text-text-muted hover:text-primary transition-colors"
+      >
+        <ImageIcon className="w-3.5 h-3.5" />
+        {t('media.toggle', { count: attachments.length })}
+        {!open && attachments.length ? (
+          <span className="flex gap-1">
+            {attachments.slice(0, 4).map((a) => (
+              <img key={a.edgeId} src={fileUrl(a.fileId)} alt={a.title} className="w-6 h-6 rounded object-cover border border-gray-100" />
+            ))}
+          </span>
+        ) : null}
+      </button>
+      {/* The section's own bottom margin is for page layouts; inside a card it is dead space. */}
+      {open ? <div className="mt-2 [&>div]:mb-0"><MediaSection entityId={entityId} kind={kind} /></div> : null}
     </div>
   )
 }
