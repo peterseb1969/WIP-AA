@@ -7,12 +7,6 @@
 **Symptom (as reported 2026-04-04):** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
 **Status:** Could not reproduce on 2026-10-17. The suspected cause, a `userEditedRef` gate that skipped the first `onUpdate`, was removed about four hours after this entry was written, when dirty detection switched to an HTML baseline comparison (commit 99f5a3e). Tested on a cold load, both straight from a URL and from the scene list, with a short scratch scene and a 1,711-word scene from the real book: the editor was editable and focused, the caret landed where clicked, typing marked the scene dirty, and Save became active. If it shows up again, note the steps (which page you came from, whether a draft banner was showing) and reopen.
 
-### Renaming an entity through Edit creates a duplicate
-**Pages:** Chapters, Characters, Locations, Plot Threads, Notes, World Rules (the shared edit form)
-**Symptom:** Changing the name/title in the Edit form leaves the old entity in place and adds a new one with the new name.
-**Root cause:** Each template's identity field is its name or title, so saving a different name is a *create*, not a new version (PoNIF #3), and nothing retires the original. A proper rename also has to re-point what references the old one: chapter and scene ids in the book structure, character/location/thread term values in scenes, notes and rules.
-**Status:** Not fixed. The project (Dashboard) and prompts (Prompt Library) handle it, because nothing references them: they retire the old document after a rename.
-
 ### Writes over 64 KB fail in the browser (@wip/client `keepalive`)
 **Where:** every request the app sends through `@wip/client` 0.60.0 from the browser.
 **Symptom:** a request whose body is over 64 KB fails at once with `TypeError: Failed to fetch`; nothing reaches the server.
@@ -29,6 +23,11 @@
 **What BE-YAC found (CASE-904, 2026-10-18):** the document store checks names against its own cached copy of each vocabulary. That copy includes deprecated and inactive terms indefinitely, and can be up to 5 minutes stale. A deleted or deprecated name therefore still resolves to its old term, ahead of another term's alias. Separately, hard-deleting a term leaves its Registry entry active, so re-creating the same name gets the old term id back.
 **Consequences for AA:** the merge rewrites stored references instead of relying on aliases, and the app must always write canonical names. Book reset (Dashboard "Danger Zone" with "clear names", Import's "reset book") deletes every name; a re-import then reuses the old term ids, which is harmless when the names mean the same thing.
 **Status:** fix proposed by BE-YAC (def-store becomes the only name resolver, a real `merge_terms`, term deletion removes the Registry entry); scope awaits Peter.
+
+## Unverified / technical debt
+
+### Renamed chapters, scenes, notes and world rules start a new version history (2026-10-19)
+Their identity is the title, so a rename copies the document under the new title (`src/lib/rename.ts`). The renamed document starts at version 1; earlier versions stay with the retired old document. Characters, locations and plot threads are not affected: they are renamed by relabelling their term.
 
 ### Browser-unverified changes (2026-10-17)
 Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. Still unverified: the error screen `main.tsx` shows when `/api/app-config` can't be loaded.
