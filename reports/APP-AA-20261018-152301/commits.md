@@ -21,3 +21,12 @@
 **What:** media.ts (hooks, own upload), MediaSection (grid, lightbox, edit, picker, Avatar), page integration, en/de strings; KNOWN_ISSUES + ROADMAP.
 **Why:** Peter's image-support scope: images only, inline prose images later.
 **Discovered:** @wip/client FetchTransport sets keepalive:true on every request → browser rejects bodies > 64 KB ("Failed to fetch"). Affects every write, incl. scene saves of very long scenes (largest aa scene 13.5 KB today). Not yet reported upstream. Range requests through the proxy return 200 full body (matters for audio seeking later).
+
+## e4246e6 — feat(media): images on chapters, notes, world rules; image library
+**Time:** 18:48
+**Files:** 12 files changed, +553/-73
+**Tests:** tsc clean; browser on scratch ns dev-aa-lib (retain mode like aa; flipped to full and deleted after): library upload without attaching; note toggle + attach from book; world-rule toggle + upload (re-used existing media); chapter expanded row + attach; library usage chips, "Not attached" filter; Delete permanently of an image attached in 2 places → edges gone, media retired, file content + metadata 404. API test first: hard delete refused while referenced ("Only inactive files can be hard-deleted"); re-upload of the same bytes after a hard delete gets the same file_id and reactivates the old media doc.
+**What:** MediaToggle, generic EditDialog/Lightbox, MediaLibraryPage + route + nav, useMediaUsage/useMediaLibrary, en/de strings.
+**Why:** Peter: continue with chapters, notes, world rules; library page with a true delete.
+**PoNIF:** #4 (bulk delete of edges checks per-item results before erasing the file); #1 (retain mode: documents retired, not erased).
+**Discovered:** relationships endpoint resolves a bare `template=` value without honouring `namespace=` (picked aa's AA_ATTACHED_TO from a scratch namespace) — app now passes ns:VALUE; recorded in KNOWN_ISSUES, not reported. CASE-899 filed for the @wip/client keepalive bug.

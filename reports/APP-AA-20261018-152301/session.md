@@ -16,4 +16,6 @@ Continues from APP-AA-20261017-150822 (via /wip-wake).
 - [x] ROADMAP: Image support ToDo (scope to agree with Peter; model change)
 - [x] Media model (f569c4f) — applied to aa with Peter's approval
 - [x] Images v1 UI (3cfc29f)
-- [ ] Report @wip/client keepalive 64 KB bug to its owner (ask Peter)
+- [x] CASE-899 filed: @wip/client keepalive 64 KB bug
+- [x] Images on chapters, notes, world rules + Image library with permanent delete (e4246e6)
+- [ ] Relationships template-filter namespace bug: report? (ask Peter)
