@@ -59,7 +59,7 @@ export interface BookStructure {
   getAllSceneIds(): string[]
 }
 
-function buildStructure(data: BookStructureData): BookStructure {
+export function buildStructure(data: BookStructureData): BookStructure {
   // Build reverse lookup maps
   const chapterIndexMap = new Map<string, number>()
   const scenePositionMap = new Map<string, { chapterIndex: number; sceneIndex: number; chapterId: string }>()

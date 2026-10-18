@@ -9,7 +9,10 @@
  * title, and a scene title's "ChN " prefix is hidden.
  */
 
-const NUMBER_ONLY_CHAPTER = /^(?:(?:chapter|kapitel|chap\.?|kap\.?|ch\.?)\s*(?:\d+|[ivxlcdm]+)|\d+)\.?$/i
+// Well-formed roman numerals only: a bare letter class would read "Child"
+// as "Ch" + "ild" and hide it as a number.
+const ROMAN = '(?=[ivxlcdm])m{0,4}(?:cm|cd|d?c{0,3})(?:xc|xl|l?x{0,3})(?:ix|iv|v?i{0,3})'
+const NUMBER_ONLY_CHAPTER = new RegExp(`^(?:(?:chapter|kapitel|chap\\.?|kap\\.?|ch\\.?)\\s*(?:\\d+|${ROMAN})|\\d+)\\.?$`, 'i')
 const SCENE_CHAPTER_PREFIX = /^(?:ch|kap)\.?\s*\d+\s+(?=\S)/i
 
 /** The chapter's title as worth showing: '' when it is only a number. */

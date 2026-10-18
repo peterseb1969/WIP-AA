@@ -17,43 +17,48 @@ export type NameKind = 'character' | 'location' | 'plot_thread'
 export function useEntityNames() {
   const { characterTerms, locationTerms, plotThreadTerms, isLoading } = useEntityTerms()
 
-  const index = useMemo(() => {
-    // value first, then label, then aliases: a spelling that is one term's
-    // value and another's alias belongs to the first.
-    const build = (terms: TermEntry[]) => {
-      const map = new Map<string, TermEntry>()
-      const add = (spelling: string | undefined, term: TermEntry) => {
-        const key = (spelling ?? '').toLowerCase()
-        if (key && !map.has(key)) map.set(key, term)
-      }
-      terms.forEach((t) => add(t.value, t))
-      terms.forEach((t) => add(t.label, t))
-      terms.forEach((t) => t.aliases?.forEach((a) => add(a, t)))
-      return map
-    }
-    return {
-      character: build(characterTerms),
-      location: build(locationTerms),
-      plot_thread: build(plotThreadTerms),
-    }
-  }, [characterTerms, locationTerms, plotThreadTerms])
+  const names = useMemo(
+    () => ({
+      character: nameIndex(characterTerms),
+      location: nameIndex(locationTerms),
+      plot_thread: nameIndex(plotThreadTerms),
+    }),
+    [characterTerms, locationTerms, plotThreadTerms],
+  )
 
-  const term = useCallback(
-    (kind: NameKind, spelling: unknown) => index[kind].get(String(spelling ?? '').toLowerCase()),
-    [index],
-  )
-  /** The name to show: the term's current label, else the spelling as stored. */
-  const label = useCallback(
-    (kind: NameKind, spelling: unknown) => term(kind, spelling)?.label ?? String(spelling ?? ''),
-    [term],
-  )
-  /** The term id a spelling resolves to (undefined when it matches no term). */
-  const termId = useCallback((kind: NameKind, spelling: unknown) => term(kind, spelling)?.termId, [term])
-  /** Do two spellings name the same entity? */
-  const same = useCallback((kind: NameKind, a: unknown, b: unknown) => {
-    const ta = termId(kind, a)
-    return ta ? ta === termId(kind, b) : String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase()
-  }, [termId])
+  const term = useCallback((kind: NameKind, spelling: unknown) => names[kind].term(spelling), [names])
+  const label = useCallback((kind: NameKind, spelling: unknown) => names[kind].label(spelling), [names])
+  const termId = useCallback((kind: NameKind, spelling: unknown) => names[kind].termId(spelling), [names])
+  const same = useCallback((kind: NameKind, a: unknown, b: unknown) => names[kind].same(a, b), [names])
 
   return { label, termId, term, same, isLoading }
+}
+
+/** Name lookups over one vocabulary's terms (the logic behind useEntityNames). */
+export function nameIndex(terms: TermEntry[]) {
+  // value first, then label, then aliases: a spelling that is one term's
+  // value and another's alias belongs to the first.
+  const map = new Map<string, TermEntry>()
+  const add = (spelling: string | undefined, term: TermEntry) => {
+    const key = (spelling ?? '').toLowerCase()
+    if (key && !map.has(key)) map.set(key, term)
+  }
+  terms.forEach((t) => add(t.value, t))
+  terms.forEach((t) => add(t.label, t))
+  terms.forEach((t) => t.aliases?.forEach((a) => add(a, t)))
+
+  const term = (spelling: unknown) => map.get(String(spelling ?? '').toLowerCase())
+  /** The term id a spelling resolves to (undefined when it matches no term). */
+  const termId = (spelling: unknown) => term(spelling)?.termId
+  return {
+    term,
+    termId,
+    /** The name to show: the term's current label, else the spelling as stored. */
+    label: (spelling: unknown) => term(spelling)?.label ?? String(spelling ?? ''),
+    /** Do two spellings name the same entity? */
+    same: (a: unknown, b: unknown) => {
+      const ta = termId(a)
+      return ta ? ta === termId(b) : String(a ?? '').toLowerCase() === String(b ?? '').toLowerCase()
+    },
+  }
 }
