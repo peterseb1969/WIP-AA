@@ -5,11 +5,10 @@ import { validateSceneAnnotations, type TermEntry } from './useValidateScene'
 /**
  * Merging characters, locations or plot threads ("X into Y").
  *
- * WIP cannot redirect one vocabulary name to another for document writes
- * (CASE-904: deprecate + alias, Registry merge and hard-delete + alias all
- * leave "X" resolving to X's own term), and stored documents never
- * re-resolve their term fields. So the app rewrites every stored reference
- * to Y's canonical term value, then retires X:
+ * WIP's term merge (defStore.mergeTerms) makes X's value and names resolve to
+ * Y for every new write, but stored documents keep the term they were written
+ * with. So the app rewrites every stored reference to Y's canonical term
+ * value, then retires X:
  *
  *   1. Y's document keeps its details and fills its EMPTY fields from X
  *      (Peter's rule); X's relationships are added, re-pointed to Y.
@@ -17,13 +16,16 @@ import { validateSceneAnnotations, type TermEntry } from './useValidateScene'
  *      insensitively — becomes Y's value in every referencing document.
  *   3. X's image attachments move to Y.
  *   4. X's value, label and aliases become aliases of Y — so the scene check
- *      still recognises X's old name in the prose — and then X's document is
- *      deleted and X's term is deleted (the name vocabularies are mutable,
- *      so terms are hard-deleted).
+ *      still recognises X's old name in the prose. The term merge does not
+ *      carry the label, hence this step.
+ *   5. X's term is merged into Y's (it stays behind, deprecated, pointing at
+ *      Y; every term list in the app shows active terms only), then X's
+ *      document is deleted.
  *
  * Every step is idempotent and X is removed last, so a merge that failed
- * half-way is completed by running it again. The app always writes Y's canonical value; nothing may
- * write X's name back (WIP would still resolve it to X's deleted term).
+ * half-way is completed by running it again: X's name then already resolves
+ * to Y's term, and the term merge is skipped (merging a deprecated term is
+ * refused).
  */
 
 export type MergeKind = 'character' | 'location' | 'plot_thread'
@@ -278,8 +280,10 @@ export async function executeMerge(wip: WipClient, plan: MergePlan, onStep: (ste
   await wip.defStore.updateTerm(plan.survivor.term.term_id, { aliases: plan.aliases })
   onStep('retire')
   for (const a of plan.absorbed) {
+    if (a.term.term_id !== plan.survivor.term.term_id) {
+      await wip.defStore.mergeTerms(plan.survivor.term.term_id, a.term.term_id, { namespace: NAMESPACE })
+    }
     await wip.documents.deleteDocument(a.documentId)
-    await wip.defStore.deleteTerm(a.term.term_id)
   }
 }
 

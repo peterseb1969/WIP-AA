@@ -124,24 +124,6 @@ export function usePortraitOf() {
 }
 
 /**
- * Store a file in WIP. Not wip.files.uploadFile: @wip/client sends every
- * request with fetch's `keepalive: true`, and browsers refuse keepalive
- * bodies over 64 KB ("Failed to fetch"), so any real photo would fail.
- * Same endpoint and form fields; the server-side proxy adds the API key.
- */
-async function storeFile(file: File): Promise<{ file_id: string }> {
-  const form = new FormData()
-  form.append('file', file, file.name)
-  form.append('namespace', NAMESPACE)
-  const res = await fetch(`${import.meta.env.BASE_URL}wip/api/document-store/files`, { method: 'POST', body: form })
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    throw new Error(`${res.status} ${detail.slice(0, 200)}`)
-  }
-  return res.json()
-}
-
-/**
  * Store a file and return its AA_MEDIA document. WIP stores identical
  * content once (same file_id), and AA_MEDIA's identity is the file, so an
  * image that is already in the book is reused — with its title and caption —
@@ -149,7 +131,7 @@ async function storeFile(file: File): Promise<{ file_id: string }> {
  * as its old media document, under the new file name.)
  */
 async function storeMedia(wip: WipClient, file: File) {
-  const stored = await storeFile(file)
+  const stored = await wip.files.uploadFile(file, file.name, undefined, NAMESPACE)
   const existing = await wip.documents.queryDocuments({
     template_id: TEMPLATES.MEDIA,
     status: 'active',

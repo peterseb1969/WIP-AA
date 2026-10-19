@@ -62,7 +62,7 @@ function CharacterCard({ data, displayName, portrait, selected = false, onClick 
 function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { documentId: string; data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   // Resolve character names from terms
-  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1000, namespace: NAMESPACE } as any)
+  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1000, namespace: NAMESPACE, status: 'active' } as any)
   const names = useEntityNames()
   const displayName = names.label('character', data.name)
   const { attachments } = useAttachments(documentId)

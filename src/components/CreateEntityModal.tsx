@@ -159,7 +159,7 @@ export function TermSelect({
   multiple?: boolean
 }) {
   const { t } = useTranslation()
-  const { data: terms } = useTerms(terminologyId, { page_size: 100, namespace: NAMESPACE } as any)
+  const { data: terms } = useTerms(terminologyId, { page_size: 100, namespace: NAMESPACE, status: 'active' } as any)
 
   const options = useMemo(
     () =>

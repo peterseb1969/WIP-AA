@@ -143,15 +143,19 @@ export function useEntityTerms() {
   const locId = termIdMap.get(TERMINOLOGIES.LOCATIONS)
   const threadId = termIdMap.get(TERMINOLOGIES.PLOT_THREADS)
 
-  // Now fetch terms using resolved UUIDs (hooks are disabled when ID is falsy)
+  // Now fetch terms using resolved UUIDs (hooks are disabled when ID is falsy).
+  // Active only: a merged-away name stays behind as a deprecated term.
   const { data: charTerms } = useTerms(charId ?? '', {
     page_size: 1000,
+    status: 'active',
   } as any)
   const { data: locTerms } = useTerms(locId ?? '', {
     page_size: 1000,
+    status: 'active',
   } as any)
   const { data: threadTerms } = useTerms(threadId ?? '', {
     page_size: 1000,
+    status: 'active',
   } as any)
 
   const characterTerms: TermEntry[] = useMemo(

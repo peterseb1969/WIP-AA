@@ -7,22 +7,12 @@
 **Symptom (as reported 2026-04-04):** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
 **Status:** Could not reproduce on 2026-10-17. The suspected cause, a `userEditedRef` gate that skipped the first `onUpdate`, was removed about four hours after this entry was written, when dirty detection switched to an HTML baseline comparison (commit 99f5a3e). Tested on a cold load, both straight from a URL and from the scene list, with a short scratch scene and a 1,711-word scene from the real book: the editor was editable and focused, the caret landed where clicked, typing marked the scene dirty, and Save became active. If it shows up again, note the steps (which page you came from, whether a draft banner was showing) and reopen.
 
-### Writes over 64 KB fail in the browser (@wip/client `keepalive`)
-**Where:** every request the app sends through `@wip/client` 0.60.0 from the browser.
-**Symptom:** a request whose body is over 64 KB fails at once with `TypeError: Failed to fetch`; nothing reaches the server.
-**Root cause:** the client's `FetchTransport` sets `keepalive: true` on every request, and browsers refuse keepalive requests with bodies over 64 KB. Reproduced 2026-10-18 with plain `fetch`: a 60 KB form post with `keepalive` → 200, 70 KB with `keepalive` → "Failed to fetch", 70 KB without → 200.
-**Status:** Image upload works around it (`storeFile` in `src/lib/media.ts` posts with its own `fetch`). Not worked around anywhere else. The largest scene in `aa` is 13.5 KB (2026-10-18), so saves work today, but a scene of roughly 10,000 words would fail to save, and so would any other single write over 64 KB. The fix belongs in `@wip/client` (drop `keepalive`, or set it only for small bodies); reported as CASE-899 (2026-10-18).
-
-### Relationships `template` filter ignores the `namespace` parameter
-**Where:** `GET /documents/{id}/relationships?template=<VALUE>&namespace=<ns>` (document-store).
-**Symptom:** with the same edge type value in two namespaces (`aa` and a scratch copy), a bare `template=AA_ATTACHED_TO` plus `namespace=dev-aa-lib` returned 0 relationships, while `template=dev-aa-lib:AA_ATTACHED_TO` or the template's canonical id returned the expected 1 (2026-10-18). The bare value resolved to the other namespace's edge type.
-**Status:** worked around: the app always passes the namespace-qualified `ns:VALUE` form (`attachedToFilter` in `src/lib/media.ts`). Reported as CASE-900 (2026-10-18).
-
-### WIP resolves names of deleted or deprecated terms (CASE-904)
-**Where:** every document write with a character, location or plot-thread name.
-**What BE-YAC found (CASE-904, 2026-10-18):** the document store checks names against its own cached copy of each vocabulary. That copy includes deprecated and inactive terms indefinitely, and can be up to 5 minutes stale. A deleted or deprecated name therefore still resolves to its old term, ahead of another term's alias. Separately, hard-deleting a term leaves its Registry entry active, so re-creating the same name gets the old term id back.
-**Consequences for AA:** the merge rewrites stored references instead of relying on aliases, and the app must always write canonical names. Book reset (Dashboard "Danger Zone" with "clear names", Import's "reset book") deletes every name; a re-import then reuses the old term ids, which is harmless when the names mean the same thing.
-**Status:** fix proposed by BE-YAC (def-store becomes the only name resolver, a real `merge_terms`, term deletion removes the Registry entry); scope awaits Peter.
+### Fixed upstream (2026-10-19): large writes, edge-type filter, term names
+Three WIP issues AA reported are fixed in WIP and verified in AA on a scratch namespace:
+- **Writes over 64 KB** (CASE-899): `@wip/client` 0.60.1 no longer sets `keepalive`. AA uses 0.62.0; a 147 KB image upload and a 73 KB scene save went through. The upload workaround (`storeFile`) is gone.
+- **Edge-type filter ignoring `namespace`** (CASE-900): fixed in document-store. AA keeps passing `ns:VALUE`, which stays correct. Since the fix, an edge type that does not exist in the namespace answers 404 instead of an empty list.
+- **Names of deleted or deprecated terms still resolving** (CASE-904): def-store is now the only resolver (no cache), deprecated terms are refused on write, and a term hard delete removes its Registry entry. Merge now uses WIP's term merge: the absorbed term stays behind as **deprecated**, pointing at the survivor, and every term list in AA asks for active terms only. Stored references are still rewritten by the app (WIP never re-resolves stored documents).
+These fixes need a WIP built from `5920a66c` or later. On 2026-10-19 wip-local ran `5920a66c`, and dev-test's `20261018c` images answered the term-merge endpoint; on an older WIP the merge's last step fails.
 
 ## Unverified / technical debt
 

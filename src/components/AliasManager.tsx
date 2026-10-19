@@ -36,6 +36,7 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
   // Fetch terms and find the matching one
   const { data: terms } = useTerms(terminologyId ?? '', {
     page_size: 1000,
+    status: 'active',
   } as any)
 
   // The entity's stored name may be the term's value, its label or an alias
