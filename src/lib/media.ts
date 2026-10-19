@@ -130,7 +130,7 @@ export function usePortraitOf() {
  * rather than created again. (One that was deleted permanently comes back
  * as its old media document, under the new file name.)
  */
-async function storeMedia(wip: WipClient, file: File) {
+export async function storeMedia(wip: WipClient, file: File) {
   const stored = await wip.files.uploadFile(file, file.name, undefined, NAMESPACE)
   const existing = await wip.documents.queryDocuments({
     template_id: TEMPLATES.MEDIA,
@@ -149,6 +149,36 @@ async function storeMedia(wip: WipClient, file: File) {
   return created.document_id
 }
 
+/** Attach a media document to an entity (attaching it again updates role and order: the edge's identity is the pair). */
+export async function attachMedia(wip: WipClient, mediaId: string, entityId: string, role: MediaRole, sortOrder: number) {
+  await wip.documents.createDocument({
+    template_id: TEMPLATES.ATTACHED_TO,
+    namespace: NAMESPACE,
+    data: { source_ref: mediaId, target_ref: entityId, role, sort_order: sortOrder },
+  })
+}
+
+/**
+ * Delete for good: every attachment, the media document, and the stored
+ * file. The file's bytes are erased from storage; WIP refuses that while
+ * anything still references the file, so the references go first. The
+ * namespace keeps documents (deletion_mode retain), so the media and edge
+ * documents are retired, not erased — their history names a file that no
+ * longer exists.
+ */
+export async function deleteMediaPermanently(wip: WipClient, mediaId: string, fileId: string, edgeIds: string[]) {
+  if (edgeIds.length) {
+    // Bulk writes answer 200 with per-item results; a failed item must stop
+    // the delete before the file goes.
+    const res = await wip.documents.deleteDocuments(edgeIds)
+    const failed = res.results.filter((r) => r.status === 'error')
+    if (failed.length) throw new Error(failed.map((r) => r.error).join('; '))
+  }
+  await wip.documents.deleteDocument(mediaId)
+  await wip.files.deleteFile(fileId)
+  await wip.files.hardDeleteFile(fileId)
+}
+
 /** Writes for attachments; every one refreshes the entity's attachment list. */
 export function useMediaEditor(entityId: string) {
   const wip = useWipClient()
@@ -162,11 +192,7 @@ export function useMediaEditor(entityId: string) {
 
   /** Attach an existing media document (no-op if it already is). */
   const attach = async (mediaId: string, role: MediaRole, sortOrder: number) => {
-    await wip.documents.createDocument({
-      template_id: TEMPLATES.ATTACHED_TO,
-      namespace: NAMESPACE,
-      data: { source_ref: mediaId, target_ref: entityId, role, sort_order: sortOrder },
-    })
+    await attachMedia(wip, mediaId, entityId, role, sortOrder)
     await refresh()
   }
 
@@ -246,25 +272,9 @@ export function useMediaLibrary() {
     await queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
   }
 
-  /**
-   * Delete for good: every attachment, the media document, and the stored
-   * file. The file's bytes are erased from storage; WIP refuses that while
-   * anything still references the file, so the references go first. The
-   * namespace keeps documents (deletion_mode retain), so the media and edge
-   * documents are retired, not erased — their history names a file that no
-   * longer exists.
-   */
+  /** Delete for good (see deleteMediaPermanently). */
   const deletePermanently = async (mediaId: string, fileId: string, edgeIds: string[]) => {
-    if (edgeIds.length) {
-      // Bulk writes answer 200 with per-item results; a failed item must stop
-      // the delete before the file goes.
-      const res = await wip.documents.deleteDocuments(edgeIds)
-      const failed = res.results.filter((r) => r.status === 'error')
-      if (failed.length) throw new Error(failed.map((r) => r.error).join('; '))
-    }
-    await wip.documents.deleteDocument(mediaId)
-    await wip.files.deleteFile(fileId)
-    await wip.files.hardDeleteFile(fileId)
+    await deleteMediaPermanently(wip, mediaId, fileId, edgeIds)
     await queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
   }
 

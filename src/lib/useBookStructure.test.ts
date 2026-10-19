@@ -4,6 +4,10 @@ import {
   chapterDropBefore,
   displayNumberAfterMove,
   ruleOf,
+  withChapterMoved,
+  withNumbering,
+  withSceneMoved,
+  withSceneRemoved,
   type ChapterSlot,
 } from './useBookStructure'
 
@@ -139,5 +143,55 @@ describe('displayNumberAfterMove', () => {
     const copy = structuredClone(book)
     displayNumberAfterMove(book, 'a', null)
     expect(book).toEqual(copy)
+  })
+})
+
+describe('structure edits (pure; the editor saves the result)', () => {
+  const book = (): ChapterSlot[] => [
+    slot('a', { scene_ids: ['s1', 's2'] }),
+    slot('b', { scene_ids: ['s3'], number_start: 5 }),
+  ]
+
+  it('moves a scene within and across chapters', () => {
+    expect(withSceneMoved(book(), 's2', 'a', 's1').map((c) => c.scene_ids)).toEqual([['s2', 's1'], ['s3']])
+    expect(withSceneMoved(book(), 's1', 'b', null).map((c) => c.scene_ids)).toEqual([['s2'], ['s3', 's1']])
+    expect(withSceneMoved(book(), 's1', 'b', 's3').map((c) => c.scene_ids)).toEqual([['s2'], ['s1', 's3']])
+  })
+
+  it('appends a chapter missing from the structure', () => {
+    const next = withSceneMoved(book(), 's3', 'c', null)
+    expect(next.map((c) => c.chapter_id)).toEqual(['a', 'b', 'c'])
+    expect(next[2]!.scene_ids).toEqual(['s3'])
+  })
+
+  it('moves a chapter with its scenes and numbering rule', () => {
+    expect(withChapterMoved(book(), 'b', 'a')).toEqual([slot('b', { scene_ids: ['s3'], number_start: 5 }), slot('a', { scene_ids: ['s1', 's2'] })])
+  })
+
+  it('returns undefined for a chapter move that changes nothing', () => {
+    expect(withChapterMoved(book(), 'b', null)).toBeUndefined()
+    expect(withChapterMoved(book(), 'a', 'a')).toBeUndefined()
+    expect(withChapterMoved(book(), 'a', 'b')).toBeUndefined()
+    expect(withChapterMoved(book(), 'x', null)).toBeUndefined()
+  })
+
+  it('removes a scene', () => {
+    expect(withSceneRemoved(book(), 's1').map((c) => c.scene_ids)).toEqual([['s2'], ['s3']])
+  })
+
+  it('sets a numbering rule and clears the other one', () => {
+    expect(withNumbering(book(), 'b', { kind: 'none' })[1]).toEqual(slot('b', { scene_ids: ['s3'], unnumbered: true }))
+    expect(withNumbering(book(), 'b', { kind: 'continue' })[1]).toEqual(slot('b', { scene_ids: ['s3'] }))
+    expect(withNumbering(book(), 'a', { kind: 'start', number: 3 })[0]).toEqual(slot('a', { scene_ids: ['s1', 's2'], number_start: 3 }))
+  })
+
+  it('never modifies its input', () => {
+    const input = book()
+    const copy = structuredClone(input)
+    withSceneMoved(input, 's1', 'b', null)
+    withChapterMoved(input, 'b', 'a')
+    withSceneRemoved(input, 's1')
+    withNumbering(input, 'b', { kind: 'none' })
+    expect(input).toEqual(copy)
   })
 })

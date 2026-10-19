@@ -152,6 +152,58 @@ export function displayNumberAfterMove(chapters: ChapterSlot[], draggedId: strin
   return buildStructure({ book_title: '', chapters: rest }).getDisplayNumber(draggedId)
 }
 
+const copySlots = (chapters: ChapterSlot[]) => chapters.map((slot) => ({ ...slot, scene_ids: [...slot.scene_ids] }))
+
+/**
+ * `chapters` with a scene moved into `chapterId` — before `beforeId`, or at
+ * the end when it is null or not in that chapter. A chapter missing from the
+ * structure is appended. The input is not modified.
+ */
+export function withSceneMoved(chapters: ChapterSlot[], sceneId: string, chapterId: string, beforeId: string | null): ChapterSlot[] {
+  const next = copySlots(chapters).map((slot) => ({ ...slot, scene_ids: slot.scene_ids.filter((id) => id !== sceneId) }))
+  let target = next.find((slot) => slot.chapter_id === chapterId)
+  if (!target) {
+    target = { chapter_id: chapterId, scene_ids: [] }
+    next.push(target)
+  }
+  const at = beforeId ? target.scene_ids.indexOf(beforeId) : -1
+  target.scene_ids.splice(at >= 0 ? at : target.scene_ids.length, 0, sceneId)
+  return next
+}
+
+/**
+ * `chapters` with a chapter (and its scenes) moved before `beforeId`, or to
+ * the end. undefined when the chapter is not in the structure or the order
+ * would not change.
+ */
+export function withChapterMoved(chapters: ChapterSlot[], chapterId: string, beforeId: string | null): ChapterSlot[] | undefined {
+  const moving = chapters.find((slot) => slot.chapter_id === chapterId)
+  if (!moving || chapterId === beforeId) return undefined
+  const next = copySlots(chapters).filter((slot) => slot.chapter_id !== chapterId)
+  const at = beforeId ? next.findIndex((slot) => slot.chapter_id === beforeId) : -1
+  next.splice(at >= 0 ? at : next.length, 0, { ...moving, scene_ids: [...moving.scene_ids] })
+  return next.every((slot, i) => slot.chapter_id === chapters[i]!.chapter_id) ? undefined : next
+}
+
+/** `chapters` without a scene (scene merge). */
+export function withSceneRemoved(chapters: ChapterSlot[], sceneId: string): ChapterSlot[] {
+  return copySlots(chapters).map((slot) => ({ ...slot, scene_ids: slot.scene_ids.filter((id) => id !== sceneId) }))
+}
+
+/**
+ * `chapters` with one chapter's numbering rule set. The `chapters` array is
+ * replaced whole by the PATCH, so leaving the fields out of a slot clears them.
+ */
+export function withNumbering(chapters: ChapterSlot[], chapterId: string, rule: NumberingRule): ChapterSlot[] {
+  return copySlots(chapters).map((slot) => {
+    if (slot.chapter_id !== chapterId) return slot
+    const { number_start: _n, unnumbered: _u, ...rest } = slot
+    if (rule.kind === 'start') return { ...rest, number_start: rule.number }
+    if (rule.kind === 'none') return { ...rest, unnumbered: true }
+    return rest
+  })
+}
+
 /** Hook to get the createDocument mutator for updating the structure */
 export function useUpdateStructure() {
   return useCreateDocument()
@@ -199,18 +251,7 @@ export function useStructureEditor() {
   const moveScene = async (sceneId: string, chapterId: string, beforeId: string | null, label: string) => {
     if (sceneId === beforeId) return
     const previous = currentChapters()
-    const chapters = currentChapters().map((slot) => ({
-      ...slot,
-      scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
-    }))
-    let target = chapters.find((slot) => slot.chapter_id === chapterId)
-    if (!target) {
-      target = { chapter_id: chapterId, scene_ids: [] }
-      chapters.push(target)
-    }
-    const at = beforeId ? target.scene_ids.indexOf(beforeId) : -1
-    target.scene_ids.splice(at >= 0 ? at : target.scene_ids.length, 0, sceneId)
-    const saved = await save(chapters)
+    const saved = await save(withSceneMoved(previous, sceneId, chapterId, beforeId))
     if (saved.documentId && saved.version != null) {
       undo?.record({ label, documentId: saved.documentId, previous, version: saved.version })
     }
@@ -222,14 +263,9 @@ export function useStructureEditor() {
    * chapter from the old to the new position is renumbered by this.
    */
   const moveChapter = async (chapterId: string, beforeId: string | null, label: string) => {
-    if (chapterId === beforeId) return
     const previous = currentChapters()
-    const moving = previous.find((slot) => slot.chapter_id === chapterId)
-    if (!moving) return
-    const chapters = currentChapters().filter((slot) => slot.chapter_id !== chapterId)
-    const at = beforeId ? chapters.findIndex((slot) => slot.chapter_id === beforeId) : -1
-    chapters.splice(at >= 0 ? at : chapters.length, 0, { ...moving, scene_ids: [...moving.scene_ids] })
-    if (chapters.every((slot, i) => slot.chapter_id === previous[i]!.chapter_id)) return
+    const chapters = withChapterMoved(previous, chapterId, beforeId)
+    if (!chapters) return
     const saved = await save(chapters)
     if (saved.documentId && saved.version != null) {
       undo?.record({ label, documentId: saved.documentId, previous, version: saved.version })
@@ -242,11 +278,7 @@ export function useStructureEditor() {
    */
   const removeScene = async (sceneId: string) => {
     const previous = currentChapters()
-    const chapters = currentChapters().map((slot) => ({
-      ...slot,
-      scene_ids: slot.scene_ids.filter((id) => id !== sceneId),
-    }))
-    const saved = await save(chapters)
+    const saved = await save(withSceneRemoved(previous, sceneId))
     return { previous, documentId: saved.documentId, version: saved.version }
   }
 
@@ -257,16 +289,7 @@ export function useStructureEditor() {
    */
   const setNumbering = async (chapterId: string, rule: NumberingRule, label: string) => {
     const previous = currentChapters()
-    const chapters = currentChapters().map((slot) => {
-      if (slot.chapter_id !== chapterId) return slot
-      // The `chapters` array is replaced whole by the PATCH, so leaving the
-      // fields out of the slot clears them.
-      const { number_start: _n, unnumbered: _u, ...rest } = slot
-      if (rule.kind === 'start') return { ...rest, number_start: rule.number }
-      if (rule.kind === 'none') return { ...rest, unnumbered: true }
-      return rest
-    })
-    const saved = await save(chapters)
+    const saved = await save(withNumbering(previous, chapterId, rule))
     if (saved.documentId && saved.version != null) {
       undo?.record({ label, documentId: saved.documentId, previous, version: saved.version })
     }
