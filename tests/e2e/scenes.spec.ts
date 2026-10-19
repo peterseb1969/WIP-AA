@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 import { bulk, wipFetch } from '../integration/support/wip'
+import { setStructure } from './support/book'
 import { watch } from './support/page'
 
 // The scene editor: save, save on leave, split and merge — where the
@@ -23,7 +24,7 @@ test.beforeAll(async () => {
   ids.chapter = await create('AA_CHAPTER', { title: 'Scenes chapter' })
   ids.arrival = await create('AA_EVENT', { title: 'Arrival', event_type: 'SCENE', story_time_sort: 1, summary: 's', prose: '<p>The ferry docked at dusk.</p><p>Nobody came to meet it.</p>' })
   ids.departure = await create('AA_EVENT', { title: 'Departure', event_type: 'SCENE', story_time_sort: 2, summary: 's', prose: '<p>She left before dawn.</p>' })
-  ids.structure = await create('AA_BOOK_STRUCTURE', { book_title: 'Scenes book', chapters: [{ chapter_id: ids.chapter, scene_ids: [ids.arrival, ids.departure] }] })
+  ids.structure = await setStructure([{ chapter_id: ids.chapter, scene_ids: [ids.arrival, ids.departure] }])
 })
 
 test('type and save with Cmd/Ctrl+S', async ({ page }) => {

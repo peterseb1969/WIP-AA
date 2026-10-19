@@ -54,6 +54,10 @@ npm test
 # Integration tests against the local WIP (creates and deletes an aa-it-<timestamp> namespace)
 npm run test:integration
 
+# End-to-end tests in Chrome (Playwright; starts its own app instance on ports 3016/5182
+# against a disposable aa-e2e-<timestamp> namespace)
+npm run test:e2e
+
 # Production build
 npm run build && npm run start
 ```
