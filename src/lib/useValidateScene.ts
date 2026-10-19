@@ -32,13 +32,17 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
-/** Check if a name appears in text using word-boundary regex */
+/**
+ * Check if a name appears in text as a whole word. Word edges are Unicode
+ * letters, digits and "_" — `\b` knows only ASCII letters, so it missed
+ * "José" and "Ödön" and found "José" inside "Josées".
+ */
 function nameFoundInText(name: string, plainText: string): boolean {
   if (!name || name.length < 2) return false
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   // Case-sensitive for short names (< 5 chars) to avoid false positives
-  const flags = name.length < 5 ? 'g' : 'gi'
-  const regex = new RegExp(`\\b${escaped}\\b`, flags)
+  const flags = name.length < 5 ? 'u' : 'iu'
+  const regex = new RegExp(`(?<![\\p{L}\\p{N}_])${escaped}(?![\\p{L}\\p{N}_])`, flags)
   return regex.test(plainText)
 }
 
