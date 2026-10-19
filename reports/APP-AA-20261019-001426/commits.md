@@ -38,3 +38,18 @@
 **Why:** Peter: do 1–3 of the case review (lib upgrade + workaround removal, stale docs, mergeTerms) before he rebootstraps dev-test.
 **PoNIF:** #1 (merged term stays deprecated — "nothing ever dies" — so term lists must filter status=active, which the API does not by default).
 **Discovered:** mergeTerms moves value + names but not the label; merging a deprecated term is refused; merging when the survivor already has the names succeeds. Default term listing includes deprecated terms. zsh `$NS:A…` is a path modifier (`:A`) — build URLs in Python, not zsh.
+
+## b63622b — chore(deps): npm audit fix (32 -> 8), TipTap aligned on 3.32
+**Time:** 22:27
+**Files:** package.json, package-lock.json, ROADMAP.md
+**Tests:** 68 passed; tsc; build; host production server (aa, read-only) endpoint matrix ok; browser on scratch ns dev-aa-aud (deleted after): editor typing + Cmd+B + Cmd+S stored with <strong>, split stored correctly (original shortened, new scene, structure both), all sidebar pages without console errors. Dev container synced (npm install + marker); its server process still runs the old server deps until restarted.
+**What:** in-range fixes only (74 packages; all 3 criticals incl. proxy-addr); TipTap family raised to ^3.32.0 (core/pm had moved alone). Left: Tailwind 3 build-time chain (needs TW4, held back by technology-stack.md), esbuild dev-server advisory (Windows only).
+**Discovered:** the split button shows a native alert() when the cursor is in the last paragraph — it froze the automation tab once (stub window.alert before driving the editor). @hono/node-server went 1 -> 2 as a transitive of the MCP SDK.
+
+## df21bbe — test: finish layer 1 — scene check, merge, rename, Markdown (108 tests); fix accented names in the scene check
+**Time:** 22:32
+**Files:** 7 files changed, +470/-5
+**Tests:** 108 passed (7 files); tsc; build. Mutation check: skip-merge guard, label-in-aliases, fill-empty-only, rename collision check, retire-original, Markdown urlTransform — each fails exactly one test; accented-name tests failed on the old regex.
+**What:** useValidateScene/mergeEntities/rename/Markdown tests; src/lib/fakeWip.ts (in-memory WipClient stand-in: status filters, incoming edges, term merge effect incl. "label not moved"); nameFoundInText uses Unicode lookarounds instead of \b.
+**Why:** Peter: finish layer 1.
+**Discovered:** \b in JS regex is ASCII-only → names starting/ending with an accented letter were never found by the scene check (aa: "The Café", "The Tree Café", "Sunny's Work Shift at the Tree Café") and "José" matched inside "Josées". Running vitest with --root / scans the whole filesystem — never do that; put probe tests inside the project.
