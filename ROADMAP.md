@@ -23,6 +23,7 @@
   - Run in the background (60 s Bash cap), after checking that WIP answers (`nc -z localhost 8443`).
 
 ## Backlog
+- **One instance per book: base path at runtime** (Peter, 2026-10-19; CASE-913) — Several AA pods on one WIP, each with its own namespace (already configurable: `WIP_NAMESPACE`), route and single-namespace key. The deployer part is CASE-913 (BE-YAC). App side: the production bundle bakes its base path (`VITE_BASE_PATH`), so each route would need its own image; serve assets with relative URLs and take the router basename at runtime instead. Wait for the deployer direction before building.
 - **Dependency vulnerabilities: Tailwind 3 chain** (2026-10-19) — `npm audit fix` took the count from 32 to 8. Left: 7 in Tailwind 3's build-time tools (`braces`, `chokidar`, `micromatch`, `fast-glob`, `postcss-selector-parser`, `postcss-nested`, `tailwindcss`; none run in the server or the browser), fixed only by Tailwind 4, which `docs/technology-stack.md` holds back until all apps move together; and one `esbuild` advisory that affects esbuild's own dev server on Windows only (AA uses esbuild through `tsx` to compile, never its server).
 
 ## Backlog (Non-Code)
