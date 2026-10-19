@@ -60,3 +60,11 @@
 **Tests:** hook cases run by hand: staged failing test → exit 1 with the failure shown; docs-only staged → exit 0 in 0.03 s (skipped); real code change staged → exit 0 in 2.9 s (tests + tsc); pre-push → exit 0 in 2.5 s, dist/ untouched. Not tested: a failing pre-push build (would have meant breaking a file the live dev container serves).
 **What:** pre-commit (npm test + tsc for commits touching src/, server/, package or build config), pre-push (vite build into a temp dir); core.hooksPath set to .githooks in this clone; CLAUDE.md Dev Setup note.
 **Why:** Peter chose pre-commit over pre-push (agent commits are frequent, pushes are batched), plus a pre-push build.
+
+## e00a1ee — test: layer 2 — integration tests against real WIP (17 tests)
+**Time:** 23:26
+**Files:** 11 files changed, +349/-4
+**Tests:** unit 108 passed; integration 17 passed (~16 s, wip-local), namespace cleaned up after passing and failing runs; tsc (now incl. tests/). Mutation: removing the merge's label-alias step fails "every old spelling, label included" against real WIP. Pre-commit hook ran and passed on this commit.
+**What:** vitest.integration.config.ts + npm run test:integration; tests/integration/global-setup.ts (aa-it-<ts> namespace, deletion_mode full, leftovers removed, app bootstrap, teardown delete, AA_IT_KEEP to keep), support/wip.ts (client, raw fetch, per-item-checked bulk, eventually), bootstrap/platform/merge-rename tests; tsconfig includes tests/; hook regex includes tests/; README + ROADMAP.
+**Why:** Peter: continue the test suite (layer 2).
+**Discovered:** WIP does not resolve a term by its LABEL on document writes — only value and names ("Value 'Linnie Rowe' is not valid"). After a relabel the new label alone is not writable as a reference; AA writes term values, so unaffected, but the merge must keep adding absorbed labels as names. Vitest marks tests "skipped" (suite FAIL) when a beforeAll throws — read the Failed Suites block, not just the counts.
