@@ -68,3 +68,15 @@
 **What:** vitest.integration.config.ts + npm run test:integration; tests/integration/global-setup.ts (aa-it-<ts> namespace, deletion_mode full, leftovers removed, app bootstrap, teardown delete, AA_IT_KEEP to keep), support/wip.ts (client, raw fetch, per-item-checked bulk, eventually), bootstrap/platform/merge-rename tests; tsconfig includes tests/; hook regex includes tests/; README + ROADMAP.
 **Why:** Peter: continue the test suite (layer 2).
 **Discovered:** WIP does not resolve a term by its LABEL on document writes — only value and names ("Value 'Linnie Rowe' is not valid"). After a relabel the new label alone is not writable as a reference; AA writes term values, so unaffected, but the merge must keep adding absorbed labels as names. Vitest marks tests "skipped" (suite FAIL) when a beforeAll throws — read the Failed Suites block, not just the counts.
+
+## 0e1f228 — docs(roadmap): one instance per book — runtime base path (CASE-913)
+**Time:** 23:30
+**What/Why:** Peter: one AA pod per book on one WIP, single-namespace keys. AA's namespace is already configurable (WIP_NAMESPACE + /api/app-config); filed CASE-913 for BE-YAC (deployer: N instances of one app manifest with own route/namespace/key; open questions: bootstrap with a single-namespace key, Ask agent via MCP with the platform key). App side recorded in the backlog: runtime base path (VITE_BASE_PATH is baked into the bundle).
+
+## 914a0b4 — test: finish layer 2 — images and structure against real WIP (22 integration tests)
+**Time:** 23:37
+**Files:** 5 files changed, +235/-60
+**Tests:** unit 115 passed; integration 22 passed; tsc; no aa-it namespaces left. Mutation: dropping storeMedia's reuse lookup and dropping hardDeleteFile each fail one integration test. Not browser-tested: the hooks' wiring to the extracted functions (mechanical; same call sites).
+**What:** media.ts storeMedia/attachMedia/deleteMediaPermanently exported, hooks call them; useBookStructure.ts withSceneMoved/withChapterMoved/withSceneRemoved/withNumbering, useStructureEditor uses them; unit tests for those; tests/integration/media-structure.test.ts.
+**Why:** Peter: continue the test suite (finish layer 2).
+**Discovered:** re-attaching the same media to the same entity updates the edge (identity = source+target), no duplicate. AA_CHARACTER_ROLE has no MAJOR (PROTAGONIST … MENTIONED).
