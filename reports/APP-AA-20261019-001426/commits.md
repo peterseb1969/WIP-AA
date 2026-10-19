@@ -80,3 +80,20 @@
 **What:** media.ts storeMedia/attachMedia/deleteMediaPermanently exported, hooks call them; useBookStructure.ts withSceneMoved/withChapterMoved/withSceneRemoved/withNumbering, useStructureEditor uses them; unit tests for those; tests/integration/media-structure.test.ts.
 **Why:** Peter: continue the test suite (finish layer 2).
 **Discovered:** re-attaching the same media to the same entity updates the edge (identity = source+target), no duplicate. AA_CHARACTER_ROLE has no MAJOR (PROTAGONIST … MENTIONED).
+
+## 0329e14 — test: layer 3 begins — Playwright smoke and character create/update; fix raw names after creating
+**Time:** 23:48
+**Tests:** e2e smoke 14/14, characters 2/2; unit 115; create test failed on the old code (showed WREN_HALLOWAY).
+**What:** @playwright/test 1.63.0 (system Chrome), playwright.config.ts (second app instance on 3016/5182, AA_E2E_NAMESPACE set once in the main process, setup/teardown projects), tests/e2e/{global.setup,global.teardown,smoke.spec,characters.spec,support/page}.ts; CreateEntityModal: term cache refreshed after the form creates a name term, labels linked (htmlFor/id), role=dialog + aria-labelledby.
+**Discovered:** a new character showed its raw term value for up to 5 min (wip/react term stale time 5 min, no invalidation after createTerm in the form). Playwright: run order of webServer vs globalSetup is unclear → setup project dependency instead. getByText can match a still-open dialog's textarea: wait for the dialog to close before asserting.
+
+## ba3b8d8 — test: e2e scene editor (save, save on leave, split, merge); fix the scene-merge dialog's lost strings
+**Time:** 23:53
+**Tests:** e2e scenes 4/4; unit 118 (new locales.test.ts); merge step fails against the old locale files; duplicate-key test fails against them too.
+**Discovered:** en.json and de.json each had two top-level "merge" blocks since fc96e42 (entity merge) — the scene-merge dialog lost 8 strings (raw keys shown). Moved to merge_scene. Editor now role=textbox "Scene text".
+
+## a0cc85a — test: e2e drag and drop (chapter + Undo, Corkboard card); shared book structure helper
+**Time:** 23:56
+**Tests:** e2e full run 22 tests + setup/teardown passed (~35 s), no aa-e2e namespace left.
+**What:** drag.spec.ts (page.mouse drags; Undo button named "Undo: <step> (Cmd/Ctrl+Z)"), support/book.ts (create/doc/setStructure/drag); scenes spec uses setStructure; README + ROADMAP.
+**Discovered:** the app reads the first active AA_BOOK_STRUCTURE — specs must share one structure document.
