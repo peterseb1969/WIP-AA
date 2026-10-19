@@ -1209,6 +1209,9 @@ function SceneEditor({
           class:
             'prose prose-sm max-w-none focus:outline-none min-h-[300px] text-text leading-relaxed',
           style: "font-family: 'Georgia', 'Times New Roman', serif; font-size: 16px; line-height: 1.8;",
+          role: 'textbox',
+          'aria-multiline': 'true',
+          'aria-label': t('scenes.prose_label'),
         },
       },
       onCreate: ({ editor: e }) => {
@@ -2030,7 +2033,7 @@ function SceneEditor({
           onClick={() => { setMergeError(null); setMergeOpen(true) }}
           disabled={!prevScene && !nextScene}
           className="text-text-muted hover:text-primary p-1 transition-colors disabled:opacity-30"
-          title={t('merge.button')}
+          title={t('merge_scene.button')}
         >
           <Merge className="w-3.5 h-3.5" />
         </button>

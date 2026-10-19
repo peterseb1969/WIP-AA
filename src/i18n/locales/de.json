@@ -246,6 +246,7 @@
     "saved": "Gespeichert",
     "save_failed": "Nicht gespeichert \u2014 erneut",
     "save_shortcut": "Speichern (Cmd/Strg+S) \u2014 speichert auch automatisch",
+    "prose_label": "Szenentext",
     "panel_media": "Bilder"
   },
   "corkboard": {
@@ -709,7 +710,7 @@
     "move": "Verschieben",
     "moving": "Wird verschoben\u2026"
   },
-  "merge": {
+  "merge_scene": {
     "button": "Mit der vorherigen oder n\u00e4chsten Szene zusammenf\u00fchren",
     "title": "\u201e{{scene}}\u201c zusammenf\u00fchren",
     "with_previous": "Mit der vorherigen Szene",

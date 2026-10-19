@@ -48,7 +48,8 @@
   },
   "language": {
     "label": "Language",
-    "en": "English"
+    "en": "English",
+    "de": "Deutsch"
   },
   "dashboard": {
     "title": "Dashboard",
@@ -245,6 +246,7 @@
     "saved": "Saved",
     "save_failed": "Not saved \u2014 retry",
     "save_shortcut": "Save (Cmd/Ctrl+S) \u2014 also saves automatically",
+    "prose_label": "Scene text",
     "panel_media": "Images"
   },
   "corkboard": {
@@ -708,7 +710,7 @@
     "move": "Move",
     "moving": "Moving\u2026"
   },
-  "merge": {
+  "merge_scene": {
     "button": "Merge with the previous or next scene",
     "title": "Merge \u201c{{scene}}\u201d",
     "with_previous": "With the previous scene",
