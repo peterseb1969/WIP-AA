@@ -53,3 +53,10 @@
 **What:** useValidateScene/mergeEntities/rename/Markdown tests; src/lib/fakeWip.ts (in-memory WipClient stand-in: status filters, incoming edges, term merge effect incl. "label not moved"); nameFoundInText uses Unicode lookarounds instead of \b.
 **Why:** Peter: finish layer 1.
 **Discovered:** \b in JS regex is ASCII-only → names starting/ending with an accented letter were never found by the scene check (aa: "The Café", "The Tree Café", "Sunny's Work Shift at the Tree Café") and "José" matched inside "Josées". Running vitest with --root / scans the whole filesystem — never do that; put probe tests inside the project.
+
+## d27463c — build: versioned git hooks — tests and type-check before commits, build before pushes
+**Time:** 23:02
+**Files:** .githooks/pre-commit, .githooks/pre-push, CLAUDE.md, ROADMAP.md
+**Tests:** hook cases run by hand: staged failing test → exit 1 with the failure shown; docs-only staged → exit 0 in 0.03 s (skipped); real code change staged → exit 0 in 2.9 s (tests + tsc); pre-push → exit 0 in 2.5 s, dist/ untouched. Not tested: a failing pre-push build (would have meant breaking a file the live dev container serves).
+**What:** pre-commit (npm test + tsc for commits touching src/, server/, package or build config), pre-push (vite build into a temp dir); core.hooksPath set to .githooks in this clone; CLAUDE.md Dev Setup note.
+**Why:** Peter chose pre-commit over pre-push (agent commits are frequent, pushes are batched), plus a pre-push build.
