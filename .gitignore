@@ -21,3 +21,7 @@ dist/
 .claude/.session-id
 .ruff_cache/
 yac-discussions
+
+# Playwright output
+test-results/
+playwright-report/

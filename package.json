@@ -11,7 +11,8 @@
     "start": "tsx server/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:integration": "vitest run --config vitest.integration.config.ts"
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -38,6 +39,7 @@
     "tsx": "^4.19.4"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.18",

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useCreateDocument, useTerms, useWipClient } from '@wip/react'
+import { useCreateDocument, useTerms, useWipClient, wipKeys } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEntityNames, type NameKind } from '../lib/entityNames'
 import { relabelEntity, renameByCopy, NameTakenError } from '../lib/rename'
@@ -195,6 +195,7 @@ export function TermSelect({
           })}
         </div>
         <select
+          id={id}
           value=""
           onChange={(e) => {
             if (e.target.value && !selected.includes(e.target.value)) {
@@ -429,6 +430,7 @@ export default function CreateEntityModal({
 
       // Auto-create terms in index terminologies before creating the document
       // In edit mode, skip auto-term-creation for fields whose value hasn't changed
+      let termsCreated = false
       for (const field of config.fields) {
         if (field.autoCreateTermIn && data[field.name]) {
           const rawValue = String(data[field.name])
@@ -444,6 +446,7 @@ export default function CreateEntityModal({
               label: rawValue,
               aliases: rawValue !== termValue ? [rawValue] : [],
             }, { namespace: NAMESPACE })
+            termsCreated = true
           } catch {
             // Term may already exist — that's fine, continue
           }
@@ -451,6 +454,10 @@ export default function CreateEntityModal({
           data[field.name] = termValue
         }
       }
+
+      // Names are shown by their term's label; the cached term lists (fresh
+      // for 5 minutes) must learn the new term, or the list shows the raw value.
+      if (termsCreated) await queryClient.invalidateQueries({ queryKey: wipKeys.terms.all })
 
       createDoc.mutate(
         { template_id: config.templateId, namespace: NAMESPACE, data },
@@ -475,10 +482,10 @@ export default function CreateEntityModal({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-[10vh] px-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+      <div role="dialog" aria-modal="true" aria-labelledby="entity-modal-title" className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-text">
+          <h2 id="entity-modal-title" className="text-lg font-semibold text-text">
             {mode === 'edit' ? t('entities.edit_title', { entity: t(`entities.${entityType}.label`) }) : t('entities.new_title', { entity: t(`entities.${entityType}.label`) })}
           </h2>
           <button
@@ -493,13 +500,14 @@ export default function CreateEntityModal({
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {config.fields.map((field) => (
             <div key={field.name}>
-              <label className="block text-sm font-medium text-text mb-1">
+              <label htmlFor={`entity-${entityType}-${field.name}`} className="block text-sm font-medium text-text mb-1">
                 {t(`entities.${entityType}.fields.${field.name}.label`)}
                 {field.required ? <span className="text-danger ml-0.5">*</span> : null}
               </label>
 
               {field.type === 'text' ? (
                 <input
+                  id={`entity-${entityType}-${field.name}`}
                   type="text"
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
@@ -511,6 +519,7 @@ export default function CreateEntityModal({
 
               {field.type === 'number' ? (
                 <input
+                  id={`entity-${entityType}-${field.name}`}
                   type="number"
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
@@ -522,6 +531,7 @@ export default function CreateEntityModal({
 
               {field.type === 'textarea' ? (
                 <textarea
+                  id={`entity-${entityType}-${field.name}`}
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
                   placeholder={t(`entities.${entityType}.fields.${field.name}.placeholder`, { defaultValue: '' })}
@@ -533,6 +543,7 @@ export default function CreateEntityModal({
 
               {field.type === 'select' && field.terminologyId ? (
                 <TermSelect
+                  id={`entity-${entityType}-${field.name}`}
                   terminologyId={field.terminologyId}
                   value={formData[field.name] as string}
                   onChange={(val) => setField(field.name, val)}
@@ -541,6 +552,7 @@ export default function CreateEntityModal({
 
               {field.type === 'select' && field.options ? (
                 <select
+                  id={`entity-${entityType}-${field.name}`}
                   value={formData[field.name] as string}
                   onChange={(e) => setField(field.name, e.target.value)}
                   required={field.required}
@@ -555,6 +567,7 @@ export default function CreateEntityModal({
 
               {field.type === 'multi-select' && field.terminologyId ? (
                 <TermSelect
+                  id={`entity-${entityType}-${field.name}`}
                   terminologyId={field.terminologyId}
                   value={formData[field.name] as string[]}
                   onChange={(val) => setField(field.name, val)}
