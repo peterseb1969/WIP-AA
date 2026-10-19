@@ -1,3 +1,9 @@
 
 ## 00:52 — Podman VM rebooted during two parallel image builds (likely my doing)
 Ran `podman build` of Dockerfile.dev + an in-container `npm ci`/test/tsc/vite build AND a production `podman build` at the same time (both background). ~00:49 the podman machine (6 GB RAM, no swap; WIP stack ≈ 3.6 GB idle) rebooted: both jobs lost the socket ("ssh: handshake failed: EOF"), every WIP container restarted. Probable OOM, not provable (no previous-boot kernel log). aa checked afterwards: 148 docs / 194 terms / 15 templates / 1 file, all containers healthy. Rule for this machine: never run image builds in parallel next to the WIP stack; one at a time, with `--memory` limits. Side effect: wip-wip-aa restarted on its OLD node:20 image, saw the new lockfile and ran `npm ci` under Node 20, so the lock-hash marker now matches and a Node-24 redeploy would NOT re-install — fixed by folding `node -v` into the entrypoint's hash.
+
+## 07:48 — Peter rebuilt wip-aa on Node 24
+Peter ran `wip-deploy rebuild wip-aa --name wip-local`. Container: node v24.22.0, entrypoint re-ran npm ci (the node -v hash worked as designed), `npm test` in the container 68/68 on Vitest 5.0.3, container healthy, Vite + Express up, no errors in the log. The production image (Node 24, tsx as a runtime dependency) has not been built for dev-test / prod-test / kb yet.
+
+## 07:58 — dev-test checked (Peter rolled wip-aa:20261018c)
+dev-test (microk8s, ns dev-test): pod wip-wip-aa-64c976c768-pkr6l healthy, 0 restarts, started 05:53Z, image ghcr.io/peterseb1969/wip-aa:20261018c. Node v24.22.0; tsx runs from node_modules (no registry fetch). In-pod: health/app-config/bootstrap status 200 JSON (namespace aa, ready), / and /characters → index.html, unknown /api and /server-api → 404 JSON, /wip proxy lists namespaces. Ingress dev-test.internal → 302 to /auth/login (gateway auth, expected). Bundle lacks the book-details strings → built from pushed 34e7104; af995ef (not yet pushed) is not in it.
