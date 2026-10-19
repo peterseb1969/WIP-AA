@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { chapterLabel, chapterTitleShown, sceneTitleShown } from './titles'
+import { chapterLabel, chapterTitleShown, sceneTitleShown, titleFromFileName } from './titles'
 
 describe('chapterTitleShown', () => {
   it.each([
@@ -82,5 +82,18 @@ describe('chapterLabel', () => {
     expect(chapterLabel(t, null, 'Prologue')).toBe('Prologue')
     expect(chapterLabel(t, null, 'Chapter 1')).toBe('chapters_page.untitled_unnumbered')
     expect(chapterLabel(t, undefined, '')).toBe('chapters_page.untitled_unnumbered')
+  })
+})
+
+describe('titleFromFileName', () => {
+  it.each([
+    ['The Long Winter.txt', 'The Long Winter'],
+    ['the_long_winter.md', 'the long winter'],
+    ['Draft  3 – final.txt', 'Draft 3 – final'],
+    ['v1.2 manuscript.txt', 'v1.2 manuscript'],
+    ['noextension', 'noextension'],
+    ['', ''],
+  ])('%j → %j', (name, title) => {
+    expect(titleFromFileName(name)).toBe(title)
   })
 })

@@ -40,3 +40,11 @@ export function chapterLabel(t: T, number: number | null | undefined, title: str
   const num = long ? t('scenes.chapter_label', { number }) : t('dashboard.ch_short', { number })
   return shown ? `${num}: ${shown}` : num
 }
+
+/**
+ * A book title suggested by an uploaded file's name: extension dropped,
+ * underscores read as spaces. '' when there is no file (pasted text).
+ */
+export function titleFromFileName(name: string) {
+  return name.replace(/\.[^.]+$/, '').replace(/_+/g, ' ').replace(/\s+/g, ' ').trim()
+}

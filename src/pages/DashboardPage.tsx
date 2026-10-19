@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDocuments, useDeleteDocument } from '@wip/react'
+import { useDocuments, useDeleteDocument, useTerms } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   LayoutDashboard,
@@ -16,7 +16,7 @@ import {
   Plus,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { NAMESPACE, TEMPLATES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
+import { NAMESPACE, TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import { useBookStructure } from '../lib/useBookStructure'
 import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
@@ -73,6 +73,8 @@ export default function DashboardPage() {
 
   const project = projects?.items?.[0]
   const projectData = project?.data as Record<string, unknown> | undefined
+  const genreLabel = useTermLabel(TERMINOLOGIES.GENRE)
+  const timeSystemLabel = useTermLabel(TERMINOLOGIES.TIME_SYSTEM)
   const [projectModal, setProjectModal] = useState<'create' | 'edit' | null>(null)
   const deleteDocument = useDeleteDocument()
 
@@ -140,9 +142,9 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3 mt-1 text-sm text-text-muted">
             {projectData.author ? <span>{t('dashboard.by_author', { author: String(projectData.author) })}</span> : null}
             {projectData.genre ? (
-              <StatusBadge label={String(projectData.genre)} colorClass="bg-accent/10 text-accent" />
+              <StatusBadge label={genreLabel(projectData.genre)} colorClass="bg-accent/10 text-accent" />
             ) : null}
-            {projectData.time_system ? <span>{t('dashboard.time_label', { system: String(projectData.time_system) })}</span> : null}
+            {projectData.time_system ? <span>{t('dashboard.time_label', { system: timeSystemLabel(projectData.time_system) })}</span> : null}
           </div>
           {projectData.description ? (
             <p className="mt-3 text-text-muted text-sm max-w-2xl">{String(projectData.description)}</p>
@@ -451,4 +453,13 @@ function DangerZone() {
       ) : null}
     </div>
   )
+}
+
+/** A term's label by its stored value (the value itself while terms load or when none matches). */
+function useTermLabel(terminology: string) {
+  const { data: terms } = useTerms(terminology, { page_size: 100, namespace: NAMESPACE } as any)
+  return (value: unknown) => {
+    const v = String(value ?? '')
+    return terms?.items?.find((term) => term.value === v)?.label || v
+  }
 }

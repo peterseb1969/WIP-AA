@@ -284,6 +284,9 @@
     "parallel_events": "({{count}} Ereignisse \u2014 parallel)"
   },
   "import": {
+    "book_details_title": "Angaben zum Buch",
+    "book_details_hint": "Wird als Projekt des Buchs gespeichert. Beschreibung und alle Angaben lassen sich später im Dashboard ändern.",
+    "book_details_existing": "Das Buch hat schon Angaben („{{title}}“); sie bleiben erhalten. Ändern lassen sie sich im Dashboard.",
     "title": "Buch importieren",
     "step_upload": "Hochladen",
     "step_structure": "Struktur",

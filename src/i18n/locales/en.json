@@ -283,6 +283,9 @@
     "parallel_events": "({{count}} events \u2014 parallel)"
   },
   "import": {
+    "book_details_title": "Book details",
+    "book_details_hint": "Saved as the book's project. You can add a description and change everything later on the Dashboard.",
+    "book_details_existing": "This book already has details (\"{{title}}\"); they are kept. Change them on the Dashboard.",
     "title": "Import Book",
     "step_upload": "Upload",
     "step_structure": "Structure",

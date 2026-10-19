@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCreateDocument, useWipClient, useTerms } from '@wip/react'
+import { useCreateDocument, useDocuments, useWipClient, useTerms } from '@wip/react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -24,6 +24,8 @@ import {
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import { clearAllDrafts } from '../components/UnsavedDraftBanner'
 import BackLink from '../components/BackLink'
+import { PROJECT_TIME_SYSTEM_DEFAULT, TermSelect } from '../components/CreateEntityModal'
+import { titleFromFileName } from '../lib/titles'
 
 const toTermValue = (text: string): string =>
   text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
@@ -89,15 +91,24 @@ interface ExtractedPlotThread {
 
 type Step = 'upload' | 'structure' | 'entities' | 'confirm' | 'importing' | 'done'
 
+/** The book's details, saved as its AA_PROJECT document. */
+interface BookDetails {
+  title: string
+  author: string
+  /** AA_GENRE term value, '' for none. */
+  genre: string
+}
+
 // ── Step 1: Upload ───────────────────────────────────────
 
 function UploadStep({
   onParsed,
 }: {
-  onParsed: (chapters: ParsedChapter[], rawText: string) => void
+  onParsed: (chapters: ParsedChapter[], rawText: string, suggestedTitle: string) => void
 }) {
   const { t } = useTranslation()
   const [text, setText] = useState('')
+  const [fileName, setFileName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -118,7 +129,7 @@ function UploadStep({
         included: true,
         scenes: ch.scenes.map((s: any) => ({ ...s, included: true })),
       }))
-      onParsed(chapters, text)
+      onParsed(chapters, text, titleFromFileName(fileName))
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -131,6 +142,7 @@ function UploadStep({
     if (!file) return
     const content = await file.text()
     setText(content)
+    setFileName(file.name)
   }
 
   const wordCount = text.trim() ? text.trim().split(/\s+/).length : 0
@@ -708,6 +720,9 @@ function ConfirmStep({
   characters,
   locations,
   plotThreads,
+  book,
+  setBook,
+  existingProjectTitle,
   onBack,
   onImport,
 }: {
@@ -715,6 +730,10 @@ function ConfirmStep({
   characters: ExtractedCharacter[]
   locations: ExtractedLocation[]
   plotThreads: ExtractedPlotThread[]
+  book: BookDetails
+  setBook: (book: BookDetails) => void
+  /** Title of the project the book already has; the import keeps it. */
+  existingProjectTitle: string | undefined
   onBack: () => void
   onImport: () => void
 }) {
@@ -756,6 +775,53 @@ function ConfirmStep({
         </div>
       </div>
 
+      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+        <h2 className="text-sm font-semibold text-text">{t('import.book_details_title')}</h2>
+        {existingProjectTitle !== undefined ? (
+          <p className="text-sm text-text-muted">{t('import.book_details_existing', { title: existingProjectTitle })}</p>
+        ) : (
+          <>
+            <p className="text-sm text-text-muted">{t('import.book_details_hint')}</p>
+            <div>
+              <label htmlFor="import-book-title" className="block text-sm font-medium text-text mb-1">
+                {t('entities.project.fields.title.label')} <span className="text-danger">*</span>
+              </label>
+              <input
+                id="import-book-title"
+                value={book.title}
+                onChange={(e) => setBook({ ...book, title: e.target.value })}
+                placeholder={t('entities.project.fields.title.placeholder')}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="import-book-author" className="block text-sm font-medium text-text mb-1">
+                  {t('entities.project.fields.author.label')}
+                </label>
+                <input
+                  id="import-book-author"
+                  value={book.author}
+                  onChange={(e) => setBook({ ...book, author: e.target.value })}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label htmlFor="import-book-genre" className="block text-sm font-medium text-text mb-1">
+                  {t('entities.project.fields.genre.label')}
+                </label>
+                <TermSelect
+                  id="import-book-genre"
+                  terminologyId={TERMINOLOGIES.GENRE}
+                  value={book.genre}
+                  onChange={(genre) => setBook({ ...book, genre: String(genre) })}
+                />
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
         <p className="text-sm text-amber-700">
@@ -773,7 +839,8 @@ function ConfirmStep({
         </button>
         <button
           onClick={onImport}
-          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark font-medium transition-colors"
+          disabled={existingProjectTitle === undefined && !book.title.trim()}
+          className="flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-lg hover:bg-primary-dark disabled:opacity-50 font-medium transition-colors"
         >
           <Upload className="w-4 h-4" />
           {t('import.create_import')}
@@ -811,7 +878,16 @@ export default function ImportPage() {
   const [importError, setImportError] = useState('')
   const [importedCount, setImportedCount] = useState(0)
   const [resetting, setResetting] = useState(false)
+  const [book, setBook] = useState<BookDetails>({ title: '', author: '', genre: '' })
   const queryClient = useQueryClient()
+
+  // The book's project (title, author, genre, …). A reset keeps it, so a
+  // re-import keeps it too; otherwise the import creates it.
+  const { data: projects } = useDocuments({ template_id: TEMPLATES.PROJECT, status: 'active', namespace: NAMESPACE })
+  const existingProject = projects?.items?.[0]
+  const existingProjectTitle = existingProject
+    ? String((existingProject.data as { title?: string }).title ?? '')
+    : undefined
 
   // Freshness guard. Re-importing into a namespace that already holds a book
   // can't consolidate existing character terms — term creation is create-only,
@@ -847,9 +923,10 @@ export default function ImportPage() {
     }
   }, [queryClient, t])
 
-  const handleParsed = (chs: ParsedChapter[], text: string) => {
+  const handleParsed = (chs: ParsedChapter[], text: string, suggestedTitle: string) => {
     setChapters(chs)
     setRawText(text)
+    setBook((b) => (b.title ? b : { ...b, title: suggestedTitle }))
     setStep('structure')
   }
 
@@ -926,10 +1003,13 @@ export default function ImportPage() {
 
     const includedChapters = chapters.filter(ch => ch.included)
 
-    // +1 for the book structure document created at the end
+    const createProject = existingProjectTitle === undefined
+    const bookTitle = createProject ? book.title.trim() : existingProjectTitle
+
+    // +1 for the book structure document created at the end, +1 for the project
     const includedSceneCount = includedChapters.reduce((sum, ch) => sum + ch.scenes.filter(s => s.included).length, 0)
     const total = includedChapters.length + includedSceneCount +
-      characters.length + locations.length + plotThreads.length + 1
+      characters.length + locations.length + plotThreads.length + 1 + (createProject ? 1 : 0)
     setImportTotal(total)
     setImportProgress(0)
 
@@ -948,6 +1028,16 @@ export default function ImportPage() {
     }
 
     try {
+      // The project first: if it is refused, nothing else has been written yet.
+      if (createProject) {
+        await createOne(TEMPLATES.PROJECT, {
+          title: bookTitle,
+          time_system: PROJECT_TIME_SYSTEM_DEFAULT,
+          ...(book.author.trim() ? { author: book.author.trim() } : {}),
+          ...(book.genre ? { genre: book.genre } : {}),
+        })
+      }
+
       // Auto-create terms in index terminologies before creating documents
       for (const c of characters) {
         const tv = toTermValue(c.name)
@@ -1011,7 +1101,7 @@ export default function ImportPage() {
         scene_ids: chapterSceneIds[i] || [],
       }))
       await createOne(TEMPLATES.BOOK_STRUCTURE, {
-        book_title: includedChapters[0]?.title ? 'Imported Book' : 'Untitled',
+        book_title: bookTitle || 'Untitled',
         chapters: structureChapters,
       })
 
@@ -1050,7 +1140,7 @@ export default function ImportPage() {
       setImportedCount(created)
       setStep('done')
     }
-  }, [chapters, characters, locations, plotThreads, chapterSummaries, chapterCharacters, createDocument, wipClient])
+  }, [chapters, characters, locations, plotThreads, chapterSummaries, chapterCharacters, createDocument, wipClient, book, existingProjectTitle])
 
   const handleResetEntities = useCallback(() => {
     setCharacters(originalCharacters.map(c => ({ ...c })))
@@ -1170,6 +1260,9 @@ export default function ImportPage() {
           characters={characters}
           locations={locations}
           plotThreads={plotThreads}
+          book={book}
+          setBook={setBook}
+          existingProjectTitle={existingProjectTitle}
           onBack={() => setStep('entities')}
           onImport={handleImport}
         />

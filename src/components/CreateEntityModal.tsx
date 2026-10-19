@@ -18,6 +18,7 @@ interface FieldDef {
   terminologyId?: string   // for select/multi-select — fetches terms as options
   options?: string[]        // static options (alternative to terminology)
   autoCreateTermIn?: string // for text fields — auto-create term in this terminology before saving
+  default?: string          // initial value when creating
 }
 
 interface EntityConfig {
@@ -27,6 +28,9 @@ interface EntityConfig {
 
 // ── Entity Configurations ────────────────────────────────
 
+/** A new project's time system: "Sequence Only" (the import cannot know the book's). */
+export const PROJECT_TIME_SYSTEM_DEFAULT = 'ORDINAL'
+
 export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
   project: {
     templateId: TEMPLATES.PROJECT,
@@ -34,7 +38,8 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
       { name: 'title', type: 'text', required: true },
       { name: 'author', type: 'text' },
       { name: 'genre', type: 'select', terminologyId: TERMINOLOGIES.GENRE },
-      { name: 'time_system', type: 'select', required: true, terminologyId: TERMINOLOGIES.TIME_SYSTEM },
+      // Shown on the Dashboard only; scenes are ordered by story_time_sort whatever it says.
+      { name: 'time_system', type: 'select', required: true, terminologyId: TERMINOLOGIES.TIME_SYSTEM, default: PROJECT_TIME_SYSTEM_DEFAULT },
       { name: 'description', type: 'textarea' },
       { name: 'setting_summary', type: 'textarea' },
     ],
@@ -138,13 +143,15 @@ export const ENTITY_CONFIGS: Record<string, EntityConfig> = {
 
 // ── Terminology Dropdown ─────────────────────────────────
 
-function TermSelect({
+export function TermSelect({
+  id,
   terminologyId,
   value,
   onChange,
   placeholder,
   multiple,
 }: {
+  id?: string
   terminologyId: string
   value: string | string[]
   onChange: (val: string | string[]) => void
@@ -211,6 +218,7 @@ function TermSelect({
 
   return (
     <select
+      id={id}
       value={typeof value === 'string' ? value : ''}
       onChange={(e) => onChange(e.target.value)}
       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-text focus:outline-none focus:border-primary"
@@ -344,7 +352,7 @@ export default function CreateEntityModal({
         const val = initialData?.[f.name]
         initial[f.name] = val != null ? String(val) : ''
       } else {
-        initial[f.name] = initialData?.[f.name] ?? ''
+        initial[f.name] = initialData?.[f.name] ?? f.default ?? ''
       }
     })
     return initial
