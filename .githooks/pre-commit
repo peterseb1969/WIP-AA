@@ -5,7 +5,7 @@
 # Activate once per clone: git config core.hooksPath .githooks
 # Emergency bypass: git commit --no-verify
 git diff --cached --name-only --diff-filter=ACMRD |
-  grep -qE '^(src/|server/|package(-lock)?\.json$|tsconfig\.json$|vite\.config\.ts$|vitest\.config\.ts$)' || exit 0
+  grep -qE '^(src/|server/|tests/|package(-lock)?\.json$|tsconfig\.json$|vite\.config\.ts$|vitest\.config\.ts$)' || exit 0
 
 npm test --silent >/tmp/aa-pre-commit-test.log 2>&1 || {
   cat /tmp/aa-pre-commit-test.log

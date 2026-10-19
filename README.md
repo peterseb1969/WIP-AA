@@ -51,6 +51,9 @@ npm run dev:server
 # Unit tests (Vitest)
 npm test
 
+# Integration tests against the local WIP (creates and deletes an aa-it-<timestamp> namespace)
+npm run test:integration
+
 # Production build
 npm run build && npm run start
 ```

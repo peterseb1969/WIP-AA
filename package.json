@@ -10,7 +10,8 @@
     "build": "vite build",
     "start": "tsx server/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",

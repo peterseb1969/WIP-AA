@@ -18,5 +18,5 @@
     "resolveJsonModule": true,
     "esModuleInterop": true
   },
-  "include": ["src", "server"]
+  "include": ["src", "server", "tests"]
 }
