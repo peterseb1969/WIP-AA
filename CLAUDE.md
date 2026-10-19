@@ -178,6 +178,8 @@ The WIP libs are tarballs in `libs/`. `@tanstack/react-query` is the peer depend
 
 **@wip/react providers:** Hooks require BOTH `QueryClientProvider` (from `@tanstack/react-query`) AND `WipProvider` (from `@wip/react`). Missing either causes silent failure — hooks mount but never fetch, no errors.
 
+**Git hooks (versioned in `.githooks/`):** activate once per clone with `git config core.hooksPath .githooks` — check with `git config --get core.hooksPath` at session start. `pre-commit` runs the unit tests (`npm test`) and the type-check for any commit that touches `src/`, `server/`, package or build config (about 3 s; report- and doc-only commits skip it); `pre-push` runs the production build. A failing hook means fix the code, not `--no-verify`.
+
 ## Tool use — Bash timeouts and waits
 
 - **Never set Bash `timeout > 60000` ms.** Use `run_in_background: true` for any command that may exceed 60 s. Use `Monitor` for streaming output, or wait for the auto-completion notification when the background task finishes. A user-scoped PreToolUse hook (`~/.claude/hooks/block-long-bash-timeout.sh`) mechanically rejects calls with `timeout > 60000` — the discipline rule still applies even if the hook is disabled or absent. *Origin: this rule once lived only in feedback memory and still failed to prevent recurrence twice in 90 minutes within one session — hence the mechanical hook.*

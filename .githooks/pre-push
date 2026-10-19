@@ -1,0 +1,12 @@
+#!/bin/sh
+# Production build before every push: the bundler catches what the type-check
+# and unit tests don't. Builds into a temporary directory, so dist/ is untouched.
+# Emergency bypass: git push --no-verify
+out=$(mktemp -d)
+npx vite build --outDir "$out" --emptyOutDir >"$out.log" 2>&1 || {
+  cat "$out.log"
+  echo "pre-push: production build failed (bypass: git push --no-verify)"
+  rm -rf "$out" "$out.log"
+  exit 1
+}
+rm -rf "$out" "$out.log"

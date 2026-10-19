@@ -1,0 +1,18 @@
+#!/bin/sh
+# Unit tests and type-check before every commit that touches code; commits
+# that only change reports or docs skip them. The checks run on the working
+# tree, so a partially staged file is checked as it is on disk.
+# Activate once per clone: git config core.hooksPath .githooks
+# Emergency bypass: git commit --no-verify
+git diff --cached --name-only --diff-filter=ACMRD |
+  grep -qE '^(src/|server/|package(-lock)?\.json$|tsconfig\.json$|vite\.config\.ts$|vitest\.config\.ts$)' || exit 0
+
+npm test --silent >/tmp/aa-pre-commit-test.log 2>&1 || {
+  cat /tmp/aa-pre-commit-test.log
+  echo "pre-commit: unit tests failed (bypass: git commit --no-verify)"
+  exit 1
+}
+npx tsc --noEmit -p . || {
+  echo "pre-commit: type-check failed (bypass: git commit --no-verify)"
+  exit 1
+}
