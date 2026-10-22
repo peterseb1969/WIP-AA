@@ -92,3 +92,9 @@
 **What:** parseText recognises unnumbered headings (en/de), front matter part, unique scene titles, positional key; ImportPage: front matter unticked, kind labels, key-based extraction maps, PROLOGUE/INTERLUDE/EPILOGUE event types, unnumbered slots; server reset addresses <ns>:AA_CHARACTERS; second Playwright project for import.
 **Why:** Peter: file a case + KNOWN_ISSUES, fix, close. CASE-928 filed, implemented, status implemented.
 **Discovered:** "Reset & import fresh" never cleared names (bare terminology value → 400 for a multi-namespace key, swallowed by catch, answered ok) — fixed in the same commit; found by the import spec's repeat passes. target_yac APP-AA is not in the KB vocabulary (use any).
+
+## a6e88b3 — feat: load the demo book from the app, in an empty book
+**Tests:** e2e demo.spec (loads in a fresh book, offer gone afterwards; fails when bookIsEmpty always says yes); gate path driven in Chrome on a new namespace aa-demo-app (demo loaded in 9.3 s, no errors); unit 129; e2e --repeat-each=3 122 passed.
+**What:** server/lib/demo-book.ts (+ data moved to server/demo/book.ts), server/demo.routes.ts (status + SSE load), LoadDemoBook card on Dashboard and Import page, "Bootstrap with the demo book" on the gate, src/lib/sse.ts; CLI is a thin wrapper.
+**Why:** Peter could not see the demo in the app; asked for an in-app option, empty books only.
+**Discovered:** Dashboard "Recent Scenes" prints locations as term values (KNOWN_ISSUES, not fixed). .dockerignore's unscoped *.md drops server/prompts/assistant.md from the image (deploy contract Skip 8; not fixed). A dev instance's `tsx watch` outlives a port-based kill and restarts its server on the next server edit: stop dev instances by their watcher PID.
