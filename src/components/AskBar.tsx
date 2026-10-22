@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect } from 'react'
+import { Suspense, lazy, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import Markdown from './Markdown'
+
+// The Markdown renderer (react-markdown + GFM) is large and only needed once
+// an answer arrives, so it stays out of the bundle every page loads.
+const Markdown = lazy(() => import('./Markdown'))
 
 interface Message {
   role: 'user' | 'assistant'
@@ -115,7 +118,7 @@ export default function AskBar() {
             }`}>
               {msg.role === 'user'
                 ? <div className="whitespace-pre-wrap">{msg.content}</div>
-                : <Markdown>{msg.content}</Markdown>}
+                : <Suspense fallback={<span className="whitespace-pre-wrap">{msg.content}</span>}><Markdown>{msg.content}</Markdown></Suspense>}
               {msg.toolCalls ? (
                 <div className="text-xs mt-1 opacity-60">{t('ask_bar.tool_calls', { count: msg.toolCalls })}</div>
               ) : null}

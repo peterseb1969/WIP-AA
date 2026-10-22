@@ -44,8 +44,8 @@ Vite's dev server answers 403 to a `Host` other than localhost or an IP. `DEV_AL
 ### The scene editor loads at most 200 scenes (found 2026-10-22)
 `ScenesPage` lists scenes with one `useDocuments` call, `page_size: 200`, and finds the open scene in that list. In a book with more than 200 scenes the rest would show "Scene not found" and be missing from the list. `aa` has 12 scenes, so this is latent. Fix when a book gets near it: page through, or fetch the open scene by id.
 
-### Large bundle
-The production bundle is one 1,257 kB chunk (2026-10-22; Vite warns above 500 kB). Code-splitting the pages would fix it.
+### Large bundle — fixed 2026-10-22
+The production bundle was one 1,257 kB chunk. Every page is now loaded on first visit (`React.lazy` in `App.tsx`, `Suspense` around the outlet in `Layout.tsx`), and the Ask bar loads its Markdown renderer with the first answer. Main chunk 443 kB; the scene editor (463 kB, TipTap) and Markdown (161 kB) load when needed; no chunk over Vite's 500 kB warning. Checked: a production build under `/apps/aa` serves every chunk, and the e2e suite passes three times in a row (116).
 
 ## Deferred decisions
 

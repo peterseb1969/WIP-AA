@@ -1,3 +1,4 @@
+import { lazy } from 'react'
 import './i18n'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
@@ -7,20 +8,23 @@ import { wipClient, queryClient } from './lib/wip'
 import { BootstrapGate } from './components/BootstrapGate'
 import Layout from './components/Layout'
 import AskBar from './components/AskBar'
-import DashboardPage from './pages/DashboardPage'
-import ScenesPage from './pages/ScenesPage'
-import CorkboardPage from './pages/CorkboardPage'
-import CharactersPage from './pages/CharactersPage'
-import ChaptersPage from './pages/ChaptersPage'
-import TimelinePage from './pages/TimelinePage'
-import LocationsPage from './pages/LocationsPage'
-import PlotThreadsPage from './pages/PlotThreadsPage'
-import NotesPage from './pages/NotesPage'
-import WorldRulesPage from './pages/WorldRulesPage'
-import PromptsPage from './pages/PromptsPage'
-import MediaLibraryPage from './pages/MediaLibraryPage'
-import ImportPage from './pages/ImportPage'
-import SettingsPage from './pages/SettingsPage'
+// Each page is its own chunk, loaded on first visit: one bundle held every
+// page, the editor and the import wizard (1.26 MB). Layout shows a loading
+// line meanwhile.
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const ScenesPage = lazy(() => import('./pages/ScenesPage'))
+const CorkboardPage = lazy(() => import('./pages/CorkboardPage'))
+const CharactersPage = lazy(() => import('./pages/CharactersPage'))
+const ChaptersPage = lazy(() => import('./pages/ChaptersPage'))
+const TimelinePage = lazy(() => import('./pages/TimelinePage'))
+const LocationsPage = lazy(() => import('./pages/LocationsPage'))
+const PlotThreadsPage = lazy(() => import('./pages/PlotThreadsPage'))
+const NotesPage = lazy(() => import('./pages/NotesPage'))
+const WorldRulesPage = lazy(() => import('./pages/WorldRulesPage'))
+const PromptsPage = lazy(() => import('./pages/PromptsPage'))
+const MediaLibraryPage = lazy(() => import('./pages/MediaLibraryPage'))
+const ImportPage = lazy(() => import('./pages/ImportPage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 // CASE-370 surface #10: when the app is mounted under a path prefix
 // (e.g. /apps/aa behind the wip-deploy gateway), the router must know the

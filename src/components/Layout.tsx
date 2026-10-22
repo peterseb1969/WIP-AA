@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
@@ -114,7 +114,10 @@ export default function Layout() {
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          {/* Pages load on first visit (App.tsx); the sidebar stays meanwhile. */}
+          <Suspense fallback={<div className="p-6 text-text-muted">{t('common.loading')}</div>}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>
