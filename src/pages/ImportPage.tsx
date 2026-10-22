@@ -62,12 +62,21 @@ interface ParsedScene {
   included: boolean
 }
 
+// Mirrors server/import.ts. `key` is the position in the manuscript: chapter
+// numbers can repeat (a Part Two starting again at 1), so results are keyed by it.
+type ChapterKind = 'chapter' | 'prologue' | 'interlude' | 'epilogue' | 'front'
+
 interface ParsedChapter {
-  number: number
+  key: number
+  /** null: a prologue, interlude, epilogue or front matter (no chapter number). */
+  number: number | null
+  kind: ChapterKind
   title: string
   scenes: ParsedScene[]
   included: boolean
 }
+
+const EVENT_TYPE_OF: Partial<Record<ChapterKind, string>> = { prologue: 'PROLOGUE', interlude: 'INTERLUDE', epilogue: 'EPILOGUE' }
 
 interface ExtractedCharacter {
   name: string
@@ -127,8 +136,9 @@ function UploadStep({
       if (!res.ok) throw new Error(data.error)
       const chapters: ParsedChapter[] = data.chapters.map((ch: any) => ({
         ...ch,
-        included: true,
-        scenes: ch.scenes.map((s: any) => ({ ...s, included: true })),
+        // Front matter (a title page, usually) is shown but left out unless ticked.
+        included: ch.kind !== 'front',
+        scenes: ch.scenes.map((s: any) => ({ ...s, included: ch.kind !== 'front' })),
       }))
       onParsed(chapters, text, titleFromFileName(fileName))
     } catch (err: any) {
@@ -263,10 +273,11 @@ function StructureStep({
                 type="checkbox"
                 checked={ch.included}
                 onChange={() => toggleChapter(chIdx)}
+                aria-label={ch.title}
                 className="rounded border-gray-300"
               />
               <BookOpen className="w-4 h-4 text-primary flex-shrink-0" />
-              <span className="text-sm text-text-muted w-16 flex-shrink-0">{t('dashboard.ch_short', { number: ch.number })}</span>
+              <span className="text-sm text-text-muted w-16 flex-shrink-0">{ch.number != null ? t('dashboard.ch_short', { number: ch.number }) : t(`import.kind_${ch.kind}`)}</span>
               <input
                 type="text"
                 value={ch.title}
@@ -966,7 +977,7 @@ export default function ImportPage() {
               allCharacters.push({ name: c.name, role: c.role, description: c.description })
             }
           }
-          perChapterChars.set(ch.number, chapterCharNames)
+          perChapterChars.set(ch.key, chapterCharNames)
           for (const l of data.locations || []) {
             if (!allLocations.some(existing => existing.name.toLowerCase() === l.name.toLowerCase())) {
               allLocations.push({ name: l.name, type: l.type, atmosphere: l.atmosphere })
@@ -978,11 +989,11 @@ export default function ImportPage() {
             }
           }
           if (data.summary) {
-            summaries.set(ch.number, data.summary)
+            summaries.set(ch.key, data.summary)
           }
         }
       } catch (err) {
-        console.error(`Extract failed for chapter ${ch.number}:`, err)
+        console.error(`Extract failed for "${ch.title}":`, err)
       }
     }
 
@@ -1078,7 +1089,7 @@ export default function ImportPage() {
         const docId = await createOne(TEMPLATES.CHAPTER, {
           title: ch.title,
           status: 'DRAFT',
-          summary: chapterSummaries.get(ch.number) || '',
+          summary: chapterSummaries.get(ch.key) || '',
         })
         chapterDocIds.push(docId)
       }
@@ -1092,11 +1103,11 @@ export default function ImportPage() {
         for (const scene of includedScenes) {
           const docId = await createOne(TEMPLATES.EVENT, {
             title: scene.title,
-            event_type: 'SCENE',
+            event_type: EVENT_TYPE_OF[ch.kind] ?? 'SCENE',
             story_time_sort: (ci + 1) * 1000 + scene.sceneOrder,
             prose: scene.prose,
-            summary: chapterSummaries.get(ch.number) || '',
-            characters: (chapterCharacters.get(ch.number) || []).filter(tv => validCharTerms.has(tv)),
+            summary: chapterSummaries.get(ch.key) || '',
+            characters: (chapterCharacters.get(ch.key) || []).filter(tv => validCharTerms.has(tv)),
           })
           sceneIds.push(docId)
         }
@@ -1107,6 +1118,8 @@ export default function ImportPage() {
       const structureChapters = chapterDocIds.map((chapterId, i) => ({
         chapter_id: chapterId,
         scene_ids: chapterSceneIds[i] || [],
+        // Prologue, interlude, epilogue and front matter take no chapter number.
+        ...(includedChapters[i]!.number == null ? { unnumbered: true } : {}),
       }))
       await createOne(TEMPLATES.BOOK_STRUCTURE, {
         book_title: bookTitle || 'Untitled',

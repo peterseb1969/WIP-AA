@@ -175,12 +175,13 @@ router.delete('/api/book/reset', async (req, res) => {
     if (clearNames) {
       const extensible = ['AA_CHARACTERS', 'AA_LOCATIONS', 'AA_PLOT_THREADS']
       for (const termValue of extensible) {
-        let terminologyId: string | null = null
-        try {
-          const t = await wip.defStore.getTerminology(termValue)
-          terminologyId = (t as any).terminology_id
-        } catch { continue }
-        if (!terminologyId) continue
+        // The key spans every namespace, so a bare value cannot be resolved
+        // (400): address the book's own terminology. A failed lookup used to
+        // be skipped silently, so the reset reported ok while every name
+        // stayed and the import page kept asking for a reset.
+        const t = await wip.defStore.getTerminology(`${WIP_NAMESPACE}:${termValue}`)
+        const terminologyId = (t as any).terminology_id as string | undefined
+        if (!terminologyId) throw new Error(`terminology ${termValue} not found in ${WIP_NAMESPACE}`)
 
         while (true) {
           const termPage = await wip.defStore.listTerms(terminologyId, { page: 1, page_size: 100 })

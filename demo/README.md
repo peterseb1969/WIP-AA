@@ -26,7 +26,7 @@ WIP_NAMESPACE=aa-demo-book PORT=3018 VITE_PORT=5183 \
 
 ## Import it
 
-`demo/manuscript.txt` is the same prose as plain text (regenerate with `npx tsx tools/load-demo-book.ts --manuscript`). Import it on a fresh namespace's Import page. It uses every chapter heading form the parser reads (`Chapter 1: …`, a number-only `Chapter 2`, Roman `Chapter III: …`, an em dash, `## 5. …`) and every scene break (`***`, `* * *`, `---`, `~~~`). The prologue, interlude and epilogue have plain headings the parser does not recognise; see KNOWN_ISSUES for what happens to them. The AI extraction (characters, locations, threads) needs an Anthropic key.
+`demo/manuscript.txt` is the same prose as plain text (regenerate with `npx tsx tools/load-demo-book.ts --manuscript`). Import it on a fresh namespace's Import page. It uses every chapter heading form the parser reads (`Chapter 1: …`, a number-only `Chapter 2`, Roman `Chapter III: …`, an em dash, `## 5. …`) and every scene break (`***`, `* * *`, `---`, `~~~`). The prologue, interlude and epilogue import as unnumbered parts, and the title page as unticked front matter. The AI extraction (characters, locations, threads) needs an Anthropic key; `tests/e2e/import.spec.ts` imports this manuscript with a stubbed extraction.
 
 ## What to look at
 

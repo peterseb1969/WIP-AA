@@ -9,8 +9,15 @@ export interface ParsedScene {
   prose: string
 }
 
+/** `front`: text before the first heading (a title page, an unheaded prologue). */
+export type ChapterKind = 'chapter' | 'prologue' | 'interlude' | 'epilogue' | 'front'
+
 export interface ParsedChapter {
-  number: number
+  /** Position in the manuscript (0, 1, …): unique, unlike `number`. */
+  key: number
+  /** The number in the heading; null for a prologue, interlude, epilogue or front matter. */
+  number: number | null
+  kind: ChapterKind
   title: string
   scenes: ParsedScene[]
 }
@@ -37,6 +44,17 @@ export interface ExtractedEntities {
 
 const CHAPTER_RE =
   /^(?:(?:chapter|kapitel)\s+(\d+|[ivxlcdm]+)(?:\s*[:\-–—.]\s*(.*))?|#{1,2}\s+(?:(?:chapter|kapitel)\s+)?(\d+|[ivxlcdm]+)(?:\s*[:\-–—.]\s*(.*))?)$/im
+
+// Unnumbered parts of a book, English and German: "Prologue", "Interlude: The
+// Bell", "## Epilog". Only a line that is nothing but the heading counts.
+const UNNUMBERED_RE =
+  /^\s*(?:#{1,2}\s+)?(prologue|prolog|interlude|zwischenspiel|epilogue|epilog)(?:\s*[:\-–—.]\s*(.*?))?\s*$/i
+
+const KIND_OF: Record<string, ChapterKind> = {
+  prologue: 'prologue', prolog: 'prologue',
+  interlude: 'interlude', zwischenspiel: 'interlude',
+  epilogue: 'epilogue', epilog: 'epilogue',
+}
 
 const SCENE_BREAK_RE = /^(?:\s*(?:\*\s*){3,}\s*|\s*(?:-\s*){3,}\s*|\s*~{3,}\s*|\s*#\s*$)/m
 
@@ -68,63 +86,72 @@ export function parseText(text: string): ParsedChapter[] {
   const chapters: ParsedChapter[] = []
   let currentChapter: ParsedChapter | null = null
   let buffer: string[] = []
+  // A scene's title is its identity: two scenes with one title would be one
+  // scene after the import (the second write updates the first). Numbers can
+  // repeat (a Part Two that starts again at Chapter 1), so titles are made
+  // unique here.
+  const usedTitles = new Set<string>()
+  const uniqueTitle = (base: string) => {
+    let title = base
+    for (let n = 2; usedTitles.has(title.toLowerCase()); n++) title = `${base} (${n})`
+    usedTitles.add(title.toLowerCase())
+    return title
+  }
+
+  const startChapter = (number: number | null, kind: ChapterKind, title: string) => {
+    currentChapter = { key: chapters.length, number, kind, title, scenes: [] }
+    chapters.push(currentChapter)
+  }
 
   function flushBuffer() {
-    if (!currentChapter) return
     const prose = buffer.join('\n').trim()
-    if (!prose) {
-      buffer = []
-      return
-    }
-    // Split buffer into scenes by scene breaks
+    buffer = []
+    if (!prose) return
+    // Text before the first heading is never glued onto Chapter 1: it becomes
+    // its own front-matter part, which the writer can include or leave out.
+    if (!currentChapter) startChapter(null, 'front', 'Front matter')
+    const chapter = currentChapter!
+    const prefix = chapter.number != null ? `Ch${chapter.number}` : chapter.title
     const sceneTexts = prose.split(SCENE_BREAK_RE).map(s => s.trim()).filter(Boolean)
     for (const sceneText of sceneTexts) {
-      const sceneNum = currentChapter.scenes.length + 1
-      currentChapter.scenes.push({
+      const sceneNum = chapter.scenes.length + 1
+      chapter.scenes.push({
         sceneOrder: sceneNum,
-        title: `Ch${currentChapter.number} Scene ${sceneNum}`,
+        title: uniqueTitle(`${prefix} Scene ${sceneNum}`),
         prose: sceneText,
       })
     }
-    buffer = []
   }
 
   for (const line of lines) {
     const match = line.match(CHAPTER_RE)
+    const unnumbered = match ? null : line.match(UNNUMBERED_RE)
     if (match) {
-      // Flush previous chapter's buffer
       flushBuffer()
-
       const numRaw = match[1] || match[3] || '1'
       const titleRaw = (match[2] || match[4] || '').trim()
       const num = parseChapterNumber(numRaw)
-
-      currentChapter = {
-        number: num,
-        title: titleRaw || `Chapter ${num}`,
-        scenes: [],
-      }
-      chapters.push(currentChapter)
+      startChapter(num, 'chapter', titleRaw || `Chapter ${num}`)
+    } else if (unnumbered) {
+      flushBuffer()
+      const word = unnumbered[1]!
+      const titleRaw = (unnumbered[2] || '').trim()
+      // As written: "Prologue", "Epilog"; "Interlude: The Bell" → "The Bell".
+      startChapter(null, KIND_OF[word.toLowerCase()]!, titleRaw || word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     } else {
       buffer.push(line)
     }
   }
 
-  // Flush last chapter
   flushBuffer()
 
-  // If no chapters detected, treat the whole text as chapter 1
-  if (chapters.length === 0 && text.trim()) {
-    const scenes = text.split(SCENE_BREAK_RE).map(s => s.trim()).filter(Boolean)
-    chapters.push({
-      number: 1,
-      title: 'Chapter 1',
-      scenes: scenes.map((prose, i) => ({
-        sceneOrder: i + 1,
-        title: `Ch1 Scene ${i + 1}`,
-        prose,
-      })),
-    })
+  // No headings at all: the whole text is chapter 1.
+  if (chapters.length === 1 && chapters[0]!.kind === 'front') {
+    const only = chapters[0]!
+    only.number = 1
+    only.kind = 'chapter'
+    only.title = 'Chapter 1'
+    only.scenes.forEach((s, i) => { s.title = `Ch1 Scene ${i + 1}` })
   }
 
   return chapters

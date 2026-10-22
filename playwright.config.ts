@@ -17,11 +17,31 @@ if (!process.env.WIP_API_KEY) {
 }
 // Set once in the main process; the worker processes inherit it.
 process.env.AA_E2E_NAMESPACE ??= `aa-e2e-${Date.now()}`
+// The import spec runs against its own app instance and namespace: an import
+// into a book that already has characters offers to reset the whole book,
+// which would wipe the other specs' fixtures.
+process.env.AA_E2E_IMPORT_NAMESPACE ??= `${process.env.AA_E2E_NAMESPACE}-import`
 // The local install uses a self-signed certificate (fixture calls from the tests).
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 export const SERVER_PORT = 3016
 const VITE_PORT = 5182
+export const IMPORT_SERVER_PORT = 3019
+const IMPORT_VITE_PORT = 5184
+
+const appInstance = (namespace: string, port: number, vitePort: number) => ({
+  command: 'npm run dev',
+  url: `http://localhost:${vitePort}/`,
+  reuseExistingServer: false,
+  timeout: 60_000,
+  env: {
+    WIP_NAMESPACE: namespace,
+    PORT: String(port),
+    VITE_PORT: String(vitePort),
+    WIP_BASE_URL: process.env.WIP_BASE_URL!,
+    WIP_API_KEY: process.env.WIP_API_KEY!,
+  },
+})
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -40,19 +60,11 @@ export default defineConfig({
   projects: [
     { name: 'setup', testMatch: /global\.setup\.ts/, teardown: 'teardown' },
     { name: 'teardown', testMatch: /global\.teardown\.ts/ },
-    { name: 'e2e', testMatch: /.*\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'e2e', testMatch: /.*\.spec\.ts/, testIgnore: /import\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'import', testMatch: /import\.spec\.ts/, use: { baseURL: `http://localhost:${IMPORT_VITE_PORT}` }, dependencies: ['setup'] },
   ],
-  webServer: {
-    command: 'npm run dev',
-    url: `http://localhost:${VITE_PORT}/`,
-    reuseExistingServer: false,
-    timeout: 60_000,
-    env: {
-      WIP_NAMESPACE: process.env.AA_E2E_NAMESPACE,
-      PORT: String(SERVER_PORT),
-      VITE_PORT: String(VITE_PORT),
-      WIP_BASE_URL: process.env.WIP_BASE_URL,
-      WIP_API_KEY: process.env.WIP_API_KEY,
-    },
-  },
+  webServer: [
+    appInstance(process.env.AA_E2E_NAMESPACE, SERVER_PORT, VITE_PORT),
+    appInstance(process.env.AA_E2E_IMPORT_NAMESPACE, IMPORT_SERVER_PORT, IMPORT_VITE_PORT),
+  ],
 })

@@ -285,6 +285,11 @@
     "parallel_events": "({{count}} Ereignisse \u2014 parallel)"
   },
   "import": {
+    "kind_chapter": "Kapitel",
+    "kind_prologue": "Prolog",
+    "kind_interlude": "Zwischenspiel",
+    "kind_epilogue": "Epilog",
+    "kind_front": "Vorspann",
     "book_details_title": "Angaben zum Buch",
     "book_details_hint": "Wird als Projekt des Buchs gespeichert. Beschreibung und alle Angaben lassen sich später im Dashboard ändern.",
     "book_details_existing": "Das Buch hat schon Angaben („{{title}}“); sie bleiben erhalten. Ändern lassen sie sich im Dashboard.",
