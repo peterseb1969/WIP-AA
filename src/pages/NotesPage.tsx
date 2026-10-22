@@ -106,7 +106,7 @@ export default function NotesPage() {
           {filtered.map((note) => {
             const d = note.data as unknown as NoteData
             return (
-              <div key={note.document_id} className="bg-white rounded-lg border border-gray-200 p-4">
+              <div key={note.document_id} role="article" aria-label={d.title} className="bg-white rounded-lg border border-gray-200 p-4">
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-semibold text-text">{d.title}</h3>
                   <div className="flex items-center gap-2">

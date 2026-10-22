@@ -93,6 +93,8 @@ export default function PlotThreadsPage() {
                   {items.map((thread) => (
                     <div
                       key={thread.id}
+                      role="article"
+                      aria-label={names.label('plot_thread', thread.data.title)}
                       className={`bg-white rounded-lg border border-gray-200 p-4 ${selectedCardClass(merge.isSelected(thread.id))}`}
                     >
                       <div className="flex items-start justify-between mb-1">

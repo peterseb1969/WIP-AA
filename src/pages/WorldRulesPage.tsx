@@ -76,7 +76,7 @@ export default function WorldRulesPage() {
               </h2>
               <div className="space-y-3">
                 {items.map((rule) => (
-                  <div key={rule.id} className="bg-white rounded-lg border border-gray-200 p-4">
+                  <div key={rule.id} role="article" aria-label={rule.data.name} className="bg-white rounded-lg border border-gray-200 p-4">
                     <div className="flex items-start justify-between mb-2">
                       <h3 className="font-semibold text-text">{rule.data.name}</h3>
                       <div className="flex items-center gap-1">
