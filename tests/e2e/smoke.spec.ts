@@ -2,8 +2,9 @@ import { expect, test } from '@playwright/test'
 import { watch } from './support/page'
 
 // Every sidebar page renders its heading, shows no error state and logs no
-// error — on an empty, freshly bootstrapped book. The first line of defence
-// when libraries change.
+// error. The first line of defence when libraries change. Specs share the
+// run's namespace and run in file order, so this sees whatever the specs
+// before it created; it does not test an empty book.
 const pages = [
   ['/', 'Dashboard'],
   ['/scenes', 'Scene Editor'],

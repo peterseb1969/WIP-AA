@@ -39,12 +39,15 @@ test('type and save with Cmd/Ctrl+S', async ({ page }) => {
 })
 
 test('saves when leaving the scene', async ({ page }) => {
+  const seen = watch(page)
   await page.goto(`/scenes?id=${ids.arrival}`)
   await editor(page).getByText('Nobody came to meet it.').click()
   await page.keyboard.press('End')
   await page.keyboard.type(' The lamps went out.')
   await page.getByRole('link', { name: 'Dashboard' }).click()
   await expect.poll(() => prose(ids.arrival)).toContain('Nobody came to meet it. The lamps went out.')
+  expect(seen.problems).toEqual([])
+  expect(seen.dialogs).toEqual([])
 })
 
 test('split after the paragraph with the cursor', async ({ page }) => {
@@ -59,10 +62,12 @@ test('split after the paragraph with the cursor', async ({ page }) => {
   expect(await prose(ids.arrival)).toBe('<p>The ferry docked at dusk. Gulls circled.</p>')
   expect(await prose(ids.continued)).toBe('<p>Nobody came to meet it. The lamps went out.</p>')
   expect((await doc(ids.continued)).data.title).toBe('Arrival (continued)')
+  expect(seen.problems).toEqual([])
   expect(seen.dialogs).toEqual([])
 })
 
 test('merge it back into the previous scene', async ({ page }) => {
+  const seen = watch(page)
   await page.goto(`/scenes?id=${ids.continued}`)
   await page.getByRole('button', { name: 'Merge with the previous or next scene' }).click()
   const dialog = page.getByRole('dialog', { name: /Merge “Arrival \(continued\)”/ })
@@ -74,4 +79,6 @@ test('merge it back into the previous scene', async ({ page }) => {
   expect(await prose(ids.arrival)).toContain('Gulls circled.')
   expect(await prose(ids.arrival)).toContain('The lamps went out.')
   expect((await doc(ids.continued)).status).toBe('inactive')
+  expect(seen.problems).toEqual([])
+  expect(seen.dialogs).toEqual([])
 })

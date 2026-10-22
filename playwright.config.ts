@@ -1,5 +1,5 @@
+import 'dotenv/config'
 import { readFileSync } from 'fs'
-import { homedir } from 'os'
 import { defineConfig } from '@playwright/test'
 
 // End-to-end tests (layer 3): the UI in a real browser (system Chrome).
@@ -7,12 +7,17 @@ import { defineConfig } from '@playwright/test'
 // tests drive a second app instance, started here, on its own ports and on a
 // disposable namespace (aa-e2e-<timestamp>). The `setup` project creates and
 // bootstraps that namespace, `teardown` deletes it. Run: npm run test:e2e
-const keyFile = process.env.WIP_API_KEY_FILE ?? `${homedir()}/.wip-deploy/wip-local/secrets/api-key`
+// The key comes from the same place as the app's: WIP_API_KEY, or the file
+// WIP_API_KEY_FILE names (set in .env). No default path: install directories
+// get renamed, and a stale default fails with a confusing ENOENT.
 process.env.WIP_BASE_URL ??= 'https://localhost:8443'
-process.env.WIP_API_KEY ??= readFileSync(keyFile, 'utf8').trim()
+if (!process.env.WIP_API_KEY) {
+  if (!process.env.WIP_API_KEY_FILE) throw new Error('Set WIP_API_KEY_FILE (in .env) or WIP_API_KEY')
+  process.env.WIP_API_KEY = readFileSync(process.env.WIP_API_KEY_FILE, 'utf8').trim()
+}
 // Set once in the main process; the worker processes inherit it.
 process.env.AA_E2E_NAMESPACE ??= `aa-e2e-${Date.now()}`
-// wip-local uses a self-signed certificate (fixture calls from the tests).
+// The local install uses a self-signed certificate (fixture calls from the tests).
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 export const SERVER_PORT = 3016

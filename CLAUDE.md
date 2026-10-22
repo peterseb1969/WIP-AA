@@ -40,11 +40,11 @@ The scaffold's dev-namespace workflow was never used here: `dev-authorassist` wa
 The MCP server resolves its key from `WIP_API_KEY_FILE` (the live wip-deploy secrets file) — see `.mcp.json`. This is fine for data modeling via MCP tools.
 
 **For your app's runtime API calls**, `.env` carries `WIP_API_KEY_FILE` pointing at that same live file. Resolve the key from the file at startup — the `@wip/proxy` `apiKeyFile` option does this for you, mirroring the MCP server — rather than baking a plaintext key. A key rotation or target-redeploy is then picked up on restart instead of stranding a stale `.env`. This is the deployment's admin/proxy key and spans all namespaces, which a cross-namespace console needs as-is.
-`.env` was written with `WIP_API_KEY_FILE=/Users/peter/.wip-deploy/wip-local/secrets/api-key` — no plaintext key is baked in. The runtime reads the file at startup, so rotating the deploy key or redeploying the target needs no edit here.
+`.env` was written with `WIP_API_KEY_FILE=/Users/peter/.wip-deploy/default/secrets/api-key` — no plaintext key is baked in. The runtime reads the file at startup, so rotating the deploy key or redeploying the target needs no edit here.
 
 ```bash
 # .env (already created)
-WIP_API_KEY_FILE=/Users/peter/.wip-deploy/wip-local/secrets/api-key
+WIP_API_KEY_FILE=/Users/peter/.wip-deploy/default/secrets/api-key
 ```
 
 **Least-privilege (optional).** The deploy key is admin-scoped. If this app owns a single namespace and you want a least-privilege key, provision one and repoint `WIP_API_KEY_FILE` at its own secrets file:
