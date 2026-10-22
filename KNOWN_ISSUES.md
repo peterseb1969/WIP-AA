@@ -26,8 +26,8 @@ Their identity is the title, so a rename copies the document under the new title
 
 A related edge (2026-10-22): `renameByCopy` checks only active documents for a title in use. Renaming onto the title of a retired document therefore brings that document back (a new version of it, with the new data) instead of creating one; its old history comes along. The rename itself works, so this was left as is. Split had the same blind spot and failed outright; it now checks every status (`uniqueSceneTitle`, `ScenesPage.tsx`).
 
-### Browser-unverified changes (2026-10-17)
-Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. Still unverified: the error screen `main.tsx` shows when `/api/app-config` can't be loaded.
+### Browser-unverified changes (2026-10-17) — all verified 2026-10-22
+Clicked through in a browser against a scratch namespace: loading the namespace from `/api/app-config`, the gate's **needs bootstrap** and **incomplete** panels, and Resume Bootstrap. The last item, the error screen `main.tsx` shows when `/api/app-config` can't be loaded, is covered by `tests/e2e/app-config.spec.ts` (HTTP 500, no namespace configured, server unreachable).
 
 ### Analyse (2026-10-18)
 Tested in a browser up to the Claude call (prompt library, starter prompts, the ✨ menu, the exact message sent, the "no API key" error). The Claude call itself was then tested against the deployed app with a real key: Style Polish on "Ch2 Scene 1" returned ten concrete suggestions in German in about 17 s. The answer is Markdown, which the Analysis tab renders as formatted text (since 2026-10-18; raw HTML is shown as text, never rendered). The key set in Settings on the deployed dev app is a runtime override (`persistable: false`), so it is lost when the container restarts; persisting it needs `ANTHROPIC_API_KEY_FILE` on a writable mount in the app's manifest (see CLAUDE.md, MCP section). The Analysis tab lives in the scene editor's side panel, which is hidden below the `md` breakpoint (768px), so on narrow screens the result is not visible.
@@ -35,17 +35,17 @@ Tested in a browser up to the Claude call (prompt library, starter prompts, the 
 ### Reporting entity view only has columns shared by every template version
 Not a bug, WIP's documented design: the `doc_<value>` entity view carries only the columns all versions share with the same type. A field added in a later version (AA_NOTE's `linked_plot_threads` in v2) is only in `doc_<value>__v<N>`, unless the template opts in via `reporting.cross_version_view.columns`. The app's cross-reference queries match on `data_json`, which holds every version's data. Reproduced on a fresh namespace on 2026-10-18. The agent-facing `wip://conventions` resource doesn't mention this rule, which is how it got mistaken for a bug.
 
-### `as any` casts around the WIP client
-Several `useTerms(...)` / `useTerminologies(...)` call sites cast their params to `any`, so `tsc` cannot check them against the client. `AliasManager`'s `updateTerm` call is typed again, and alias saving was retested in a browser with @wip/client 0.60.0 (2026-10-17).
+### `as any` casts around the WIP client — fixed 2026-10-22
+Gone. `@wip/react`'s `useTerms` forwards its params to the API, but its params type lacks `namespace` (`useTerminologies` has it); `src/lib/useBookTerms.ts` is now the one place that widens it, and every other cast needed none. Removing them surfaced one real gap, fixed: the import stored `undefined` in the book structure if a create returned no id. Left on purpose (not WIP-client casts): `catch (err: any)` blocks and the parsing of the server's import JSON in `ImportPage`/`DashboardPage`/`ScenesPage`/`AskBar`.
 
-### Vite rejects unknown hosts
-Vite's dev server answers 403 to a `Host` it doesn't recognise. Through Caddy on localhost this is fine; a non-localhost ingress (e.g. `kb.internal`) would need `server.allowedHosts` in `vite.config.ts`.
+### Vite rejects unknown hosts — fixed 2026-10-22
+Vite's dev server answers 403 to a `Host` other than localhost or an IP. `DEV_ALLOWED_HOSTS` (comma-separated, a leading dot allows subdomains) now feeds `server.allowedHosts`; unset keeps Vite's default. A dev install behind a non-localhost ingress needs that variable in its manifest (`apps/wip-aa/wip-app.yaml`, WIP repo), which it does not have yet.
 
 ### The scene editor loads at most 200 scenes (found 2026-10-22)
 `ScenesPage` lists scenes with one `useDocuments` call, `page_size: 200`, and finds the open scene in that list. In a book with more than 200 scenes the rest would show "Scene not found" and be missing from the list. `aa` has 12 scenes, so this is latent. Fix when a book gets near it: page through, or fetch the open scene by id.
 
 ### Large bundle
-The production bundle is ~930 kB (Vite warns above 500 kB). Code-splitting the pages would fix it.
+The production bundle is one 1,257 kB chunk (2026-10-22; Vite warns above 500 kB). Code-splitting the pages would fix it.
 
 ## Deferred decisions
 
