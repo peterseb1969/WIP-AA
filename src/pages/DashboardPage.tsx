@@ -23,6 +23,7 @@ import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
 import LoadDemoBook from '../components/LoadDemoBook'
+import { useEntityNames } from '../lib/entityNames'
 
 interface ChapterData {
   title: string
@@ -75,6 +76,8 @@ export default function DashboardPage() {
 
   const project = projects?.items?.[0]
   const projectData = project?.data as Record<string, unknown> | undefined
+  // Scenes store a location's term value; show its current name.
+  const names = useEntityNames()
   const genreLabel = useTermLabel(TERMINOLOGIES.GENRE)
   const timeSystemLabel = useTermLabel(TERMINOLOGIES.TIME_SYSTEM)
   const [projectModal, setProjectModal] = useState<'create' | 'edit' | null>(null)
@@ -211,7 +214,7 @@ export default function DashboardPage() {
                     <div className="font-medium text-sm text-text">{sceneTitleShown(String(d.title))}</div>
                     <div className="text-xs text-text-muted mt-0.5">
                       {chNum != null && t('dashboard.ch_short', { number: chNum })}
-                      {d.location != null && ` — ${String(d.location)}`}
+                      {d.location != null && ` — ${names.label('location', d.location)}`}
                     </div>
                   </Link>
                 )

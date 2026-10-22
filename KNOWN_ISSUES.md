@@ -53,8 +53,8 @@ Vite's dev server answers 403 to a `Host` other than localhost or an IP. `DEV_AL
 ### "Delete book" needs deletion mode `full` (2026-10-23, CASE-930)
 "Delete book" (Dashboard) and "Delete book & import fresh" (Import page) delete everything the app writes into the book: documents (also ones an earlier soft delete left retired), stored image files and names, so the book is afterwards exactly like a freshly bootstrapped one and offers the demo again. They hard-delete, because WIP refuses a new document whose identity matches a retired one once its names were hard-deleted and created again ("Composite key already registered under different entry", CASE-930); retiring the documents would leave a book that cannot be imported or loaded again. Hard deletes need the namespace in deletion mode `full`: new books are bootstrapped that way, `aa` was switched on 2026-10-23, and a `retain` book shows an explanation instead of the delete button. The partial reset (checkboxes per kind) is gone: it left the title, images, prompts and dangling image attachments behind.
 
-### Dashboard "Recent Scenes" shows locations as term values (found 2026-10-23)
-Seen with the demo book: "Ch. 2 — THE_NARROWS" instead of "The Narrows". The rest of the app shows labels; this list prints the stored value. Not fixed.
+### Dashboard "Recent Scenes" showed locations as term values — fixed 2026-10-23
+"Ch. 2 — THE_NARROWS" instead of "The Narrows": the list printed the stored term value. It now shows the location's name, like the rest of the app (`useEntityNames`). Guarded by `tests/e2e/dashboard.spec.ts`.
 
 ### The scene editor loads at most 200 scenes (found 2026-10-22)
 `ScenesPage` lists scenes with one `useDocuments` call, `page_size: 200`, and finds the open scene in that list. In a book with more than 200 scenes the rest would show "Scene not found" and be missing from the list. `aa` has 12 scenes, so this is latent. Fix when a book gets near it: page through, or fetch the open scene by id.
