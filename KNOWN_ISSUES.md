@@ -13,8 +13,8 @@ The parser started chapters only at `Chapter N` / `Kapitel N` / `# N`: text befo
 ### A scene cannot have the same title as a chapter (WIP, found 2026-10-22)
 Creating a scene titled like an existing chapter in the same namespace fails: "Composite key already registered under different entry". Both templates use the title as identity, and WIP's Registry key evidently does not include the template, although `wip://conventions` scopes identity per template. Writers hit this with a chapter "Low Water" and a scene "Low Water". Renaming a scene to a chapter's title goes through the same create, so it should fail the same way (not tried). Reproduced on a scratch namespace with a chapter and a scene titled "Same Title Probe". Platform side: CASE-926 (BE-YAC).
 
-### A namespace recreated under a deleted one's name resolves names to the deleted entries (WIP, found 2026-10-22)
-After deleting a namespace and creating it again with the same name (and bootstrapping it), `ns:VALUE` still resolves to the deleted namespace's terminologies (404 "Terminology … not found"), while listing shows the new ones. The app uses `ns:VALUE`, so such a namespace is unusable. The e2e runs are not affected (a new timestamped name each run); `tools/load-demo-book.ts --reset` is. Platform side: CASE-927 (BE-YAC).
+### A namespace recreated under a deleted one's name resolves names to the deleted entries for a while (WIP, found 2026-10-22, CASE-927)
+After deleting a namespace and creating it again with the same name, `ns:VALUE` resolved to the deleted namespace's terminologies (404 "Terminology … not found") while listing showed the new ones. On `aa` (re-created 2026-10-22 22:41 UTC) it lasted about 5 minutes for AA_CHARACTERS / AA_LOCATIONS, then resolved; on `aa-demo` it still failed a minute later. A fix is underway in WIP. Avoid it: empty a book with the app's "Delete book" (keeps the namespace); `tools/load-demo-book.ts` takes a new namespace name rather than reusing one.
 
 ### The server ignores `WIP_API_KEY_FILE` (found 2026-10-22)
 **Where:** `server/index.ts:16`, `server/lib/wip-api.ts`
