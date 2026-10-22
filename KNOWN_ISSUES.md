@@ -50,6 +50,9 @@ Gone. `@wip/react`'s `useTerms` forwards its params to the API, but its params t
 ### Vite rejects unknown hosts — fixed 2026-10-22
 Vite's dev server answers 403 to a `Host` other than localhost or an IP. `DEV_ALLOWED_HOSTS` (comma-separated, a leading dot allows subdomains) now feeds `server.allowedHosts`; unset keeps Vite's default. A dev install behind a non-localhost ingress needs that variable in its manifest (`apps/wip-aa/wip-app.yaml`, WIP repo), which it does not have yet.
 
+### "Delete book" needs deletion mode `full` (2026-10-23, CASE-930)
+"Delete book" (Dashboard) and "Delete book & import fresh" (Import page) delete everything the app writes into the book: documents (also ones an earlier soft delete left retired), stored image files and names, so the book is afterwards exactly like a freshly bootstrapped one and offers the demo again. They hard-delete, because WIP refuses a new document whose identity matches a retired one once its names were hard-deleted and created again ("Composite key already registered under different entry", CASE-930); retiring the documents would leave a book that cannot be imported or loaded again. Hard deletes need the namespace in deletion mode `full`: new books are bootstrapped that way, `aa` was switched on 2026-10-23, and a `retain` book shows an explanation instead of the delete button. The partial reset (checkboxes per kind) is gone: it left the title, images, prompts and dangling image attachments behind.
+
 ### Dashboard "Recent Scenes" shows locations as term values (found 2026-10-23)
 Seen with the demo book: "Ch. 2 — THE_NARROWS" instead of "The Narrows". The rest of the app shows labels; this list prints the stored value. Not fixed.
 

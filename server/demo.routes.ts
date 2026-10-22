@@ -11,15 +11,9 @@
 
 import { Router } from 'express'
 import { checkStatus } from './lib/bootstrap.js'
-import { bookIsEmpty, loadDemoBook, type DemoTarget } from './lib/demo-book.js'
+import { bookIsEmpty, deploymentBook as target } from './lib/book-space.js'
+import { loadDemoBook } from './lib/demo-book.js'
 import { initSSE, sendSSE, endSSE } from './lib/sse.js'
-
-// Read per request, like the bootstrap: the namespace is the deployment's.
-const target = (): DemoTarget => ({
-  namespace: process.env.WIP_NAMESPACE || 'aa',
-  baseUrl: process.env.WIP_BASE_URL || 'https://localhost:8443',
-  apiKey: process.env.WIP_API_KEY || '',
-})
 
 const router = Router()
 

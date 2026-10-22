@@ -33,7 +33,7 @@ test('import a manuscript with prologue, interlude, epilogue and front matter', 
 
   await page.goto('/import')
   // Later --repeat-each passes find the previous pass's book: start fresh.
-  const reset = page.getByRole('button', { name: 'Reset & import fresh' })
+  const reset = page.getByRole('button', { name: 'Delete book & import fresh' })
   const upload = page.getByRole('button', { name: 'Parse Structure' })
   await expect(reset.or(upload)).toBeVisible()
   if (await reset.isVisible()) {

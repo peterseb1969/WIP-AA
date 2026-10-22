@@ -164,8 +164,16 @@ export async function runBootstrap(
   try {
     // Step 1: Create namespace (idempotent upsert via PUT)
     progress('namespace', `Creating ${NAMESPACE} namespace...`)
+    // A new book is created with deletion_mode `full`, so "Delete book" can
+    // remove it for good (soft-deleted documents plus re-created names block
+    // a later import or demo load in WIP, see server/lib/book-space.ts).
+    // Every other delete in the app stays soft. An existing namespace (a
+    // resumed bootstrap) keeps its mode: switching retain → full needs an
+    // explicit confirmation and is the operator's decision.
+    const existing = ((await wipGet('/api/registry/namespaces')) as Array<{ prefix: string }>).some((n) => n.prefix === NAMESPACE)
     await wipPut(`/api/registry/namespaces/${NAMESPACE}`, {
       description: 'AuthorAssist app data (bootstrap created)',
+      ...(existing ? {} : { deletion_mode: 'full' }),
     })
 
     // Step 2: Load and create terminologies

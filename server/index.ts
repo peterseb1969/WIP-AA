@@ -11,6 +11,7 @@ import { analyse } from './analyse.js'
 import bootstrapRoutes from './bootstrap.routes.js'
 import configRoutes from './config.routes.js'
 import demoRoutes from './demo.routes.js'
+import { bookContents, deleteBook, deploymentBook } from './lib/book-space.js'
 
 const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -128,85 +129,24 @@ router.post('/api/analyse', async (req, res) => {
   }
 })
 
-// --- Delete book data ---
-// Body: { templates: string[], clearNames: boolean }
-// templates: array of template values to delete documents for (e.g. ['AA_CHAPTER', 'AA_EVENT'])
-// clearNames: also delete terms from extensible terminologies (AA_CHARACTERS, AA_LOCATIONS, AA_PLOT_THREADS)
-const TEMPLATE_VALUES = [
-  'AA_CHAPTER', 'AA_EVENT', 'AA_CHARACTER', 'AA_LOCATION',
-  'AA_PLOT_THREAD', 'AA_NOTE', 'AA_WORLD_RULE', 'AA_BOOK_STRUCTURE',
-] as const
-
-router.delete('/api/book/reset', async (req, res) => {
+// --- The whole book: what is in it, delete it ---
+// One action, no partial deletes: "Delete book" leaves the book exactly as a
+// fresh bootstrap does (server/lib/book-space.ts).
+router.get('/api/book/contents', async (_req, res) => {
   try {
-    const { templates = [], clearNames = false } = req.body || {}
-    const templateSet = new Set(templates as string[])
-    const wip = createWipClient({
-      baseUrl: WIP_BASE_URL,
-      auth: { type: 'api-key', key: WIP_API_KEY },
-    })
+    res.json(await bookContents(deploymentBook()))
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message })
+  }
+})
 
-    let deletedDocs = 0
-    let deletedTerms = 0
-
-    // Delete documents by template
-    for (const tv of TEMPLATE_VALUES) {
-      if (!templateSet.has(tv)) continue
-
-      while (true) {
-        const docs = await wip.documents.listDocuments({
-          namespace: WIP_NAMESPACE,
-          template_value: tv,
-          status: 'active',
-          page: 1,
-          page_size: 100,
-        })
-
-        if (!docs.items.length) break
-
-        await Promise.all(
-          docs.items.map((doc: any) =>
-            wip.documents.deleteDocument(doc.document_id, { updatedBy: 'book-reset' }).catch(() => {})
-          )
-        )
-        deletedDocs += docs.items.length
-
-        if (docs.items.length < 100) break
-      }
-    }
-
-    // Delete terms from extensible terminologies
-    if (clearNames) {
-      const extensible = ['AA_CHARACTERS', 'AA_LOCATIONS', 'AA_PLOT_THREADS']
-      for (const termValue of extensible) {
-        // The key spans every namespace, so a bare value cannot be resolved
-        // (400): address the book's own terminology. A failed lookup used to
-        // be skipped silently, so the reset reported ok while every name
-        // stayed and the import page kept asking for a reset.
-        const t = await wip.defStore.getTerminology(`${WIP_NAMESPACE}:${termValue}`)
-        const terminologyId = (t as any).terminology_id as string | undefined
-        if (!terminologyId) throw new Error(`terminology ${termValue} not found in ${WIP_NAMESPACE}`)
-
-        while (true) {
-          const termPage = await wip.defStore.listTerms(terminologyId, { page: 1, page_size: 100 })
-          if (!termPage.items.length) break
-
-          await Promise.all(
-            termPage.items.map((term: any) =>
-              wip.defStore.deleteTerm(term.term_id, { hardDelete: true }).catch(() => {})
-            )
-          )
-          deletedTerms += termPage.items.length
-
-          if (termPage.items.length < 100) break
-        }
-      }
-    }
-
-    res.json({ status: 'ok', deletedDocs, deletedTerms })
-  } catch (err: any) {
-    console.error('Reset error:', err)
-    res.status(500).json({ error: err.message || 'Reset failed' })
+router.delete('/api/book', async (_req, res) => {
+  try {
+    const deleted = await deleteBook(deploymentBook())
+    res.json({ status: 'ok', ...deleted })
+  } catch (err) {
+    console.error('Delete book error:', err)
+    res.status(500).json({ error: (err as Error).message })
   }
 })
 

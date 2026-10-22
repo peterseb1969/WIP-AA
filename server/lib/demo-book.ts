@@ -11,72 +11,14 @@
 import { deflateSync, crc32 } from 'zlib'
 import { createWipClient } from '@wip/client'
 import * as book from '../demo/book.js'
+import { bookClient, bookIsEmpty, type BookTarget } from './book-space.js'
 
-export interface DemoTarget {
-  namespace: string
-  baseUrl: string
-  apiKey: string
-}
+export { bookIsEmpty }
+export type DemoTarget = BookTarget
 
 export interface DemoProgress {
   step: string
   detail: string
-}
-
-// What makes a book "not empty": any document a writer creates, or any name
-// (an import creates names before documents).
-const BOOK_TEMPLATES = ['AA_PROJECT', 'AA_CHAPTER', 'AA_EVENT', 'AA_CHARACTER', 'AA_LOCATION', 'AA_PLOT_THREAD', 'AA_NOTE', 'AA_WORLD_RULE', 'AA_BOOK_STRUCTURE', 'AA_MEDIA']
-const NAME_TERMINOLOGIES = ['AA_CHARACTERS', 'AA_LOCATIONS', 'AA_PLOT_THREADS']
-
-function client(t: DemoTarget) {
-  async function call(method: string, path: string, body?: unknown) {
-    const res = await fetch(`${t.baseUrl}${path}`, {
-      method,
-      headers: { 'X-API-Key': t.apiKey, 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
-    const text = await res.text()
-    let json: unknown
-    try { json = JSON.parse(text) } catch { json = text }
-    return { status: res.status, json }
-  }
-
-  /** Bulk writes answer 200 even when an item failed: check every item. */
-  async function bulk(path: string, items: unknown[]) {
-    const { status, json } = await call('POST', path, items)
-    const results = (json as { results?: Array<{ status: string; error?: string; document_id?: string; id?: string }> }).results
-    if (status !== 200 || !results) throw new Error(`${path}: HTTP ${status} ${JSON.stringify(json).slice(0, 300)}`)
-    const failed = results.filter((r) => r.status === 'error')
-    if (failed.length) throw new Error(`${path}: ${failed.map((r) => r.error).join('; ')}`)
-    return results
-  }
-
-  async function create(template: string, items: Array<Record<string, unknown>>) {
-    try {
-      const results = await bulk('/api/document-store/documents', items.map((data) => ({ template_id: `${t.namespace}:${template}`, namespace: t.namespace, data })))
-      return results.map((r) => r.document_id!)
-    } catch (err) {
-      throw new Error(`${template}: ${err instanceof Error ? err.message : err}`)
-    }
-  }
-
-  return { call, bulk, create }
-}
-
-/** True when the book has no documents and no names yet. */
-export async function bookIsEmpty(t: DemoTarget): Promise<boolean> {
-  const { call } = client(t)
-  for (const template of BOOK_TEMPLATES) {
-    const { status, json } = await call('POST', '/api/document-store/documents/query', { template_id: `${t.namespace}:${template}`, status: 'active', page_size: 1 })
-    if (status !== 200) throw new Error(`checking ${template}: HTTP ${status}`)
-    if ((json as { total?: number; items?: unknown[] }).items?.length) return false
-  }
-  for (const terminology of NAME_TERMINOLOGIES) {
-    const { status, json } = await call('GET', `/api/def-store/terminologies/${t.namespace}:${terminology}/terms?namespace=${t.namespace}&page_size=1`)
-    if (status !== 200) throw new Error(`checking ${terminology}: HTTP ${status}`)
-    if ((json as { items?: unknown[] }).items?.length) return false
-  }
-  return true
 }
 
 // ── PNG images (solid colour + a simple shape) ─────────────
@@ -122,7 +64,7 @@ function picture(shape: string, [r, g, b]: readonly number[]) {
  */
 export async function loadDemoBook(t: DemoTarget, onProgress: (p: DemoProgress) => void = () => {}) {
   if (!(await bookIsEmpty(t))) throw new Error('This book already has content; the demo book is only loaded into an empty book.')
-  const { bulk, create } = client(t)
+  const { bulk, create } = bookClient(t)
   const progress = (step: string, detail: string) => onProgress({ step, detail })
 
   progress('names', 'Creating names…')

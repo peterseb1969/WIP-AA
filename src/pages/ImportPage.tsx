@@ -914,14 +914,9 @@ export default function ImportPage() {
   const handleResetBook = useCallback(async () => {
     setResetting(true)
     try {
-      const res = await fetch(`${BASE_PATH}api/book/reset`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          templates: ['AA_CHAPTER', 'AA_EVENT', 'AA_CHARACTER', 'AA_LOCATION', 'AA_PLOT_THREAD', 'AA_NOTE', 'AA_WORLD_RULE', 'AA_BOOK_STRUCTURE'],
-          clearNames: true,
-        }),
-      })
+      // The whole book, as the Dashboard's "Delete book" does: an import
+      // starts from the same state as a new book.
+      const res = await fetch(`${BASE_PATH}api/book`, { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.status !== 'ok') {
         alert(t('import.reset_failed', { error: data.error || res.statusText }))

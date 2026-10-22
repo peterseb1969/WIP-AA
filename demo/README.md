@@ -4,7 +4,7 @@ A short mystery (8 chapters including prologue, interlude and epilogue; 16 scene
 
 ## Load it in the app
 
-An empty book offers it: on the first-launch screen ("Bootstrap with the demo book"), and on the Dashboard and the Import page as "Load the demo book" while the book has no documents and no names. A book with content never offers it, so the demo cannot mix into a real novel. To try it next to a real book, give it its own instance and namespace (CASE-913 tracks one instance per book).
+An empty book offers it: on the first-launch screen ("Bootstrap with the demo book"), and on the Dashboard and the Import page as "Load the demo book" while the book has no documents and no names. A book with content never offers it, so the demo cannot mix into a real novel. To get rid of it, use "Delete book" in the Dashboard's danger zone: it removes everything and the book offers the demo again. To try it next to a real book, give it its own instance and namespace (CASE-913 tracks one instance per book).
 
 ## Load it from the command line
 

@@ -61,8 +61,8 @@ export default defineConfig({
   projects: [
     { name: 'setup', testMatch: /global\.setup\.ts/, teardown: 'teardown' },
     { name: 'teardown', testMatch: /global\.teardown\.ts/ },
-    { name: 'e2e', testMatch: /.*\.spec\.ts/, testIgnore: /(import|demo)\.spec\.ts/, dependencies: ['setup'] },
-    { name: 'import', testMatch: /(demo|import)\.spec\.ts/, use: { baseURL: `http://localhost:${IMPORT_VITE_PORT}` }, dependencies: ['setup'] },
+    { name: 'e2e', testMatch: /.*\.spec\.ts/, testIgnore: /(import|demo|delete-book)\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'import', testMatch: /(demo|import|delete-book)\.spec\.ts/, use: { baseURL: `http://localhost:${IMPORT_VITE_PORT}` }, dependencies: ['setup'] },
   ],
   webServer: [
     appInstance(process.env.AA_E2E_NAMESPACE, SERVER_PORT, VITE_PORT),

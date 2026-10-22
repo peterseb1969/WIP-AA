@@ -289,74 +289,58 @@ export default function DashboardPage() {
   )
 }
 
-const DELETE_OPTIONS: Array<{ key: string; labelKey: string; templates: string[]; descKey: string }> = [
-  { key: 'chapters', labelKey: 'dashboard.chapters_scenes', templates: ['AA_CHAPTER', 'AA_EVENT', 'AA_BOOK_STRUCTURE'], descKey: 'dashboard.chapters_scenes_desc' },
-  { key: 'characters', labelKey: 'dashboard.characters_label', templates: ['AA_CHARACTER'], descKey: 'dashboard.characters_desc' },
-  { key: 'locations', labelKey: 'dashboard.locations_label', templates: ['AA_LOCATION'], descKey: 'dashboard.locations_desc' },
-  { key: 'plots', labelKey: 'dashboard.plots_label', templates: ['AA_PLOT_THREAD'], descKey: 'dashboard.plots_desc' },
-  { key: 'notes', labelKey: 'dashboard.notes_label', templates: ['AA_NOTE'], descKey: 'dashboard.notes_desc' },
-  { key: 'rules', labelKey: 'dashboard.rules_label', templates: ['AA_WORLD_RULE'], descKey: 'dashboard.rules_desc' },
-]
+const CONTENT_KINDS = ['chapters', 'scenes', 'characters', 'locations', 'plot_threads', 'notes', 'world_rules', 'images', 'prompts', 'names'] as const
 
+/**
+ * "Delete book": one action, no partial deletes. Deletes everything the app
+ * writes into the book (server/lib/book-space.ts), so the book is afterwards
+ * exactly like a freshly bootstrapped one. The dialog lists what goes and
+ * asks for the book's title, since nothing can be undone.
+ */
 function DangerZone() {
   const { t } = useTranslation()
-  const [showConfirm, setShowConfirm] = useState(false)
-  const [selected, setSelected] = useState<Set<string>>(() => new Set(DELETE_OPTIONS.map(o => o.key)))
-  const [clearNames, setClearNames] = useState(true)
-  const [deleting, setDeleting] = useState(false)
-  const [result, setResult] = useState<{ deletedDocs: number; deletedTerms: number } | null>(null)
   const queryClient = useQueryClient()
   const BASE_PATH = import.meta.env.BASE_URL || '/'
+  const [open, setOpen] = useState(false)
+  const [contents, setContents] = useState<{ title: string | null; counts: Record<string, number>; deletable: boolean } | null>(null)
+  const [typed, setTyped] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
 
-  const toggleOption = (key: string) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) next.delete(key)
-      else next.add(key)
-      return next
-    })
-  }
+  const confirmWord = contents?.title ?? t('dashboard.delete_book_word')
 
-  const allSelected = selected.size === DELETE_OPTIONS.length
-  const toggleAll = () => {
-    if (allSelected) {
-      setSelected(new Set())
-      setClearNames(false)
-    } else {
-      setSelected(new Set(DELETE_OPTIONS.map(o => o.key)))
-      setClearNames(true)
+  const start = async () => {
+    setOpen(true)
+    setContents(null)
+    setTyped('')
+    setError('')
+    try {
+      const res = await fetch(`${BASE_PATH}api/book/contents`)
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+      setContents(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
     }
   }
 
-  const handleDelete = async () => {
-    const templates = DELETE_OPTIONS
-      .filter(o => selected.has(o.key))
-      .flatMap(o => o.templates)
-    if (templates.length === 0 && !clearNames) return
-
+  const remove = async () => {
     setDeleting(true)
+    setError('')
     try {
-      const res = await fetch(`${BASE_PATH}api/book/reset`, {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templates, clearNames }),
-      })
-      const text = await res.text()
-      let data: any
-      try { data = JSON.parse(text) } catch { data = { error: `Server returned: ${res.status} ${res.statusText}` } }
-      if (res.ok && data.status === 'ok') {
-        setResult(data)
-        // Force refetch all queries to clear stale structure/document data
-        await queryClient.invalidateQueries()
-        await queryClient.refetchQueries()
-      } else {
-        alert(`Delete failed: ${data.error || 'Unknown error'}`)
-      }
-    } catch (err: any) {
-      alert(`Delete failed: ${err.message}`)
+      const res = await fetch(`${BASE_PATH}api/book`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
+      if (!res.ok || data.status !== 'ok') throw new Error(data.error || `HTTP ${res.status}`)
+      setOpen(false)
+      setDone(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setDeleting(false)
-      setShowConfirm(false)
+      // Refetch everything: what was deleted, and what may have gone before a failure.
+      await queryClient.invalidateQueries()
+      await queryClient.refetchQueries()
     }
   }
 
@@ -366,90 +350,68 @@ function DangerZone() {
         <Trash2 className="w-4 h-4" />
         {t('dashboard.danger_zone')}
       </h2>
-      {result ? (
-        <p className="text-sm text-text-muted">
-          {t('dashboard.deleted_result', { docs: result.deletedDocs, terms: result.deletedTerms })}
-        </p>
+      {done ? (
+        <p className="text-sm text-text-muted" role="status">{t('dashboard.delete_book_done')}</p>
       ) : (
         <div className="flex items-center justify-between">
-          <p className="text-sm text-text-muted">
-            {t('dashboard.reset_description')}
-          </p>
+          <p className="text-sm text-text-muted">{t('dashboard.delete_book_description')}</p>
           <button
-            onClick={() => setShowConfirm(true)}
+            onClick={start}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 border border-red-300 rounded-lg hover:bg-red-100 transition-colors flex-shrink-0 ml-4"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            {t('dashboard.reset_book')}
+            {t('dashboard.delete_book')}
           </button>
         </div>
       )}
 
-      {showConfirm ? (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
-            <h3 className="text-lg font-semibold text-text mb-3">{t('dashboard.reset_title')}</h3>
-            <p className="text-sm text-text-muted mb-4">
-              {t('dashboard.reset_instructions')}
-            </p>
-
-            <div className="space-y-2 mb-4">
-              {/* Select all */}
-              <label className="flex items-center gap-3 cursor-pointer pb-2 border-b border-gray-100">
-                <input
-                  type="checkbox"
-                  checked={allSelected && clearNames}
-                  onChange={toggleAll}
-                  className="accent-red-600"
-                />
-                <span className="text-sm font-medium text-text">{t('dashboard.select_all')}</span>
-              </label>
-
-              {DELETE_OPTIONS.map(opt => (
-                <label key={opt.key} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selected.has(opt.key)}
-                    onChange={() => toggleOption(opt.key)}
-                    className="accent-red-600"
-                  />
-                  <div>
-                    <span className="text-sm text-text">{t(opt.labelKey)}</span>
-                    <span className="text-xs text-text-muted ml-2">{t(opt.descKey)}</span>
-                  </div>
-                </label>
-              ))}
-
-              {/* Name registries — separate since it's terms, not documents */}
-              <label className="flex items-center gap-3 cursor-pointer pt-2 border-t border-gray-100">
-                <input
-                  type="checkbox"
-                  checked={clearNames}
-                  onChange={(e) => setClearNames(e.target.checked)}
-                  className="accent-red-600"
-                />
-                <div>
-                  <span className="text-sm text-text">{t('dashboard.name_registries')}</span>
-                  <span className="text-xs text-text-muted ml-2">{t('dashboard.name_registries_desc')}</span>
-                </div>
-              </label>
-            </div>
-
+      {open ? (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={deleting ? undefined : () => setOpen(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="delete-book-title" className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 id="delete-book-title" className="text-lg font-semibold text-text mb-2">
+              {contents?.title ? t('dashboard.delete_book_title', { title: contents.title }) : t('dashboard.delete_book_title_untitled')}
+            </h3>
+            <p className="text-sm text-text-muted mb-3">{t('dashboard.delete_book_body')}</p>
+            {contents ? (
+              <ul className="mb-4 grid grid-cols-2 gap-x-6 gap-y-0.5 text-sm text-text" aria-label={t('dashboard.delete_book_contents')}>
+                {CONTENT_KINDS.filter((k) => contents.counts[k]).map((k) => (
+                  <li key={k} className="flex justify-between"><span>{t(`dashboard.content.${k}`)}</span><span className="tabular-nums">{contents.counts[k]}</span></li>
+                ))}
+                {contents.title ? <li className="flex justify-between"><span>{t('dashboard.content.title')}</span><span>1</span></li> : null}
+              </ul>
+            ) : !error ? (
+              <p className="mb-4 flex items-center gap-2 text-sm text-text-muted"><Loader2 className="w-4 h-4 animate-spin" />{t('common.loading')}</p>
+            ) : null}
+            {contents && !contents.deletable ? (
+              <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" role="note">{t('dashboard.delete_book_not_allowed')}</p>
+            ) : null}
+            <label className="block text-sm text-text mb-1" htmlFor="delete-book-confirm">
+              {t('dashboard.delete_book_type', { word: confirmWord })}
+            </label>
+            <input
+              id="delete-book-confirm"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              disabled={!contents?.deletable || deleting}
+              autoComplete="off"
+              className="w-full mb-3 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-red-500"
+            />
+            {error ? <p className="mb-3 text-sm text-red-700" role="alert">{t('dashboard.delete_book_failed', { message: error })}</p> : null}
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setShowConfirm(false)}
+                onClick={() => setOpen(false)}
                 disabled={deleting}
                 className="px-4 py-2 text-sm font-medium bg-gray-100 text-text-muted rounded-lg hover:bg-gray-200 transition-colors"
               >
                 {t('common.cancel')}
               </button>
               <button
-                onClick={handleDelete}
-                disabled={deleting || (selected.size === 0 && !clearNames)}
+                onClick={remove}
+                disabled={!contents?.deletable || deleting || typed.trim() !== confirmWord}
                 className="px-4 py-2 text-sm font-medium bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {deleting ? t('common.deleting') : t('dashboard.delete_selected')}
+                {deleting ? t('dashboard.deleting_book') : t('dashboard.delete_book_confirm')}
               </button>
             </div>
           </div>

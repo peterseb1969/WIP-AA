@@ -69,7 +69,7 @@ src/
     └── SettingsPage.tsx       Anthropic key (set/rotate at runtime)
 
 server/
-├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /api/ask, /api/import/*, /wip proxy;
+├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /api/ask, /api/import/*, /api/book (contents, delete), /wip proxy;
 │                             in production serves dist/ with an SPA fallback (unknown API paths → 404 JSON)
 ├── agent.ts                  MCP client + agentic Claude loop for the Ask bar (read-only tools)
 ├── analyse.ts                Analyse endpoint (prompts built in the browser)
@@ -78,7 +78,7 @@ server/
 ├── config.routes.ts          Runtime Anthropic key endpoints
 ├── demo.routes.ts            GET /server-api/demo/status, POST /server-api/demo/load (SSE)
 ├── demo/book.ts              The demo novel as data (loaded by lib/demo-book.ts)
-├── lib/                      bootstrap.ts (seed-driven bootstrap), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
+├── lib/                      bootstrap.ts (seed-driven bootstrap), book-space.ts (what a book is: empty? contents, delete all), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
 ├── seed/                     Terminologies and templates the bootstrap creates
 └── prompts/assistant.md      Optional system prompt supplement for the Ask bar
 

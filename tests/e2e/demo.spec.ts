@@ -3,10 +3,10 @@ import { wipFetch } from '../integration/support/wip'
 import { watch } from './support/page'
 
 // "Load the demo book", on the import project's own app instance and
-// namespace (playwright.config.ts). This spec sorts before import.spec.ts, so
-// on the first pass the book is fresh and the demo is offered and loaded; on
-// later --repeat-each passes the book has content and the offer must be gone
-// (the demo never mixes into a writer's own novel).
+// namespace (playwright.config.ts). The spec empties the book first (DELETE
+// /api/book, the Dashboard's "Delete book"), so it does not depend on the
+// other specs that share the namespace. Once loaded, the offer must be gone:
+// the demo never mixes into a book with content.
 const ns = process.env.AA_E2E_IMPORT_NAMESPACE!
 
 async function count(template: string) {
@@ -14,24 +14,20 @@ async function count(template: string) {
   return (json as { items: unknown[] }).items.length
 }
 
-test('the demo book is offered in an empty book and loads every part', async ({ page }) => {
+test('the demo book is offered in an empty book, loads every part, and is then no longer offered', async ({ page }) => {
   const seen = watch(page)
   const offer = page.getByRole('button', { name: 'Load the demo book' })
+  page.on('response', async (r) => { if (r.url().includes('/demo/')) console.log('NET', Date.now() % 100000, r.request().method(), r.url().split('server-api')[1], r.status(), r.url().includes('status') ? await r.text() : '') })
+  const emptied = await page.request.delete('/api/book')
+  expect(emptied.status()).toBe(200)
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()
-  await page.waitForLoadState('networkidle')
-
-  if (test.info().repeatEachIndex > 0) {
-    // Not empty any more (this pass's predecessors loaded and imported books).
-    await expect(offer).toHaveCount(0)
-    await page.goto('/import')
-    await page.waitForLoadState('networkidle')
-    await expect(offer).toHaveCount(0)
-    return
-  }
 
   await offer.click()
   await expect(page.getByRole('heading', { level: 1, name: "The Lantern Keeper's Tide" }).first()).toBeVisible({ timeout: 30_000 })
+  await expect(offer).toHaveCount(0)
+  await page.goto('/import')
+  await page.waitForLoadState('networkidle')
   await expect(offer).toHaveCount(0)
 
   expect(await count('AA_CHARACTER')).toBe(9)
