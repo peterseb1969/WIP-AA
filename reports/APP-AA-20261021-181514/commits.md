@@ -1,0 +1,80 @@
+## 483435b — test: e2e and integration read the WIP key from .env; watcher records failed requests
+**Time:** 21:53
+**Files:** 6 changed, +38/-15
+**Tests:** e2e 24/24 (single run, key from .env); watcher probe recorded a page-level 404 (removed afterwards)
+**What:** playwright + vitest integration configs load .env (dotenv) and require WIP_API_KEY_FILE/WIP_API_KEY instead of defaulting to ~/.wip-deploy/wip-local; watch() records HTTP >= 400 and failed requests; three scene tests now assert problems/dialogs; CLAUDE.md key path; smoke comment corrected.
+**Why:** the local install was renamed wip-local → default, so npm run test:e2e died with ENOENT before running anything; nothing runs e2e automatically, so it went unnoticed.
+**Discovered:** Chrome already logs 4xx/5xx as console errors, so the old watcher caught most failed requests too; the gain is naming the request. core.hooksPath was unset in this clone (reset to .githooks). wip-template-store + wip-wip-aa had exited (Peter restarted).
+
+## 3a2ddf1 — fix: split picks a title no scene has ever had (split → merge back → split again failed)
+**Time:** 22:01
+**Tests:** new e2e 'split again after merging it back' fails on the old code (checked by reverting ScenesPage.tsx), passes with the fix; tsc clean
+**What:** uniqueSceneTitle checks active, inactive and archived AA_EVENTs; scenes.spec tags titles per --repeat-each pass; support/book.ts gains pick/tag and term helpers.
+**Why:** --repeat-each=3 exposed it: a status-less document query sees active docs only, so a retired '(continued)' title looked free; AA_EVENT identity is title, so the create revived the retired scene (active v2, outside the structure) and split aborted.
+**PoNIF:** #3 (identity hash decides) + #1 (inactive keeps its identity) — the create was an upsert onto a retired entity.
+**Discovered:** renameByCopy has the same blind spot (status: 'active' check) but there a revived retired doc just becomes the renamed entry, so it works; left as is. aa holds no inactive AA_EVENTs, so no live damage.
+
+## 9efa345 — test: e2e entity merge through the UI; specs repeatable with --repeat-each
+**Time:** 22:01
+**Tests:** e2e --repeat-each=3: 74 passed, 0 failed/flaky; merge spec fails when executeMerge skips the reference rewrite
+**What:** merge.spec.ts (characters merge via UI, stored result checked); per-pass names in characters/drag/merge specs; role=dialog + names on MergeEntitiesDialog and media DeleteDialog; aria-pressed on character cards in merge mode; library cards are named articles.
+**Why:** Peter: step 6 (images + entity-merge coverage first) and repeatable specs for a clean flakiness measure.
+**Discovered:** a term's label is not one of its names: fixtures must list the label as an alias for display-name writes to resolve.
+
+## a5fe5ec — test: e2e images — upload on a character page becomes the portrait; permanent delete from the library
+**Time:** 22:03
+**Tests:** images spec 2/2; mutation checks: default role ILLUSTRATION → upload test fails; hardDeleteFile skipped → delete test fails (file still 200). Full e2e --repeat-each=3: 80 passed. Integration 22/22 (with .env key).
+**What:** tests/e2e/images.spec.ts.
+**Why:** Peter's step 6: images were the largest untested recent feature.
+**Discovered:** GET /api/document-store/files/<id> answers 200 after a soft delete and 404 only after the hard delete — the 404 assertion really distinguishes the two.
+
+## 298c505 — docs: test plan gaps, current architecture, the server's unread WIP_API_KEY_FILE
+**Time:** 22:25
+**Tests:** not run (docs only)
+**What:** ROADMAP layer 3 brought current + missing pieces listed (locations/threads/notes/world rules, Move dialog, chapter numbering, rename dialogs, import review, German UI, automatic runs); ARCHITECTURE file tree / scene saving / Ask bar / new Testing section; README env table; KNOWN_ISSUES + CLAUDE.md corrected.
+**Why:** Peter asked to add the test gaps and fix the documentation.
+**Discovered:** the server never reads WIP_API_KEY_FILE (server/index.ts:16 reads WIP_API_KEY, fallback dev_master_key_for_testing → 401 on the local install), contradicting CLAUDE.md; a bare npm run dev on the host fails every WIP call. Tests and deployments mask it. Not fixed (Peter's call). ARCHITECTURE had been stale since ~11 routes; KNOWN_ISSUES still said Analysis shows plain text.
+
+## 4bfd4c2 — test: e2e scene first load seven ways; close the 'may not save on first load' issue
+**Time:** 22:25
+**Tests:** first-load spec 49 runs (7 tests × 7 passes) no failure; full e2e --repeat-each=3: 101 passed
+**What:** tests/e2e/scene-first-load.spec.ts (direct URL, list, Corkboard, leftover draft, slow WIP 1.5 s/call, 120-paragraph scene, second scene of a session); KNOWN_ISSUES entry closed; ROADMAP counts.
+**Why:** Peter asked to dive into the never-reproduced first-load bug.
+**Discovered:** SceneEditor mounts only after the events list loads, so it never starts without prose; the events list is page_size 200 — books over 200 scenes would show "Scene not found" (latent, recorded).
+
+## 0a094eb — fix: prose saves to a scene land in the order they started; a save during a save is not dropped
+**Time:** 23:04
+**Tests:** scene-save-order.spec.ts 2/2; both fail on the old ScenesPage (stored the draft; "Two." dropped); full e2e --repeat-each=3: 116 passed; unit 118
+**What:** queueProseWrite (module-level per-scene promise chain) for save, leave-save, split and scene merge; a save asked for during a running save runs right after it.
+**Why:** a one-in-fifty failure of the first-load draft test: the leave-save (fire-and-forget; React's dev remount runs it at once) landed after the later Cmd/Ctrl+S and stored the older text. Same race possible in production on leave-and-return.
+**Discovered:** an async helper that returns a promise makes its caller await that promise (test deadlock; wrapped in an object). Playwright route globs must match the query string; use a regex.
+
+## 4bfceb8 — refactor: drop the as-any casts around the WIP client
+**Time:** 23:04
+**Tests:** tsc clean; unit 118; e2e full (single pass) before + in the 116-pass run
+**What:** useBookTerms (the one widening of @wip/react useTerms params for namespace); casts removed from AliasManager, CreateEntityModal, useValidateScene, Characters/Dashboard/Import pages.
+**Why:** KNOWN_ISSUES tech debt (Peter: "go for the technical debt").
+**Discovered:** @wip/react useTerms params type lacks namespace (useTerminologies has it) — candidate case for BE-YAC. Import resolved creates without document_id as undefined → now rejects.
+
+## 1c1fc5b — test: e2e the error screen when the app config cannot be loaded
+**Time:** 23:04
+**Tests:** app-config.spec.ts 3/3
+**What:** HTTP 500 / no namespace / unreachable → "Cannot load app configuration", no nav rendered.
+**Why:** last browser-unverified item from 2026-10-17.
+
+## 4811781 — feat: DEV_ALLOWED_HOSTS lets the Vite dev server answer a non-localhost host
+**Time:** 23:04
+**Tests:** curl against a standalone Vite on :5190 — aa.internal 403 → 200 when listed, other hosts 403, unset unchanged
+**What:** server.allowedHosts from DEV_ALLOWED_HOSTS.
+**Why:** KNOWN_ISSUES tech debt. The wip-aa manifest (WIP repo) would still need the variable for a non-localhost dev ingress.
+
+## 8e48b8e — docs: KNOWN_ISSUES — casts, unknown hosts and the app-config error screen resolved
+**Time:** 23:04
+**Tests:** not run (docs only)
+
+## 6d0a22f — perf: load each page on first visit; main chunk 1,257 kB → 443 kB
+**Time:** 23:11
+**Tests:** e2e --repeat-each=3: 116 passed (after the podman VM came back; wip-template-store had again not started with the VM and was started by hand); prod build under /apps/aa: entry + lazy chunks 200
+**What:** React.lazy for 14 pages, Suspense in Layout, lazy Markdown in AskBar.
+**Why:** KNOWN_ISSUES "Large bundle" (Peter: technical debt).
+**Discovered:** after a podman VM start, wip-template-store stays "Exited (0) 292 years ago" (never started) and wip-react-console exits (1) — twice today. Platform/deploy side, not AA.
