@@ -73,7 +73,7 @@ function ChapterRow({
     <div data-chapter-group={dnd?.chapterId} className={`relative ${dnd?.isDragging ? 'opacity-40' : ''}`}>
     {dnd?.lineAbove ? <div className="absolute -top-2 left-0 right-0 h-1 rounded bg-primary" /> : null}
     {dnd?.lineBelow ? <div className="absolute -bottom-2 left-0 right-0 h-1 rounded bg-primary" /> : null}
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div role="article" aria-label={data.title} className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div
         role="button"
         tabIndex={0}
@@ -94,7 +94,7 @@ function ChapterRow({
           <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
         )}
 
-        <span className={`text-lg font-semibold w-12 ${displayNumber != null ? 'text-primary' : 'text-text-light'}`}>
+        <span aria-label={t('numbering.shown')} className={`text-lg font-semibold w-12 ${displayNumber != null ? 'text-primary' : 'text-text-light'}`}>
           {displayNumber ?? '–'}
         </span>
 
@@ -520,14 +520,15 @@ function NumberingDialog({ title, rule, suggestedStart, onClose, onSave }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold text-text mb-1">{t('numbering.title')}</h3>
+      <div role="dialog" aria-modal="true" aria-labelledby="numbering-title" className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <h3 id="numbering-title" className="text-lg font-semibold text-text mb-1">{t('numbering.title')}</h3>
         <p className="text-sm text-text-muted mb-4">{title}</p>
         <div className="space-y-2 mb-4">
           {option('continue', t('numbering.continue'), t('numbering.continue_hint'))}
           {option('start', t('numbering.start'), t('numbering.start_hint'), kind === 'start' ? (
             <input
               type="number"
+              aria-label={t('numbering.start')}
               value={start}
               onChange={(e) => setStart(e.target.value)}
               autoFocus

@@ -784,6 +784,7 @@
   "numbering": {
     "title": "Chapter numbering",
     "button": "Number",
+    "shown": "Chapter number",
     "button_title": "Set how this chapter is numbered",
     "continue": "Continue numbering",
     "continue_hint": "One more than the chapter before (the first chapter is 1).",
