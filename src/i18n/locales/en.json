@@ -849,6 +849,7 @@
     "suggestions_other": "{{count}} suggestions"
   },
   "rename": {
+    "title_label": "Scene title",
     "taken": "\u201c{{name}}\u201d is already taken \u2014 choose another name.",
     "taken_merge": "\u201c{{name}}\u201d already has this name. To make them one, use Merge\u2026 on the list page.",
     "save_first": "Save the scene before renaming it.",

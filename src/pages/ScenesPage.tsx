@@ -2015,6 +2015,7 @@ function SceneEditor({
         <div className="flex-1 min-w-0 flex items-center gap-2">
           {renaming ? (
             <input
+              aria-label={t('rename.title_label')}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -2029,6 +2030,9 @@ function SceneEditor({
           ) : (
             <h2
               onClick={startRename}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startRename() } }}
               title={t('rename.click_to_rename')}
               className="text-sm font-semibold text-text truncate cursor-text hover:bg-surface rounded px-1 -mx-1"
             >

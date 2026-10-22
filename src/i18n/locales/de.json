@@ -849,6 +849,7 @@
     "suggestions_other": "{{count}} Vorschl\u00e4ge"
   },
   "rename": {
+    "title_label": "Szenentitel",
     "taken": "\u201e{{name}}\u201c ist schon vergeben \u2014 w\u00e4hle einen anderen Namen.",
     "taken_merge": "\u201e{{name}}\u201c tr\u00e4gt diesen Namen bereits. Um beide zu vereinen, nutze \u201eZusammenf\u00fchren\u2026\u201c auf der Listenseite.",
     "save_first": "Speichere die Szene, bevor du sie umbenennst.",
