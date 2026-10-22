@@ -10,6 +10,7 @@ import { parseText, extractEntities } from './import.js'
 import { analyse } from './analyse.js'
 import bootstrapRoutes from './bootstrap.routes.js'
 import configRoutes from './config.routes.js'
+import demoRoutes from './demo.routes.js'
 
 const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -58,6 +59,9 @@ router.use('/server-api', bootstrapRoutes)
 
 // Runtime config (Anthropic key set/rotate from the Settings UI)
 router.use('/server-api', configRoutes)
+
+// Demo book ("Load the demo book" in an empty book)
+router.use('/server-api', demoRoutes)
 
 // --- Ask endpoint ---
 router.post('/api/ask', async (req, res) => {

@@ -284,6 +284,13 @@
     "time_point": "Zeitpunkt {{number}}",
     "parallel_events": "({{count}} Ereignisse \u2014 parallel)"
   },
+  "demo": {
+    "title": "Das Demo-Buch ausprobieren",
+    "description": "Lädt \"The Lantern Keeper's Tide\", einen kurzen Krimi mit Kapiteln, Szenen, Figuren, Orten, Handlungssträngen, Notizen, Weltregeln und Bildern, der jede Funktion zeigt. Nur angeboten, solange dieses Buch leer ist.",
+    "load": "Demo-Buch laden",
+    "loading": "Demo-Buch wird geladen…",
+    "failed": "Das Demo-Buch konnte nicht geladen werden: {{message}}"
+  },
   "import": {
     "kind_chapter": "Kapitel",
     "kind_prologue": "Prolog",

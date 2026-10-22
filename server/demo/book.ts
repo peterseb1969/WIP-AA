@@ -1,8 +1,8 @@
 /**
  * "The Lantern Keeper's Tide" — a short demo novel that touches every
- * AuthorAssist feature. One source for both outputs of
- * tools/load-demo-book.ts: the complete book written into a namespace, and
- * demo/manuscript.txt for testing the import.
+ * AuthorAssist feature. One source for the book "Load the demo book" writes
+ * (server/lib/demo-book.ts, also used by tools/load-demo-book.ts) and for
+ * demo/manuscript.txt, the same prose for testing the import.
  *
  * Shapes follow server/seed/templates. Entity documents store display names
  * and references store term values, as an imported book does. Every term

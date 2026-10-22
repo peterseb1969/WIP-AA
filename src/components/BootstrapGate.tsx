@@ -16,8 +16,9 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { Database, AlertTriangle, RefreshCw, Loader2, ServerCrash } from 'lucide-react'
+import { Database, AlertTriangle, RefreshCw, Loader2, ServerCrash, BookOpen } from 'lucide-react'
 import { NAMESPACE } from '../lib/constants'
+import { loadDemoBook } from '../lib/sse'
 
 const APP_TITLE = 'AuthorAssist'
 
@@ -54,10 +55,13 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { checkStatus() }, [checkStatus])
 
-  const startBootstrap = useCallback(async () => {
+  // With `withDemo`, the demo book is loaded into the new, empty book before
+  // the app opens ("Bootstrap with the demo book").
+  const startBootstrap = useCallback(async (withDemo = false) => {
     setStatus('bootstrapping')
     setProgress(null)
     setError(null)
+    let bootstrapped = false
 
     try {
       const response = await fetch(`${SERVER_API}/bootstrap/run`, { method: 'POST' })
@@ -85,7 +89,8 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
               const data = JSON.parse(line.slice(6)) as BootstrapProgress
               setProgress(data)
               if (eventType === 'complete' && data.done && !data.error) {
-                setStatus('ready')
+                bootstrapped = true
+                if (!withDemo) setStatus('ready')
               } else if (eventType === 'error' || data.error) {
                 setError(data.error || data.detail)
                 setStatus('error')
@@ -94,6 +99,11 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
             eventType = ''
           }
         }
+      }
+      if (withDemo && bootstrapped) {
+        setProgress({ step: 'demo', detail: 'Loading the demo book…', done: false })
+        await loadDemoBook((detail) => setProgress({ step: 'demo', detail, done: false }))
+        setStatus('ready')
       }
     } catch (err) {
       setError((err as Error).message)
@@ -153,7 +163,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={startBootstrap}
+                onClick={() => startBootstrap()}
                 className="flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Database className="h-4 w-4" /> Bootstrap
@@ -165,8 +175,14 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
                 <RefreshCw className="h-4 w-4" /> Check Again
               </button>
             </div>
+            <button
+              onClick={() => startBootstrap(true)}
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-blue-200 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50"
+            >
+              <BookOpen className="h-4 w-4" /> Bootstrap with the demo book
+            </button>
             <p className="text-xs text-gray-400 text-center">
-              If restoring from backup, do so now and then click "Check Again".
+              The demo book is a short mystery that shows every feature. If restoring from backup, do so now and then click "Check Again".
             </p>
           </div>
         )}
@@ -187,7 +203,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={startBootstrap}
+                onClick={() => startBootstrap()}
                 className="flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Database className="h-4 w-4" /> Resume Bootstrap
@@ -228,7 +244,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex gap-3">
               <button
-                onClick={startBootstrap}
+                onClick={() => startBootstrap()}
                 className="flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <RefreshCw className="h-4 w-4" /> Retry Bootstrap

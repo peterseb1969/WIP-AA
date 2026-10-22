@@ -27,6 +27,7 @@ import { clearAllDrafts } from '../components/UnsavedDraftBanner'
 import BackLink from '../components/BackLink'
 import { PROJECT_TIME_SYSTEM_DEFAULT, TermSelect } from '../components/CreateEntityModal'
 import { titleFromFileName } from '../lib/titles'
+import LoadDemoBook from '../components/LoadDemoBook'
 
 const toTermValue = (text: string): string =>
   text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
@@ -1245,7 +1246,10 @@ export default function ImportPage() {
             </div>
           </div>
         ) : (
-          <UploadStep onParsed={handleParsed} />
+          <>
+            <LoadDemoBook onLoaded={() => navigate('/')} />
+            <UploadStep onParsed={handleParsed} />
+          </>
         )
       ) : null}
 

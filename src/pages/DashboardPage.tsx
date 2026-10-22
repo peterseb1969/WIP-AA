@@ -22,6 +22,7 @@ import { useBookStructure } from '../lib/useBookStructure'
 import { chapterLabel, sceneTitleShown } from '../lib/titles'
 import StatusBadge from '../components/StatusBadge'
 import CreateEntityModal from '../components/CreateEntityModal'
+import LoadDemoBook from '../components/LoadDemoBook'
 
 interface ChapterData {
   title: string
@@ -167,6 +168,8 @@ export default function DashboardPage() {
           </button>
         </div>
       )}
+
+      <LoadDemoBook />
 
       {projectModal && (
         <CreateEntityModal

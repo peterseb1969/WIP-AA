@@ -1,15 +1,19 @@
 # Demo book: *The Lantern Keeper's Tide*
 
-A short mystery (8 chapters including prologue, interlude and epilogue; 16 scenes and one backstory event; ~1,400 words) written to touch every AuthorAssist feature. `book.ts` holds all of it; `tools/load-demo-book.ts` turns it into a loaded book or a manuscript.
+A short mystery (8 chapters including prologue, interlude and epilogue; 16 scenes and one backstory event; ~1,400 words) written to touch every AuthorAssist feature. `server/demo/book.ts` holds all of it; `server/lib/demo-book.ts` loads it.
 
-## Load it
+## Load it in the app
+
+An empty book offers it: on the first-launch screen ("Bootstrap with the demo book"), and on the Dashboard and the Import page as "Load the demo book" while the book has no documents and no names. A book with content never offers it, so the demo cannot mix into a real novel. To try it next to a real book, give it its own instance and namespace (CASE-913 tracks one instance per book).
+
+## Load it from the command line
 
 ```bash
-npx tsx tools/load-demo-book.ts                        # into aa-demo-book (never aa)
+npx tsx tools/load-demo-book.ts                        # creates, bootstraps and fills aa-demo-book (never aa)
 npx tsx tools/load-demo-book.ts --namespace aa-demo-2  # another copy
 ```
 
-The loader creates the namespace, runs the app's own bootstrap (`server/seed`), then writes the book through the WIP API in the shapes the app writes. It needs WIP running and `WIP_API_KEY_FILE` in `.env`. It refuses `aa` and any namespace that already exists. Use a new name for a fresh copy: `--reset` deletes and recreates the same name, which fails on WIP as of 2026-10-22 (the recreated namespace still resolves names to the deleted terminologies).
+It needs WIP running and `WIP_API_KEY_FILE` in `.env`, and refuses `aa` and any namespace that already exists. Use a new name for a fresh copy: on WIP as of 2026-10-22, a namespace deleted and created again under the same name still resolves names to the deleted terminologies (CASE-927).
 
 ## Open it
 

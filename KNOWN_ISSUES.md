@@ -50,6 +50,9 @@ Gone. `@wip/react`'s `useTerms` forwards its params to the API, but its params t
 ### Vite rejects unknown hosts — fixed 2026-10-22
 Vite's dev server answers 403 to a `Host` other than localhost or an IP. `DEV_ALLOWED_HOSTS` (comma-separated, a leading dot allows subdomains) now feeds `server.allowedHosts`; unset keeps Vite's default. A dev install behind a non-localhost ingress needs that variable in its manifest (`apps/wip-aa/wip-app.yaml`, WIP repo), which it does not have yet.
 
+### Dashboard "Recent Scenes" shows locations as term values (found 2026-10-23)
+Seen with the demo book: "Ch. 2 — THE_NARROWS" instead of "The Narrows". The rest of the app shows labels; this list prints the stored value. Not fixed.
+
 ### The scene editor loads at most 200 scenes (found 2026-10-22)
 `ScenesPage` lists scenes with one `useDocuments` call, `page_size: 200`, and finds the open scene in that list. In a book with more than 200 scenes the rest would show "Scene not found" and be missing from the list. `aa` has 12 scenes, so this is latent. Fix when a book gets near it: page through, or fetch the open scene by id.
 

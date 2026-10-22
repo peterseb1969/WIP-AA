@@ -34,11 +34,13 @@ src/
 │   ├── rename.ts             Rename by relabelling a term, or by copying a document under a new title
 │   ├── media.ts              Images: AA_MEDIA per stored file, AA_ATTACHED_TO edges, permanent delete
 │   ├── analysis.ts           Scene analysis with the writer's prompt library (AA_PROMPT)
+│   ├── sse.ts                Reads server-sent event streams; loadDemoBook()
 │   ├── useResizableWidth.ts  Resizable side panel
 │   └── fakeWip.ts            In-memory WipClient stand-in for unit tests
 ├── components/
 │   ├── Layout.tsx             Sidebar nav (14 items) + header + UnsavedDraftBanner + Outlet
-│   ├── BootstrapGate.tsx      Offer-on-empty / use-on-exists gate around the app
+│   ├── BootstrapGate.tsx      Offer-on-empty / use-on-exists gate around the app (also: bootstrap with the demo book)
+│   ├── LoadDemoBook.tsx       "Load the demo book" card, shown only while the book is empty
 │   ├── CreateEntityModal.tsx  Create/edit form for all entity types
 │   ├── MergeEntities.tsx      Merge mode on list pages + the merge dialog (preview, run, result)
 │   ├── MergeSceneDialog.tsx   Merge a scene with its previous or next scene
@@ -74,7 +76,9 @@ server/
 ├── import.ts                 Chapter/scene parser + Claude entity extraction
 ├── bootstrap.routes.ts       GET /server-api/bootstrap/status, POST /server-api/bootstrap/run (SSE)
 ├── config.routes.ts          Runtime Anthropic key endpoints
-├── lib/                      bootstrap.ts (seed-driven bootstrap), anthropic-key.ts, wip-api.ts, sse.ts
+├── demo.routes.ts            GET /server-api/demo/status, POST /server-api/demo/load (SSE)
+├── demo/book.ts              The demo novel as data (loaded by lib/demo-book.ts)
+├── lib/                      bootstrap.ts (seed-driven bootstrap), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
 ├── seed/                     Terminologies and templates the bootstrap creates
 └── prompts/assistant.md      Optional system prompt supplement for the Ask bar
 

@@ -17,9 +17,10 @@ if (!process.env.WIP_API_KEY) {
 }
 // Set once in the main process; the worker processes inherit it.
 process.env.AA_E2E_NAMESPACE ??= `aa-e2e-${Date.now()}`
-// The import spec runs against its own app instance and namespace: an import
-// into a book that already has characters offers to reset the whole book,
-// which would wipe the other specs' fixtures.
+// The import and demo specs run against their own app instance and namespace:
+// an import into a book that already has characters offers to reset the whole
+// book, which would wipe the other specs' fixtures, and the demo book is only
+// offered in an empty book.
 process.env.AA_E2E_IMPORT_NAMESPACE ??= `${process.env.AA_E2E_NAMESPACE}-import`
 // The local install uses a self-signed certificate (fixture calls from the tests).
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
@@ -60,8 +61,8 @@ export default defineConfig({
   projects: [
     { name: 'setup', testMatch: /global\.setup\.ts/, teardown: 'teardown' },
     { name: 'teardown', testMatch: /global\.teardown\.ts/ },
-    { name: 'e2e', testMatch: /.*\.spec\.ts/, testIgnore: /import\.spec\.ts/, dependencies: ['setup'] },
-    { name: 'import', testMatch: /import\.spec\.ts/, use: { baseURL: `http://localhost:${IMPORT_VITE_PORT}` }, dependencies: ['setup'] },
+    { name: 'e2e', testMatch: /.*\.spec\.ts/, testIgnore: /(import|demo)\.spec\.ts/, dependencies: ['setup'] },
+    { name: 'import', testMatch: /(demo|import)\.spec\.ts/, use: { baseURL: `http://localhost:${IMPORT_VITE_PORT}` }, dependencies: ['setup'] },
   ],
   webServer: [
     appInstance(process.env.AA_E2E_NAMESPACE, SERVER_PORT, VITE_PORT),
