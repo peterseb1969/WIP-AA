@@ -40,7 +40,7 @@ The scaffold's dev-namespace workflow was never used here: `dev-authorassist` wa
 The MCP server resolves its key from `WIP_API_KEY_FILE` (the live wip-deploy secrets file) — see `.mcp.json`. This is fine for data modeling via MCP tools.
 
 **For your app's runtime API calls**, `.env` carries `WIP_API_KEY_FILE` pointing at that same live file. Resolve the key from the file at startup — the `@wip/proxy` `apiKeyFile` option does this for you, mirroring the MCP server — rather than baking a plaintext key. A key rotation or target-redeploy is then picked up on restart instead of stranding a stale `.env`. This is the deployment's admin/proxy key and spans all namespaces, which a cross-namespace console needs as-is.
-`.env` was written with `WIP_API_KEY_FILE=/Users/peter/.wip-deploy/default/secrets/api-key` — no plaintext key is baked in. The runtime reads the file at startup, so rotating the deploy key or redeploying the target needs no edit here.
+`.env` was written with `WIP_API_KEY_FILE=/Users/peter/.wip-deploy/default/secrets/api-key` — no plaintext key is baked in. **AA's server does not read it yet** (checked 2026-10-22): `server/index.ts` reads only `WIP_API_KEY`, falling back to `dev_master_key_for_testing`, which the local install refuses. Deployed containers get `WIP_API_KEY` from the manifest; the e2e and integration configs read the file and pass `WIP_API_KEY` on. So a bare `npm run dev` on the host fails every WIP call until the server resolves the file too (KNOWN_ISSUES).
 
 ```bash
 # .env (already created)

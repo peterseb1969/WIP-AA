@@ -16,38 +16,71 @@ Browser (React SPA, port 5180 in dev)
 
 ```
 src/
-├── main.tsx                  Entry point (React 19, StrictMode)
-├── App.tsx                   Router (11 routes), providers (QueryClient, WipProvider, BrowserRouter)
+├── main.tsx                  Entry point: fetches /api/app-config (namespace) before first render
+├── App.tsx                   Router (14 routes), providers (QueryClient, WipProvider, BrowserRouter, BootstrapGate)
 ├── index.css                 Tailwind base + TipTap editor styles + composition mode
+├── i18n/                     react-i18next setup; locales/en.json, de.json (+ duplicate-key test)
 ├── lib/
-│   ├── wip.ts                WipClient + QueryClient setup (baseUrl = origin + /wip)
-│   └── constants.ts          NAMESPACE, TEMPLATES, TERMINOLOGIES, color maps
+│   ├── wip.ts                WipClient + QueryClient (baseUrl = BASE_URL + wip)
+│   ├── app-config.ts         Runtime app config (namespace) from the server
+│   ├── constants.ts          NAMESPACE (set at boot), TEMPLATES, TERMINOLOGIES, color maps
+│   ├── useBookStructure.ts   Book structure: chapter order, scene positions, chapter numbering
+│   ├── structureUndo.tsx     Undo for structure moves (drag-and-drop, Move, merge)
+│   ├── pointerDrag.ts        Pointer-based dragging shared by every drag in the app
+│   ├── entityNames.ts        Names of characters, locations, threads resolved through their terms
+│   ├── titles.ts             Display rules for number-only chapter titles and "ChN" scene prefixes
+│   ├── useValidateScene.ts   Scene check: entity names in prose (Unicode word edges)
+│   ├── mergeEntities.ts      Merge characters / locations / plot threads (plan, then execute)
+│   ├── rename.ts             Rename by relabelling a term, or by copying a document under a new title
+│   ├── media.ts              Images: AA_MEDIA per stored file, AA_ATTACHED_TO edges, permanent delete
+│   ├── analysis.ts           Scene analysis with the writer's prompt library (AA_PROMPT)
+│   ├── useResizableWidth.ts  Resizable side panel
+│   └── fakeWip.ts            In-memory WipClient stand-in for unit tests
 ├── components/
-│   ├── Layout.tsx             Sidebar nav (11 items) + header + UnsavedDraftBanner + Outlet
-│   ├── CreateEntityModal.tsx  Universal create/edit form for all entity types
+│   ├── Layout.tsx             Sidebar nav (14 items) + header + UnsavedDraftBanner + Outlet
+│   ├── BootstrapGate.tsx      Offer-on-empty / use-on-exists gate around the app
+│   ├── CreateEntityModal.tsx  Create/edit form for all entity types
+│   ├── MergeEntities.tsx      Merge mode on list pages + the merge dialog (preview, run, result)
+│   ├── MergeSceneDialog.tsx   Merge a scene with its previous or next scene
+│   ├── MoveSceneDialog.tsx    Move a scene to a chapter and position
+│   ├── MediaSection.tsx       Images on an entity: grid, lightbox, upload, attach from the book
+│   ├── AliasManager.tsx       Aliases of a character / location / thread term
+│   ├── CrossReferences.tsx    "Appears in" lists via the reporting layer (SQL by term id)
+│   ├── Markdown.tsx           Renders Claude's Markdown; raw HTML shown as text
 │   ├── AskBar.tsx             Floating AI chat (bottom-right)
-│   ├── UnsavedDraftBanner.tsx Draft recovery banner (localStorage scan, 24h retention)
-│   ├── StatusBadge.tsx        Colored label component
-│   └── BackLink.tsx           Back navigation helper
+│   ├── UnsavedDraftBanner.tsx Reminder for scene drafts left after a failed save
+│   ├── LanguageSwitcher.tsx, StatusBadge.tsx, BackLink.tsx
 └── pages/
-    ├── DashboardPage.tsx      Read-only stats and quick links
-    ├── ScenesPage.tsx         Scene list + TipTap editor + context panels + flow/composition modes
-    ├── CorkboardPage.tsx      Read-only visual scene cards with grouping and coloring
-    ├── CharactersPage.tsx     Card grid + detail bio + embedded relationships
-    ├── ChaptersPage.tsx       Expandable cards + inline edit + nested scene list
-    ├── TimelinePage.tsx       Read-only chronological visualization
-    ├── LocationsPage.tsx      Card grid + detail view
-    ├── PlotThreadsPage.tsx    Status-grouped thread list
-    ├── NotesPage.tsx          Type-filtered note list with entity links
+    ├── DashboardPage.tsx      Book project details, stats and quick links
+    ├── ScenesPage.tsx         Scene list + TipTap editor (autosave, split, merge, move, rename) + side panels
+    ├── CorkboardPage.tsx      Scene cards by chapter; drag cards and chapters
+    ├── ChaptersPage.tsx       Chapter list: drag, numbering rules, rename, images
+    ├── CharactersPage.tsx     Card grid + detail (bio, relationships, images, Appears in); merge
+    ├── LocationsPage.tsx      Card grid + detail; merge
+    ├── PlotThreadsPage.tsx    Status-grouped threads; merge
+    ├── NotesPage.tsx          Type-filtered notes with entity links
     ├── WorldRulesPage.tsx     Domain-grouped rules
-    └── ImportPage.tsx         6-step import wizard (upload → structure → entities → review → import → done)
+    ├── TimelinePage.tsx       Read-only chronological view
+    ├── MediaLibraryPage.tsx   Every image, where it is used, upload, permanent delete
+    ├── PromptsPage.tsx        The writer's prompt library for Analyse
+    ├── ImportPage.tsx         Import wizard (upload → structure → entities → confirm incl. book details → importing → done)
+    └── SettingsPage.tsx       Anthropic key (set/rotate at runtime)
 
 server/
-├── index.ts                  Express app: health, /api/ask, /api/import/*, WIP proxy
-├── agent.ts                  MCP client + agentic Claude loop (read-only tools, 30min sessions)
-├── import.ts                 Chapter/scene regex parser + Claude entity extraction
-└── prompts/
-    └── assistant.md          Optional system prompt supplement for ask bar
+├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /api/ask, /api/import/*, /wip proxy;
+│                             in production serves dist/ with an SPA fallback (unknown API paths → 404 JSON)
+├── agent.ts                  MCP client + agentic Claude loop for the Ask bar (read-only tools)
+├── analyse.ts                Analyse endpoint (prompts built in the browser)
+├── import.ts                 Chapter/scene parser + Claude entity extraction
+├── bootstrap.routes.ts       GET /server-api/bootstrap/status, POST /server-api/bootstrap/run (SSE)
+├── config.routes.ts          Runtime Anthropic key endpoints
+├── lib/                      bootstrap.ts (seed-driven bootstrap), anthropic-key.ts, wip-api.ts, sse.ts
+├── seed/                     Terminologies and templates the bootstrap creates
+└── prompts/assistant.md      Optional system prompt supplement for the Ask bar
+
+tests/
+├── integration/              Vitest against real WIP (npm run test:integration)
+└── e2e/                      Playwright in Chrome (npm run test:e2e)
 ```
 
 ## Data model mapping
@@ -94,11 +127,10 @@ Every page maps to one or more WIP templates. All entities live in the `aa` name
 
 ### Scene editing flow
 1. User selects scene from list → URL updates to `/scenes?id=<sceneId>`
-2. TipTap editor loads prose content
-3. Auto-save writes to `localStorage` (`aa-scene-draft-{sceneId}`) every 3 seconds when dirty
-4. Explicit "Save" button writes to WIP via `useCreateDocument` (identity dedup creates new version)
-5. On unmount, dirty content is flushed to localStorage
-6. `UnsavedDraftBanner` in Layout scans localStorage and shows recovery links
+2. TipTap editor loads the prose (a newer localStorage draft wins, and marks the scene dirty)
+3. Saving writes a merge PATCH of `prose` only, so other fields are never touched. Autosave runs after 45 s without typing, at most every 5 min while typing non-stop, when the scene is left and when the tab is hidden; Save and Cmd/Ctrl+S save at once
+4. The localStorage draft (`aa-scene-draft-{sceneId}`) is only a crash backup between saves; it outlives a save only when the save failed, and `UnsavedDraftBanner` then offers it
+5. Split, merge, move and rename change the book structure (`AA_BOOK_STRUCTURE`, by document id); merge, move and drag-and-drop are undoable. A scene's identity is its title, so split picks a title no scene, active or retired, has had
 
 ### Import flow
 1. User pastes/uploads manuscript text
@@ -111,9 +143,19 @@ Every page maps to one or more WIP templates. All entities live in the `aa` name
 ### Ask bar
 - Server connects to WIP via MCP (stdio, SSE, or HTTP transport)
 - Tool set filtered to read-only operations (no create/delete/update)
-- `namespace: 'aa'` auto-injected into tool arguments
+- `WIP_NAMESPACE` injected into the arguments of every tool that takes a namespace
 - Sessions cached in memory with 30-minute TTL
 
 ## Proxy setup
 
 In development, Vite proxies `/api/*` and `/wip/*` to the Express server on port 3014. The Express server uses `@wip/proxy` middleware on `/wip` to forward requests to the WIP backend with API key injection. No client-side authentication.
+
+## Testing
+
+| Layer | Command | Runs against | When |
+|---|---|---|---|
+| Unit (Vitest) | `npm test` | nothing external; merge and rename use `src/lib/fakeWip.ts` | pre-commit hook |
+| Integration (Vitest) | `npm run test:integration` | the local WIP, disposable `aa-it-<timestamp>` namespace | by hand |
+| End-to-end (Playwright, system Chrome) | `npm run test:e2e` | a second app instance (ports 3016/5182) on a disposable `aa-e2e-<timestamp>` namespace, bootstrapped through the app's own route | by hand |
+
+Both WIP-backed layers read the key from the file `WIP_API_KEY_FILE` names in `.env`. The UI drives the behaviour under test; the WIP API creates fixtures and checks what was stored. `tests/e2e/support/page.ts` (`watch`) fails a test on page errors, console errors, HTTP ≥ 400, failed requests and native dialogs. Specs share one namespace and take per-pass names (`pick`/`tag`), so `npx playwright test --repeat-each=3` checks for flakiness. Coverage and what is still missing: ROADMAP, Next Up, "Test coverage".

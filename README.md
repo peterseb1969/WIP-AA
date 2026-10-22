@@ -55,8 +55,10 @@ npm test
 npm run test:integration
 
 # End-to-end tests in Chrome (Playwright; starts its own app instance on ports 3016/5182
-# against a disposable aa-e2e-<timestamp> namespace)
+# against a disposable aa-e2e-<timestamp> namespace). Needs WIP running and
+# WIP_API_KEY_FILE in .env. Run in the background: a full run takes ~30 s, x3 ~70 s.
 npm run test:e2e
+npx playwright test --repeat-each=3   # flakiness check; specs use per-pass names
 
 # Production build
 npm run build && npm run start
@@ -69,8 +71,13 @@ The server expects a WIP backend reachable via the proxy. The `@wip/proxy` middl
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `PORT` | `3014` | Server port |
-| `WIP_API_KEY` | — | API key for WIP backend |
+| `WIP_BASE_URL` | `https://localhost:8443` | WIP backend |
+| `WIP_NAMESPACE` | `aa` | The book's namespace (also served to the browser by `/api/app-config`) |
+| `WIP_API_KEY` | `dev_master_key_for_testing` | API key for WIP backend. The server reads only this variable; the fallback is refused by current installs |
+| `WIP_API_KEY_FILE` | — | Set in `.env`. Read by the test configs (`playwright.config.ts`, `vitest.integration.config.ts`), **not yet by the server** (see KNOWN_ISSUES) |
+| `APP_BASE_PATH` | `/` | Route prefix when deployed (e.g. `/apps/aa`) |
 | `ANTHROPIC_API_KEY` | — | For import entity extraction and ask bar |
+| `ANTHROPIC_API_KEY_FILE` | — | Key file; a key set on the Settings page is written here and survives restarts |
 | `SESSION_TTL_MINUTES` | `30` | Ask bar session timeout |
 | `MAX_TURNS` | `15` | Max tool-call turns per ask bar question |
 
