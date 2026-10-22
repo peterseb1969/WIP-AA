@@ -9,6 +9,8 @@ const chapters = async () => ((await doc(ids.structure)).data.chapters as Array<
 const order = async () => (await chapters()).map((c) => c.chapter_id)
 
 async function box(locator: Locator) {
+  // The page may still be rendering after goto: measure only once it shows.
+  await expect(locator).toBeVisible()
   const b = (await locator.boundingBox())!
   return { center: { x: b.x + b.width / 2, y: b.y + b.height / 2 }, upper: { x: b.x + b.width / 2, y: b.y + b.height * 0.25 } }
 }

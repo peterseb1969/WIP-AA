@@ -6,7 +6,7 @@ import { watch } from './support/page'
 // number, Undo. The rules live on the book structure's chapter slots; the
 // numbers shown are computed from the order plus the rules.
 const ids = { one: '', two: '', three: '', structure: '' }
-const titles = () => ({ one: `Arrival${tag()}`, two: `Interlude${tag()}`, three: `Departure${tag()}` })
+const titles = () => ({ one: `Numbered first${tag()}`, two: `Numbered between${tag()}`, three: `Numbered last${tag()}` })
 const slot = async (id: string) => ((await doc(ids.structure)).data.chapters as Array<{ chapter_id: string; number_start?: number; unnumbered?: boolean }>).find((c) => c.chapter_id === id)
 const shown = (page: Page, title: string) => page.getByRole('article', { name: title }).getByLabel('Chapter number')
 
