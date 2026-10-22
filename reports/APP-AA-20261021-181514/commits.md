@@ -78,3 +78,11 @@
 **What:** React.lazy for 14 pages, Suspense in Layout, lazy Markdown in AskBar.
 **Why:** KNOWN_ISSUES "Large bundle" (Peter: technical debt).
 **Discovered:** after a podman VM start, wip-template-store stays "Exited (0) 292 years ago" (never started) and wip-react-console exits (1) — twice today. Platform/deploy side, not AA.
+
+## 7c4e800 — feat: demo novel touching every feature, with a loader and a manuscript
+**Tests:** strict tsc on demo/ + tools/; loaded into aa-demo-book (9 characters, 8 locations, 6 threads, 8 chapters, 17 events, 6 notes, 3 rules, 2 prompts, 6 images / 9 attachments); a second app instance on aa-demo-book: all 12 pages load with no page/console/HTTP error; screenshots of Chapters (numbering), Characters (avatars), Images (attachments, unattached) as intended. Manuscript parsed with the real parseText: 5 chapters from all heading forms.
+**What:** demo/book.ts, demo/README.md, demo/manuscript.txt, tools/load-demo-book.ts; tsconfig includes demo + tools.
+**Why:** Peter asked for AA test data: a short novel using all features (manuscript + loader, own namespace).
+**Discovered:** (1) AA bug: import folds prologue/interlude/epilogue into neighbouring scenes (pre-chapter buffer never cleared) — KNOWN_ISSUES, not fixed. (2) WIP: a scene titled like a chapter is refused, "Composite key already registered" → CASE-926. (3) WIP: a namespace recreated under a deleted name resolves ns:VALUE to the deleted terminology → CASE-927; aa-demo and aa-demo-2 deleted (unusable).
+
+## f47a8fe — docs: KNOWN_ISSUES — case numbers for the two WIP bugs
