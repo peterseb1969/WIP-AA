@@ -531,6 +531,21 @@ function CharactersPanel({
 const AUTOSAVE_IDLE_MS = 45_000
 const AUTOSAVE_MAX_MS = 5 * 60_000
 
+// Prose writes to one scene run one after another, in the order they were
+// started. Two writes in flight at once land in either order, and the last
+// one wins: a save on leaving a scene that landed after a later Cmd/Ctrl+S
+// replaced the newer text with the older one while the editor showed it as
+// saved. Module level, so a save started by an editor that has gone (leaving
+// the scene, or React's development remount) still orders the next one.
+const proseWrites = new Map<string, Promise<unknown>>()
+function queueProseWrite<T>(sceneId: string, write: () => Promise<T>): Promise<T> {
+  const next = (proseWrites.get(sceneId) ?? Promise.resolve()).catch(() => {}).then(write)
+  proseWrites.set(sceneId, next)
+  const forget = () => { if (proseWrites.get(sceneId) === next) proseWrites.delete(sceneId) }
+  next.then(forget, forget)
+  return next
+}
+
 type ContextTab = 'characters' | 'location' | 'threads' | 'rules' | 'notes' | 'media' | 'validate' | 'analysis'
 
 /** One run of a library prompt against the open scene. */
@@ -1274,33 +1289,44 @@ function SceneEditor({
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const dirtySinceRef = useRef<number | null>(null)
 
-  const saveProse = useCallback(async () => {
-    if (!editor || editor.isDestroyed || !isDirtyRef.current || savingRef.current) return
-    const prose = editor.getHTML()
-    savingRef.current = true
-    setSaving(true)
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
-    try {
-      await saveClient.documents.updateDocument(sceneId, { prose })
-      baselineHtmlRef.current = prose
-      // Typing may have continued while the save was in flight.
-      const stillDirty = !editor.isDestroyed && editor.getHTML() !== prose
-      isDirtyRef.current = stillDirty
-      setIsDirty(stillDirty)
-      dirtySinceRef.current = stillDirty ? Date.now() : null
-      setLastSaved(new Date())
-      setSaveError(null)
-      if (!stillDirty) {
-        localStorage.removeItem(draftKey)
-        notifyDraftChange()
+  // A save asked for while one is running (Cmd/Ctrl+S during an autosave)
+  // runs right after it, with the text as it is then; it used to be dropped.
+  const saveAgainRef = useRef(false)
+  const saveProse = useCallback(() => {
+    const run = async (): Promise<void> => {
+      if (!editor || editor.isDestroyed || !isDirtyRef.current) return
+      if (savingRef.current) { saveAgainRef.current = true; return }
+      const prose = editor.getHTML()
+      savingRef.current = true
+      setSaving(true)
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      try {
+        await queueProseWrite(sceneId, () => saveClient.documents.updateDocument(sceneId, { prose }))
+        baselineHtmlRef.current = prose
+        // Typing may have continued while the save was in flight.
+        const stillDirty = !editor.isDestroyed && editor.getHTML() !== prose
+        isDirtyRef.current = stillDirty
+        setIsDirty(stillDirty)
+        dirtySinceRef.current = stillDirty ? Date.now() : null
+        setLastSaved(new Date())
+        setSaveError(null)
+        if (!stillDirty) {
+          localStorage.removeItem(draftKey)
+          notifyDraftChange()
+        }
+        queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
+      } catch (err) {
+        setSaveError(err instanceof Error ? err.message : String(err))
+      } finally {
+        savingRef.current = false
+        setSaving(false)
       }
-      queryClient.invalidateQueries({ queryKey: wipKeys.documents.all })
-    } catch (err) {
-      setSaveError(err instanceof Error ? err.message : String(err))
-    } finally {
-      savingRef.current = false
-      setSaving(false)
+      if (saveAgainRef.current) {
+        saveAgainRef.current = false
+        await run()
+      }
     }
+    return run()
   }, [editor, saveClient, sceneId, draftKey, queryClient])
 
   // When the saved prose changes from outside the editor (an undo of a
@@ -1376,7 +1402,7 @@ function SceneEditor({
       if (isDirtyRef.current && editor.getText().trim()) {
         const prose = editor.getHTML()
         writeDraft(prose)
-        saveClient.documents.updateDocument(sceneId, { prose })
+        queueProseWrite(sceneId, () => saveClient.documents.updateDocument(sceneId, { prose }))
           .then(() => {
             localStorage.removeItem(draftKey)
             notifyDraftChange()
@@ -1639,7 +1665,7 @@ function SceneEditor({
         plot_threads: kept.data.plot_threads ?? [],
         summary: kept.data.summary ?? '',
       }
-      const keptResult = await saveClient.documents.updateDocument(kept.id, merged)
+      const keptResult = await queueProseWrite(kept.id, () => saveClient.documents.updateDocument(kept.id, merged))
       await saveClient.documents.deleteDocument(removed.id)
       const order = await structureEditor.removeScene(removed.id)
       if (order.documentId && order.version != null && keptResult.version != null) {
@@ -1785,7 +1811,7 @@ function SceneEditor({
 
       // 2. Save the first half to the current scene (prose only), and make
       //    the editor hold exactly that, so nothing counts as unsaved.
-      await saveClient.documents.updateDocument(sceneId, { prose: firstHtml })
+      await queueProseWrite(sceneId, () => saveClient.documents.updateDocument(sceneId, { prose: firstHtml }))
       editor.commands.setContent(firstHtml, { emitUpdate: false })
       baselineHtmlRef.current = editor.getHTML()
       isDirtyRef.current = false
