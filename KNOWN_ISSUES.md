@@ -2,10 +2,10 @@
 
 ## Bugs
 
-### Scene editing may not save on first load — not reproducible
+### Scene editing may not save on first load — closed 2026-10-22, guarded by e2e tests
 **Page:** Scenes (`/scenes`)
 **Symptom (as reported 2026-04-04):** Opening a scene shows the editor as read-only or unresponsive on first visit. Navigating away and back fixes it.
-**Status:** Could not reproduce on 2026-10-17. The suspected cause, a `userEditedRef` gate that skipped the first `onUpdate`, was removed about four hours after this entry was written, when dirty detection switched to an HTML baseline comparison (commit 99f5a3e). Tested on a cold load, both straight from a URL and from the scene list, with a short scratch scene and a 1,711-word scene from the real book: the editor was editable and focused, the caret landed where clicked, typing marked the scene dirty, and Save became active. If it shows up again, note the steps (which page you came from, whether a draft banner was showing) and reopen.
+**Status:** Not reproducible since the suspected cause went: a `userEditedRef` gate that skipped the first `onUpdate`, removed about four hours after this entry was written, when dirty detection switched to an HTML baseline comparison (commit 99f5a3e). Checked by hand on 2026-10-17 (cold load from a URL and from the scene list, a 1,711-word scene from the real book). On 2026-10-22 `tests/e2e/scene-first-load.spec.ts` automated it: seven ways of opening a scene for the first time in a fresh browser (direct URL, scene list, Corkboard card, a leftover local draft, every WIP call delayed 1.5 s, a 120-paragraph scene, the second scene of a session); each time the editor is editable, typing shows, Cmd/Ctrl+S stores it. 49 runs (seven tests, seven passes), no failure. The code also rules out the obvious path: the editor mounts only after the scene list has loaded, so it never starts without the prose. If it shows up again, note the steps (which page you came from, whether a draft banner was showing, local or deployed app) and reopen.
 
 ### The server ignores `WIP_API_KEY_FILE` (found 2026-10-22)
 **Where:** `server/index.ts:16`, `server/lib/wip-api.ts`
@@ -40,6 +40,9 @@ Several `useTerms(...)` / `useTerminologies(...)` call sites cast their params t
 
 ### Vite rejects unknown hosts
 Vite's dev server answers 403 to a `Host` it doesn't recognise. Through Caddy on localhost this is fine; a non-localhost ingress (e.g. `kb.internal`) would need `server.allowedHosts` in `vite.config.ts`.
+
+### The scene editor loads at most 200 scenes (found 2026-10-22)
+`ScenesPage` lists scenes with one `useDocuments` call, `page_size: 200`, and finds the open scene in that list. In a book with more than 200 scenes the rest would show "Scene not found" and be missing from the list. `aa` has 12 scenes, so this is latent. Fix when a book gets near it: page through, or fetch the open scene by id.
 
 ### Large bundle
 The production bundle is ~930 kB (Vite warns above 500 kB). Code-splitting the pages would fix it.
