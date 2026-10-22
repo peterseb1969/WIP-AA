@@ -66,7 +66,7 @@
     "loading_project": "Projekt wird geladen...",
     "danger_zone": "Gefahrenzone",
     "delete_book": "Buch l\u00f6schen",
-    "delete_book_description": "L\u00f6scht das ganze Buch: Kapitel, Szenen, Charaktere, Orte, Handlungsstr\u00e4nge, Notizen, Weltregeln, Namen, Bilder, Prompts und den Titel.",
+    "delete_book_description": "L\u00f6scht das ganze Buch: Kapitel, Szenen, Figuren, Schaupl\u00e4tze, Handlungsstr\u00e4nge, Notizen, Weltregeln, Namen, Bilder, Prompts und den Titel.",
     "delete_book_title": "\u201e{{title}}\u201c l\u00f6schen?",
     "delete_book_title_untitled": "Dieses Buch l\u00f6schen?",
     "delete_book_body": "Alles in diesem Buch wird gel\u00f6scht, und die gespeicherten Bilddateien werden entfernt. Das l\u00e4sst sich nicht r\u00fcckg\u00e4ngig machen. Danach ist das Buch leer wie ein neues.",
@@ -82,8 +82,8 @@
       "title": "Titel",
       "chapters": "Kapitel",
       "scenes": "Szenen",
-      "characters": "Charaktere",
-      "locations": "Orte",
+      "characters": "Figuren",
+      "locations": "Schaupl\u00e4tze",
       "plot_threads": "Handlungsstr\u00e4nge",
       "notes": "Notizen",
       "world_rules": "Weltregeln",
@@ -292,7 +292,7 @@
   },
   "demo": {
     "title": "Das Demo-Buch ausprobieren",
-    "description": "Lädt \"The Lantern Keeper's Tide\", einen kurzen Krimi mit Kapiteln, Szenen, Figuren, Orten, Handlungssträngen, Notizen, Weltregeln und Bildern, der jede Funktion zeigt. Nur angeboten, solange dieses Buch leer ist.",
+    "description": "L\u00e4dt \"The Lantern Keeper's Tide\", einen kurzen Krimi mit Kapiteln, Szenen, Figuren, Schaupl\u00e4tzen, Handlungsstr\u00e4ngen, Notizen, Weltregeln und Bildern, der jede Funktion zeigt. Nur angeboten, solange dieses Buch leer ist.",
     "load": "Demo-Buch laden",
     "loading": "Demo-Buch wird geladen…",
     "failed": "Das Demo-Buch konnte nicht geladen werden: {{message}}"
@@ -340,7 +340,7 @@
     "view_dashboard": "Zur \u00dcbersicht",
     "view_chapters": "Zu den Kapiteln",
     "not_fresh_title": "Dieser Buchbereich enth\u00e4lt bereits ein importiertes Buch",
-    "not_fresh_body": "Dieses Buch hat bereits Inhalt. Ein Import dar\u00fcber kann vorhandene Charaktere nicht zusammenf\u00fchren \u2013 es entstehen Duplikate und fehlgeschlagene Merges. L\u00f6sche zuerst das ganze Buch (Kapitel, Szenen, Charaktere, Namen, Notizen, Bilder, Prompts und den Titel) und importiere dann neu.",
+    "not_fresh_body": "Dieses Buch hat bereits Inhalt. Ein Import dar\u00fcber kann vorhandene Figuren nicht zusammenf\u00fchren \u2013 es entstehen Duplikate und fehlgeschlagene Merges. L\u00f6sche zuerst das ganze Buch (Kapitel, Szenen, Figuren, Namen, Notizen, Bilder, Prompts und den Titel) und importiere dann neu.",
     "reset_and_reimport": "Buch l\u00f6schen & neu importieren",
     "resetting": "Buch wird gel\u00f6scht\u2026",
     "reset_failed": "L\u00f6schen des Buchs fehlgeschlagen: {{error}}"
