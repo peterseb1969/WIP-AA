@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDocuments, useDeleteDocument, useTerms } from '@wip/react'
+import { useDocuments, useDeleteDocument } from '@wip/react'
+import { useBookTerms } from '../lib/useBookTerms'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   LayoutDashboard,
@@ -457,7 +458,7 @@ function DangerZone() {
 
 /** A term's label by its stored value (the value itself while terms load or when none matches). */
 function useTermLabel(terminology: string) {
-  const { data: terms } = useTerms(terminology, { page_size: 100, namespace: NAMESPACE } as any)
+  const { data: terms } = useBookTerms(terminology, { page_size: 100 })
   return (value: unknown) => {
     const v = String(value ?? '')
     return terms?.items?.find((term) => term.value === v)?.label || v

@@ -24,11 +24,11 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
   const { data: terminologies } = useTerminologies({
     namespace: NAMESPACE,
     page_size: 50,
-  } as any)
+  })
 
   const terminologyId = useMemo(() => {
     for (const t of terminologies?.items ?? []) {
-      if ((t as any).value === terminologyValue) return (t as any).terminology_id
+      if (t.value === terminologyValue) return t.terminology_id
     }
     return null
   }, [terminologies, terminologyValue])
@@ -37,14 +37,14 @@ export default function AliasManager({ terminologyValue, entityTermValue }: Alia
   const { data: terms } = useTerms(terminologyId ?? '', {
     page_size: 1000,
     status: 'active',
-  } as any)
+  })
 
   // The entity's stored name may be the term's value, its label or an alias
   // ("Lady Linora Thalyn" for LADY_LINORA_THALYN) — match all of them.
   const term = useMemo(() => {
     if (!terms?.items) return null
     const name = entityTermValue.toLowerCase()
-    const items = terms.items as any[]
+    const items = terms.items
     return items.find((t) => t.value.toLowerCase() === name)
       ?? items.find((t) => (t.label ?? '').toLowerCase() === name || (t.aliases ?? []).some((a: string) => a.toLowerCase() === name))
       ?? null

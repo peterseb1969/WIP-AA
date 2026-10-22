@@ -133,12 +133,12 @@ export function useEntityTerms() {
   const { data: terminologies } = useTerminologies({
     namespace: NAMESPACE,
     page_size: 50,
-  } as any)
+  })
 
   const termIdMap = useMemo(() => {
     const map = new Map<string, string>()
     for (const t of terminologies?.items ?? []) {
-      map.set((t as any).value, (t as any).terminology_id)
+      map.set(t.value, t.terminology_id)
     }
     return map
   }, [terminologies])
@@ -152,18 +152,18 @@ export function useEntityTerms() {
   const { data: charTerms } = useTerms(charId ?? '', {
     page_size: 1000,
     status: 'active',
-  } as any)
+  })
   const { data: locTerms } = useTerms(locId ?? '', {
     page_size: 1000,
     status: 'active',
-  } as any)
+  })
   const { data: threadTerms } = useTerms(threadId ?? '', {
     page_size: 1000,
     status: 'active',
-  } as any)
+  })
 
   const characterTerms: TermEntry[] = useMemo(
-    () => (charTerms?.items ?? []).map((t: any) => ({
+    () => (charTerms?.items ?? []).map((t) => ({
       value: t.value,
       label: t.label || t.value,
       aliases: t.aliases ?? [],
@@ -173,7 +173,7 @@ export function useEntityTerms() {
   )
 
   const locationTerms: TermEntry[] = useMemo(
-    () => (locTerms?.items ?? []).map((t: any) => ({
+    () => (locTerms?.items ?? []).map((t) => ({
       value: t.value,
       label: t.label || t.value,
       aliases: t.aliases ?? [],
@@ -183,7 +183,7 @@ export function useEntityTerms() {
   )
 
   const plotThreadTerms: TermEntry[] = useMemo(
-    () => (threadTerms?.items ?? []).map((t: any) => ({
+    () => (threadTerms?.items ?? []).map((t) => ({
       value: t.value,
       label: t.label || t.value,
       aliases: t.aliases ?? [],

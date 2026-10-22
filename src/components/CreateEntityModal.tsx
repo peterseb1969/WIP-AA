@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useCreateDocument, useTerms, useWipClient, wipKeys } from '@wip/react'
+import { useCreateDocument, useWipClient, wipKeys } from '@wip/react'
+import { useBookTerms } from '../lib/useBookTerms'
 import { useQueryClient } from '@tanstack/react-query'
 import { useEntityNames, type NameKind } from '../lib/entityNames'
 import { relabelEntity, renameByCopy, NameTakenError } from '../lib/rename'
@@ -159,7 +160,7 @@ export function TermSelect({
   multiple?: boolean
 }) {
   const { t } = useTranslation()
-  const { data: terms } = useTerms(terminologyId, { page_size: 100, namespace: NAMESPACE, status: 'active' } as any)
+  const { data: terms } = useBookTerms(terminologyId, { page_size: 100, status: 'active' })
 
   const options = useMemo(
     () =>
@@ -380,7 +381,8 @@ export default function CreateEntityModal({
   const toTermValue = (text: string): string =>
     text.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '')
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Called by the form's submit and by the footer button, which sits outside the form.
+  const handleSubmit = async (e: React.SyntheticEvent) => {
     e.preventDefault()
     setSubmitting(true)
     setSaveError(null)
@@ -609,7 +611,7 @@ export default function CreateEntityModal({
             {t('common.cancel')}
           </button>
           <button
-            onClick={handleSubmit as any}
+            onClick={handleSubmit}
             disabled={submitting || createDoc.isPending}
             className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
           >

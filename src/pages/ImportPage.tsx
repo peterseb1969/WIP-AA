@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCreateDocument, useDocuments, useWipClient, useTerms } from '@wip/react'
+import { useCreateDocument, useDocuments, useWipClient } from '@wip/react'
+import { useBookTerms } from '../lib/useBookTerms'
 import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -364,8 +365,8 @@ function EntitiesStep({
   onNext: () => void
 }) {
   const { t } = useTranslation()
-  const { data: roleTerms } = useTerms(TERMINOLOGIES.CHARACTER_ROLE, { page_size: 50, namespace: NAMESPACE } as any)
-  const { data: locationTypeTerms } = useTerms(TERMINOLOGIES.LOCATION_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
+  const { data: roleTerms } = useBookTerms(TERMINOLOGIES.CHARACTER_ROLE, { page_size: 50 })
+  const { data: locationTypeTerms } = useBookTerms(TERMINOLOGIES.LOCATION_TYPE, { page_size: 50 })
   const roleValues = (roleTerms?.items || []).map(item => item.value)
   const locationTypeValues = (locationTypeTerms?.items || []).map(item => item.value)
 
@@ -894,9 +895,9 @@ export default function ImportPage() {
   // so review-step merges silently fail to apply against terms that already
   // exist. Detect existing characters and require a reset before a fresh
   // import rather than letting the user hit that footgun.
-  const { data: existingChars } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1, namespace: NAMESPACE } as any)
+  const { data: existingChars } = useBookTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1 })
   const checkingFreshness = existingChars === undefined
-  const hasExistingBook = (((existingChars as any)?.items?.length) ?? 0) > 0
+  const hasExistingBook = (existingChars?.items?.length ?? 0) > 0
 
   const handleResetBook = useCallback(async () => {
     setResetting(true)
@@ -1020,7 +1021,14 @@ export default function ImportPage() {
         createDocument.mutate(
           { template_id: templateId, namespace: NAMESPACE, data },
           {
-            onSuccess: (result: any) => { created++; setImportProgress(created); resolve(result.document_id) },
+            onSuccess: (result) => {
+              created++
+              setImportProgress(created)
+              // The book structure lists chapters and scenes by id: a create
+              // without one must stop the import, not store `undefined` there.
+              if (result.document_id) resolve(result.document_id)
+              else reject(new Error(`${templateId}: created without a document id`))
+            },
             onError: (err) => { created++; setImportProgress(created); reject(err) },
           }
         )

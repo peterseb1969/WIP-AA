@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDocuments, useTerms, useDeleteDocument, useUpdateDocument } from '@wip/react'
+import { useDocuments, useDeleteDocument, useUpdateDocument } from '@wip/react'
+import { useBookTerms } from '../lib/useBookTerms'
 import { Users, ArrowLeft, Heart, Plus, Pencil, Trash2, X } from 'lucide-react'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES, ROLE_COLORS } from '../lib/constants'
 import StatusBadge from '../components/StatusBadge'
@@ -63,7 +64,7 @@ function CharacterCard({ data, displayName, portrait, selected, onClick }: { dat
 function CharacterDetail({ documentId, data, onBack, onEdit, onDelete }: { documentId: string; data: CharacterData; onBack: () => void; onEdit: () => void; onDelete: () => void }) {
   const { t } = useTranslation()
   // Resolve character names from terms
-  const { data: charTerms } = useTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1000, namespace: NAMESPACE, status: 'active' } as any)
+  const { data: charTerms } = useBookTerms(TERMINOLOGIES.CHARACTERS, { page_size: 1000, status: 'active' })
   const names = useEntityNames()
   const displayName = names.label('character', data.name)
   const { attachments } = useAttachments(documentId)
@@ -168,7 +169,7 @@ function Relationships({
   const updateDoc = useUpdateDocument()
   const portraitOfName = usePortraitOf()
   const names = useEntityNames()
-  const { data: typeTerms } = useTerms(TERMINOLOGIES.RELATIONSHIP_TYPE, { page_size: 50, namespace: NAMESPACE } as any)
+  const { data: typeTerms } = useBookTerms(TERMINOLOGIES.RELATIONSHIP_TYPE, { page_size: 50 })
   const [adding, setAdding] = useState(false)
   const [draft, setDraft] = useState({ character: '', relationship_type: '', description: '' })
   const [error, setError] = useState<string | null>(null)
