@@ -86,3 +86,9 @@
 **Discovered:** (1) AA bug: import folds prologue/interlude/epilogue into neighbouring scenes (pre-chapter buffer never cleared) — KNOWN_ISSUES, not fixed. (2) WIP: a scene titled like a chapter is refused, "Composite key already registered" → CASE-926. (3) WIP: a namespace recreated under a deleted name resolves ns:VALUE to the deleted terminology → CASE-927; aa-demo and aa-demo-2 deleted (unusable).
 
 ## f47a8fe — docs: KNOWN_ISSUES — case numbers for the two WIP bugs
+
+## d908c38 — fix: import keeps prologue, interlude, epilogue and front matter as their own parts (CASE-928)
+**Tests:** server/import.test.ts 11 (8 fail on the old parser); e2e import.spec (own app instance + namespace) fails on the old parser and on number-keyed results; unit 129; e2e --repeat-each=3 119 passed.
+**What:** parseText recognises unnumbered headings (en/de), front matter part, unique scene titles, positional key; ImportPage: front matter unticked, kind labels, key-based extraction maps, PROLOGUE/INTERLUDE/EPILOGUE event types, unnumbered slots; server reset addresses <ns>:AA_CHARACTERS; second Playwright project for import.
+**Why:** Peter: file a case + KNOWN_ISSUES, fix, close. CASE-928 filed, implemented, status implemented.
+**Discovered:** "Reset & import fresh" never cleared names (bare terminology value → 400 for a multi-namespace key, swallowed by catch, answered ok) — fixed in the same commit; found by the import spec's repeat passes. target_yac APP-AA is not in the KB vocabulary (use any).
