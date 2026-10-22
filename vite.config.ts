@@ -15,12 +15,20 @@ const SERVER_PORT = process.env.PORT || '3014'
 const CLIENT_PORT = parseInt(process.env.VITE_PORT || '5180')
 const SERVER_URL = `http://localhost:${SERVER_PORT}`
 
+// Hosts the dev server answers besides localhost and IP addresses. Vite
+// refuses any other Host header (403) to block DNS rebinding, so a dev
+// install behind a non-localhost ingress (e.g. `kb.internal`) names its host
+// here: DEV_ALLOWED_HOSTS=aa.internal,.example.org (a leading dot allows
+// every subdomain). Unset keeps Vite's default.
+const ALLOWED_HOSTS = (process.env.DEV_ALLOWED_HOSTS ?? '').split(',').map((h) => h.trim()).filter(Boolean)
+
 export default defineConfig({
   base: BASE_WITH_SLASH,
   plugins: [react()],
   server: {
     host: '0.0.0.0',
     port: CLIENT_PORT,
+    ...(ALLOWED_HOSTS.length ? { allowedHosts: ALLOWED_HOSTS } : {}),
     proxy: {
       [`${BASE_PATH}/api`]: SERVER_URL,
       [`${BASE_PATH}/server-api`]: SERVER_URL,
