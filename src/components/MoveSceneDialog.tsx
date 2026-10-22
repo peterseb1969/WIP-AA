@@ -67,16 +67,17 @@ export default function MoveSceneDialog({
 
   return (
     <div className="fixed inset-0 bg-black/40 z-50 flex items-start justify-center pt-[10vh] px-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="move-scene-title" className="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-text truncate">{t('move.title', { scene: sceneTitle })}</h2>
+          <h2 id="move-scene-title" className="text-lg font-semibold text-text truncate">{t('move.title', { scene: sceneTitle })}</h2>
           <button onClick={onClose} className="text-text-muted hover:text-text p-1"><X className="w-5 h-5" /></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-text mb-1">{t('move.chapter')}</label>
+            <label htmlFor="move-scene-chapter" className="block text-sm font-medium text-text mb-1">{t('move.chapter')}</label>
             <select
+              id="move-scene-chapter"
               value={chapterId}
               onChange={(e) => pickChapter(e.target.value)}
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white text-text focus:outline-none focus:border-primary"
