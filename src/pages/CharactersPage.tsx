@@ -33,12 +33,13 @@ interface CharacterData {
   }>
 }
 
-function CharacterCard({ data, displayName, portrait, selected = false, onClick }: { data: CharacterData; displayName: string; portrait?: string; selected?: boolean; onClick: () => void }) {
+function CharacterCard({ data, displayName, portrait, selected, onClick }: { data: CharacterData; displayName: string; portrait?: string; selected?: boolean; onClick: () => void }) {
   const { t } = useTranslation()
   return (
     <button
       onClick={onClick}
-      className={`bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all w-full ${selectedCardClass(selected)}`}
+      aria-pressed={selected}
+      className={`bg-white rounded-lg border border-gray-200 p-4 text-left hover:border-primary/30 hover:shadow-sm transition-all w-full ${selectedCardClass(!!selected)}`}
     >
       <div className="flex items-start gap-3 mb-2">
         {portrait ? <Avatar fileId={portrait} name={displayName} className="w-10 h-10" /> : null}
@@ -409,7 +410,7 @@ export default function CharactersPage() {
                   data={ch.data as unknown as CharacterData}
                   displayName={names.label('character', (ch.data as { name?: string }).name)}
                   portrait={portraitOfName((ch.data as { name?: string }).name)}
-                  selected={merge.isSelected(ch.document_id)}
+                  selected={merge.active ? merge.isSelected(ch.document_id) : undefined}
                   onClick={() => (merge.active ? merge.toggle(ch.document_id) : setSelectedId(ch.document_id))}
                 />
               ))}

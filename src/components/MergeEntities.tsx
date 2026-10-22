@@ -135,10 +135,10 @@ export function MergeEntitiesDialog({ kind, candidates, onClose, onMerged }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={phase === 'running' ? undefined : onClose}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="merge-entities-title" className="bg-white rounded-lg p-6 w-full max-w-lg mx-4 shadow-xl max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center mb-4">
           <Merge className="w-5 h-5 text-primary mr-2" />
-          <h3 className="text-lg font-semibold text-text">{t(`merge.title_${kind}`)}</h3>
+          <h3 id="merge-entities-title" className="text-lg font-semibold text-text">{t(`merge.title_${kind}`)}</h3>
           {phase !== 'running' ? (
             <button onClick={phase === 'done' ? onMerged : onClose} className="ml-auto p-1 text-text-muted hover:text-text"><X className="w-5 h-5" /></button>
           ) : null}

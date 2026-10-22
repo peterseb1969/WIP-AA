@@ -1,5 +1,5 @@
 import { expect, test, type Locator } from '@playwright/test'
-import { create, doc, drag, setStructure } from './support/book'
+import { create, doc, drag, setStructure, tag } from './support/book'
 import { watch } from './support/page'
 
 // Drag and drop with a real mouse (pointer events), and Undo, which writes
@@ -16,10 +16,10 @@ async function box(locator: Locator) {
 test.describe.configure({ mode: 'serial' })
 
 test.beforeAll(async () => {
-  ids.a = await create('AA_CHAPTER', { title: 'The Harbour' })
-  ids.b = await create('AA_CHAPTER', { title: 'The Crossing' })
-  ids.c = await create('AA_CHAPTER', { title: 'The Island' })
-  const scene = (title: string, n: number) => create('AA_EVENT', { title, event_type: 'SCENE', story_time_sort: n, summary: 's', prose: `<p>${title}.</p>` })
+  ids.a = await create('AA_CHAPTER', { title: `The Harbour${tag()}` })
+  ids.b = await create('AA_CHAPTER', { title: `The Crossing${tag()}` })
+  ids.c = await create('AA_CHAPTER', { title: `The Island${tag()}` })
+  const scene = (title: string, n: number) => create('AA_EVENT', { title: `${title}${tag()}`, event_type: 'SCENE', story_time_sort: n, summary: 's', prose: `<p>${title}.</p>` })
   ids.s1 = await scene('Fog', 1); ids.s2 = await scene('Rope', 2); ids.s3 = await scene('Shore', 3)
   ids.structure = await setStructure([
     { chapter_id: ids.a, scene_ids: [ids.s1, ids.s2] },
@@ -31,8 +31,8 @@ test.beforeAll(async () => {
 test('drag a chapter to the top on the Chapters page, then undo', async ({ page }) => {
   const seen = watch(page)
   await page.goto('/chapters')
-  const island = await box(page.getByText('The Island', { exact: true }))
-  const harbour = await box(page.getByText('The Harbour', { exact: true }))
+  const island = await box(page.getByText(`The Island${tag()}`, { exact: true }))
+  const harbour = await box(page.getByText(`The Harbour${tag()}`, { exact: true }))
   await drag(page, island.center, harbour.upper)
   await expect.poll(order).toEqual([ids.c, ids.a, ids.b])
 
@@ -45,8 +45,8 @@ test('drag a chapter to the top on the Chapters page, then undo', async ({ page 
 test('drag a scene card into another chapter on the Corkboard', async ({ page }) => {
   const seen = watch(page)
   await page.goto('/corkboard')
-  const fog = await box(page.getByText('Fog', { exact: true }))
-  const shore = await box(page.getByText('Shore', { exact: true }))
+  const fog = await box(page.getByText(`Fog${tag()}`, { exact: true }))
+  const shore = await box(page.getByText(`Shore${tag()}`, { exact: true }))
   await drag(page, fog.center, shore.upper)
   await expect.poll(async () => (await chapters()).map((c) => c.scene_ids)).toEqual([[ids.s2], [ids.s1, ids.s3], []])
   expect(seen.problems).toEqual([])

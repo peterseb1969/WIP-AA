@@ -196,7 +196,7 @@ function MediaCard({ media, hideIfAttached, onView, onEdit, onDelete }: {
   if (hideIfAttached && (isLoading || usage.length)) return null
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
+    <article aria-label={media.data.title} className="bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
       <button onClick={onView} className="block aspect-[4/3] bg-surface">
         <img src={fileUrl(media.data.file)} alt={media.data.title} loading="lazy" className="w-full h-full object-cover" />
       </button>
@@ -226,7 +226,7 @@ function MediaCard({ media, hideIfAttached, onView, onEdit, onDelete }: {
           )}
         </div>
       </div>
-    </div>
+    </article>
   )
 }
 
@@ -254,11 +254,11 @@ function DeleteDialog({ media, usage, onClose, onConfirm }: {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={busy ? undefined : onClose}>
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby="media-delete-title" className="bg-white rounded-lg p-6 w-full max-w-md mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-4 mb-4">
           <img src={fileUrl(media.data.file)} alt="" className="w-20 h-20 object-cover rounded border border-gray-100 flex-shrink-0" />
           <div>
-            <h3 className="text-lg font-semibold text-text mb-1">{t('media.delete_title', { title: media.data.title })}</h3>
+            <h3 id="media-delete-title" className="text-lg font-semibold text-text mb-1">{t('media.delete_title', { title: media.data.title })}</h3>
             <p className="text-sm text-text-muted">{t('media.delete_body')}</p>
           </div>
         </div>
