@@ -1533,18 +1533,30 @@ function SceneEditor({
   /** `base`, or `base` with " 2", " 3", … inserted before the closing
    *  parenthesis — the first title no scene in WIP has. Asks WIP rather
    *  than the loaded scene list, which is paged and may be stale. */
+  // A scene's identity is its title, and a retired scene keeps its identity:
+  // creating a scene under a retired scene's title brings that scene back
+  // instead of creating a new one (split → merge back → split again did
+  // exactly that). A query without a status sees active scenes only, so
+  // every status is checked.
   const uniqueSceneTitle = useCallback(async (base: string) => {
+    const inUse = async (title: string) => {
+      for (const status of ['active', 'inactive', 'archived'] as const) {
+        const found = await wipClient.documents.queryDocuments(
+          {
+            template_id: TEMPLATES.EVENT,
+            status,
+            filters: [{ field: 'data.title', operator: 'eq', value: title }],
+            page_size: 1,
+          },
+          NAMESPACE,
+        )
+        if (found.total) return true
+      }
+      return false
+    }
     for (let n = 1; n < 100; n++) {
       const candidate = n === 1 ? base : base.replace(/\)$/, ` ${n})`)
-      const found = await wipClient.documents.queryDocuments(
-        {
-          template_id: TEMPLATES.EVENT,
-          filters: [{ field: 'data.title', operator: 'eq', value: candidate }],
-          page_size: 1,
-        },
-        NAMESPACE,
-      )
-      if (!found.total) return candidate
+      if (!(await inUse(candidate))) return candidate
     }
     throw new Error(`No free title found for "${base}".`)
   }, [wipClient])
