@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { proseFromText } from './prose'
+import { joinSentences, proseFromText } from './prose'
 
 describe('proseFromText', () => {
   it('makes a paragraph of each block between blank lines', () => {
@@ -21,5 +21,20 @@ describe('proseFromText', () => {
   it('ignores surrounding and whitespace-only lines', () => {
     expect(proseFromText('\n  \nOne.\n \t\nTwo.\n\n')).toBe('<p>One.</p><p>Two.</p>')
     expect(proseFromText('  \n ')).toBe('')
+  })
+})
+
+describe('joinSentences', () => {
+  it('adds a full stop only where a text has no closing punctuation', () => {
+    expect(joinSentences(['Ends here.', 'No stop', 'Asks?', 'Last'])).toBe('Ends here. No stop. Asks? Last')
+  })
+
+  it('counts punctuation before closing quotes and brackets', () => {
+    expect(joinSentences(['He said "go."', '(Later.)', 'Then'])).toBe('He said "go." (Later.) Then')
+  })
+
+  it('skips empty texts and trims', () => {
+    expect(joinSentences(['  One.  ', '', '  ', 'Two'])).toBe('One. Two')
+    expect(joinSentences([])).toBe('')
   })
 })

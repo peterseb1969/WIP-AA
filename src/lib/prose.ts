@@ -22,3 +22,13 @@ export function proseFromText(text: string) {
     .map((lines) => `<p>${lines.map(escapeHtml).join('<br>')}</p>`)
     .join('')
 }
+
+/**
+ * Texts joined into one, as sentences: a text that already ends in
+ * punctuation (closing quotes or brackets after it count) is followed by a
+ * space, any other by ". ". Used when merging entities' descriptions.
+ */
+export function joinSentences(texts: string[]) {
+  return texts.map((t) => t.trim()).filter(Boolean)
+    .reduce((out, text) => (!out ? text : /[.!?…:;][)"'”’»«]*$/.test(out) ? `${out} ${text}` : `${out}. ${text}`), '')
+}

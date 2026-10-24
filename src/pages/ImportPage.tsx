@@ -27,7 +27,7 @@ import { clearAllDrafts } from '../components/UnsavedDraftBanner'
 import BackLink from '../components/BackLink'
 import { PROJECT_TIME_SYSTEM_DEFAULT, TermSelect } from '../components/CreateEntityModal'
 import { titleFromFileName } from '../lib/titles'
-import { proseFromText } from '../lib/prose'
+import { joinSentences, proseFromText } from '../lib/prose'
 import LoadDemoBook from '../components/LoadDemoBook'
 
 const toTermValue = (text: string): string =>
@@ -426,21 +426,21 @@ function EntitiesStep({
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const descriptions = [...new Set(selected.map(c => c.description).filter(Boolean))]
       const aliases = collectMergeAliases(selected.flatMap(c => [c.name, ...(c.aliases || [])]), canonicalName)
-      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: descriptions.join('. '), aliases }
+      const merged: ExtractedCharacter = { name: canonicalName, role: bestRole, description: joinSentences(descriptions), aliases }
       setCharacters([merged, ...characters.filter((_, i) => !mergeSelection.has(i))])
     } else if (tab === 'locations') {
       const selected = indices.map(i => locations[i]!)
       const canonicalName = [...selected].sort((a, b) => b.name.length - a.name.length)[0]!.name
       const atmospheres = [...new Set(selected.map(l => l.atmosphere).filter(Boolean))]
       const aliases = collectMergeAliases(selected.flatMap(l => [l.name, ...(l.aliases || [])]), canonicalName)
-      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: atmospheres.join('. '), aliases }
+      const merged: ExtractedLocation = { name: canonicalName, type: selected[0]!.type, atmosphere: joinSentences(atmospheres), aliases }
       setLocations([merged, ...locations.filter((_, i) => !mergeSelection.has(i))])
     } else if (tab === 'threads') {
       const selected = indices.map(i => plotThreads[i]!)
       const canonicalTitle = [...selected].sort((a, b) => b.title.length - a.title.length)[0]!.title
       const descriptions = [...new Set(selected.map(p => p.description).filter(Boolean))]
       const aliases = collectMergeAliases(selected.flatMap(p => [p.title, ...(p.aliases || [])]), canonicalTitle)
-      const merged: ExtractedPlotThread = { title: canonicalTitle, description: descriptions.join('. '), aliases }
+      const merged: ExtractedPlotThread = { title: canonicalTitle, description: joinSentences(descriptions), aliases }
       setPlotThreads([merged, ...plotThreads.filter((_, i) => !mergeSelection.has(i))])
     }
     cancelMerge()
