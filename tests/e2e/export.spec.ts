@@ -75,3 +75,20 @@ test('EPUB e-book', async ({ page }) => {
   expect(await zip.file('OEBPS/chapter-002.xhtml')!.async('string')).toContain(`<h1>Chapter 1: ${titles.chapter}</h1>`)
   expect(seen.problems).toEqual([])
 })
+
+test('PDF print view opens in a new tab and prints', async ({ page, context }) => {
+  const seen = watch(page)
+  await page.goto('/export')
+  await page.getByLabel('Page size').selectOption('a4')
+  const [view] = await Promise.all([context.waitForEvent('page'), page.getByRole('link', { name: 'Open PDF (print view)' }).click()])
+  await view.waitForLoadState()
+  expect(view.url()).toContain('size=a4')
+  await expect(view.getByRole('button', { name: 'Print / Save as PDF' })).toBeVisible()
+  await expect(view.getByRole('heading', { name: `Chapter 1: ${titles.chapter}` })).toBeVisible()
+  // The toolbar is screen-only; the chapter starts a new page: title page, prologue, chapter 1.
+  await view.emulateMedia({ media: 'print' })
+  await expect(view.getByRole('button', { name: 'Print / Save as PDF' })).toBeHidden()
+  const pdf = (await view.pdf({ preferCSSPageSize: true })).toString('latin1')
+  expect(pdf.match(/\/Type\s*\/Page[^s]/g)).toHaveLength(3)
+  expect(seen.problems).toEqual([])
+})

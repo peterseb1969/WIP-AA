@@ -8,34 +8,11 @@
 import { createHash } from 'crypto'
 import JSZip from 'jszip'
 import { chapterHeading, words, type ExportBook, type ExportLanguage } from './book.js'
-import type { Block, Run } from './prose.js'
+import { blocksHtml, esc, SCENE_BREAK } from './html.js'
 
 export interface EpubOptions {
   lang: ExportLanguage
   sceneTitles: boolean
-}
-
-const esc = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
-
-function runHtml(run: Run) {
-  if ('break' in run) return '<br/>'
-  let html = esc(run.text)
-  if (run.strike) html = `<s>${html}</s>`
-  if (run.italic) html = `<em>${html}</em>`
-  if (run.bold) html = `<strong>${html}</strong>`
-  return html
-}
-
-const SCENE_BREAK = '<p class="scene-break">* * *</p>'
-
-function blocksHtml(blocks: Block[]) {
-  let first = true
-  return blocks.map((block) => {
-    if (block.kind === 'rule') { first = true; return SCENE_BREAK }
-    const html = `<p${first ? ' class="first"' : ''}>${block.runs.map(runHtml).join('')}</p>`
-    first = false
-    return html
-  })
 }
 
 const page = (lang: string, title: string, body: string[]) => `<?xml version="1.0" encoding="utf-8"?>
