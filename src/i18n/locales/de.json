@@ -870,6 +870,8 @@
     "format_docx_manuscript_hint": "F\u00fcr Agenturen, Lektorate und Verlage: 12 pt Times New Roman, doppelter Zeilenabstand, Kopfzeile, Wortzahl auf der Titelseite.",
     "format_docx_reading": "Word \u2014 Leseexemplar",
     "format_docx_reading_hint": "F\u00fcr Testleser oder zum Drucken: buch\u00e4hnliches Layout mit Seitenzahlen.",
+    "format_epub": "EPUB-E-Book",
+    "format_epub_hint": "F\u00fcr E-Reader, Handys und Testleser; Apple Books, Kobo und Kindle Direct Publishing nehmen es an.",
     "format_md": "Markdown",
     "format_md_hint": "F\u00fcr Sicherungen und zum Bearbeiten in jedem Texteditor. L\u00e4sst sich wieder importieren.",
     "format_txt": "Reiner Text",

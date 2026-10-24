@@ -870,6 +870,8 @@
     "format_docx_manuscript_hint": "For agents, editors and publishers: 12 pt Times New Roman, double spaced, page header, word count on the title page.",
     "format_docx_reading": "Word \u2014 reading copy",
     "format_docx_reading_hint": "For test readers or printing: a book-like layout with page numbers.",
+    "format_epub": "EPUB e-book",
+    "format_epub_hint": "For e-readers, phones and test readers; accepted by Apple Books, Kobo and Kindle Direct Publishing.",
     "format_md": "Markdown",
     "format_md_hint": "For backups and editing in any text editor. Can be imported again.",
     "format_txt": "Plain text",

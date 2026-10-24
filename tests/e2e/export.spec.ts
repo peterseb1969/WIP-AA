@@ -64,3 +64,14 @@ test('Word in manuscript format', async ({ page }) => {
   expect(document).toMatch(/about \d+ words/)
   expect(seen.problems).toEqual([])
 })
+
+test('EPUB e-book', async ({ page }) => {
+  const seen = watch(page)
+  await page.goto('/export')
+  const { name, bytes } = await download(page, 'EPUB e-book')
+  expect(name).toBe('e2e-book.epub')
+  const zip = await JSZip.loadAsync(bytes)
+  expect(await zip.file('mimetype')!.async('string')).toBe('application/epub+zip')
+  expect(await zip.file('OEBPS/chapter-002.xhtml')!.async('string')).toContain(`<h1>Chapter 1: ${titles.chapter}</h1>`)
+  expect(seen.problems).toEqual([])
+})

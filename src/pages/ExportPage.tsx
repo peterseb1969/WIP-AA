@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BookOpenText, Download, FileDown, FileText, FileType, Hash } from 'lucide-react'
+import { BookOpenText, Download, FileDown, FileText, FileType, Hash, TabletSmartphone } from 'lucide-react'
 
 // Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
 const EXPORT_API = `${import.meta.env.BASE_URL}api/export`
@@ -9,6 +9,7 @@ const EXPORT_API = `${import.meta.env.BASE_URL}api/export`
 const FORMATS = [
   { id: 'docx_manuscript', format: 'docx', query: '&style=manuscript', icon: FileType },
   { id: 'docx_reading', format: 'docx', query: '&style=reading', icon: BookOpenText },
+  { id: 'epub', format: 'epub', query: '', icon: TabletSmartphone },
   { id: 'md', format: 'md', query: '', icon: Hash },
   { id: 'txt', format: 'txt', query: '', icon: FileText },
 ] as const

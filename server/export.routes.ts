@@ -4,7 +4,8 @@
  *   GET /api/export/:format?lang=en|de&scene_titles=1[&style=manuscript|reading]
  *
  * Formats: `md` (Markdown), `txt` (plain text), `docx` (Word; `style` picks
- * standard manuscript format, the default, or a reading copy). `lang` sets
+ * standard manuscript format, the default, or a reading copy), `epub`
+ * (e-book). `lang` sets
  * the words the export adds itself ("Chapter", "by"); the book's own text is never
  * translated. Scene titles are left out unless `scene_titles=1`: imported
  * titles ("Scene 2") are labels for the writer, not text for readers.
@@ -16,6 +17,7 @@ import { deploymentBook } from './lib/book-space.js'
 import { fileStem, loadBook, type ExportBook, type ExportLanguage } from './lib/export/book.js'
 import { toMarkdown, toPlainText, type TextOptions } from './lib/export/text.js'
 import { toDocx } from './lib/export/docx.js'
+import { toEpub } from './lib/export/epub.js'
 
 const router = Router()
 
@@ -27,6 +29,7 @@ const FORMATS: Record<string, { type: string; render: (book: ExportBook, opts: O
   md: { type: 'text/markdown; charset=utf-8', render: toMarkdown },
   txt: { type: 'text/plain; charset=utf-8', render: toPlainText },
   docx: { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', render: toDocx },
+  epub: { type: 'application/epub+zip', render: (book, opts) => toEpub(book, opts) },
 }
 
 router.get('/export/:format', async (req, res) => {
