@@ -73,12 +73,15 @@ test('import a manuscript with prologue, interlude, epilogue and front matter', 
   }
   const sceneOf = (i: number, j = 0) => scenes.get(slots[i]!.scene_ids[j]!)!
   expect(sceneOf(0)).toMatchObject({ event_type: 'PROLOGUE', title: 'Prologue Scene 1' })
-  expect(String(sceneOf(0).prose)).toMatch(/^At ten past two the light went out/)
+  // Prose is stored as the editor's HTML, one paragraph per block of the
+  // manuscript (plain text would open as a single paragraph).
+  expect(String(sceneOf(0).prose)).toMatch(/^<p>At ten past two the light went out/)
+  expect(String(sceneOf(0).prose).match(/<p>/g)).toHaveLength(4)
   expect(sceneOf(4)).toMatchObject({ event_type: 'INTERLUDE' })
   expect(sceneOf(7)).toMatchObject({ event_type: 'EPILOGUE' })
   // Chapter 1 starts with its own first line: no title page, no prologue.
   expect(sceneOf(1)).toMatchObject({ event_type: 'SCENE', title: 'Ch1 Scene 1' })
-  expect(String(sceneOf(1).prose)).toMatch(/^The Grey Gull leaned into The Narrows/)
+  expect(String(sceneOf(1).prose)).toMatch(/^<p>The Grey Gull leaned into The Narrows/)
   // The scenes before an interlude or epilogue end with their own text.
   expect(String(sceneOf(3, 2).prose)).not.toContain('Interlude')
   expect(String(sceneOf(6, 1).prose)).not.toContain('Epilogue')

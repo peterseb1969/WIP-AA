@@ -27,6 +27,7 @@ import { clearAllDrafts } from '../components/UnsavedDraftBanner'
 import BackLink from '../components/BackLink'
 import { PROJECT_TIME_SYSTEM_DEFAULT, TermSelect } from '../components/CreateEntityModal'
 import { titleFromFileName } from '../lib/titles'
+import { proseFromText } from '../lib/prose'
 import LoadDemoBook from '../components/LoadDemoBook'
 
 const toTermValue = (text: string): string =>
@@ -1101,7 +1102,7 @@ export default function ImportPage() {
             title: scene.title,
             event_type: EVENT_TYPE_OF[ch.kind] ?? 'SCENE',
             story_time_sort: (ci + 1) * 1000 + scene.sceneOrder,
-            prose: scene.prose,
+            prose: proseFromText(scene.prose),
             summary: chapterSummaries.get(ch.key) || '',
             characters: (chapterCharacters.get(ch.key) || []).filter(tv => validCharTerms.has(tv)),
           })
