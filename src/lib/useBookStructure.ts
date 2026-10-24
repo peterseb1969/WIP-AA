@@ -57,12 +57,20 @@ export interface BookStructure {
   getChapterIds(): string[]
   /** Get all scene_ids in order (flat) */
   getAllSceneIds(): string[]
+  /**
+   * The scene before or after a scene in reading order, across chapter
+   * boundaries (empty chapters are skipped), and the chapter it is in.
+   * undefined at the start or end of the book, or for a scene in no chapter.
+   */
+  getSceneInReadingOrder(sceneId: string, direction: 'prev' | 'next'): { sceneId: string; chapterId: string } | undefined
 }
 
 export function buildStructure(data: BookStructureData): BookStructure {
   // Build reverse lookup maps
   const chapterIndexMap = new Map<string, number>()
   const scenePositionMap = new Map<string, { chapterIndex: number; sceneIndex: number; chapterId: string }>()
+
+  const readingOrder: Array<{ sceneId: string; chapterId: string }> = []
 
   const displayNumbers = new Map<string, number | null>()
   let next = 1
@@ -76,6 +84,7 @@ export function buildStructure(data: BookStructureData): BookStructure {
     chapterIndexMap.set(slot.chapter_id, ci)
     slot.scene_ids.forEach((sid, si) => {
       scenePositionMap.set(sid, { chapterIndex: ci, sceneIndex: si, chapterId: slot.chapter_id })
+      readingOrder.push({ sceneId: sid, chapterId: slot.chapter_id })
     })
   })
 
@@ -104,6 +113,11 @@ export function buildStructure(data: BookStructureData): BookStructure {
     },
     getChapterIds: () => data.chapters.map((s) => s.chapter_id),
     getAllSceneIds: () => data.chapters.flatMap((s) => s.scene_ids),
+    getSceneInReadingOrder: (id, direction) => {
+      const idx = readingOrder.findIndex((s) => s.sceneId === id)
+      if (idx < 0) return undefined
+      return readingOrder[idx + (direction === 'prev' ? -1 : 1)]
+    },
   }
 }
 

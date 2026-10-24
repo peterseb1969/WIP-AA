@@ -795,60 +795,59 @@ function ContextPanel({
 
 // ── Continuity Strip (bottom) ────────────────────────────
 
+/** Where an arrow of the continuity strip leads; chapterLabel when it leaves the chapter. */
+interface NavTarget {
+  scene: { document_id: string; data: EventData }
+  chapterLabel?: string
+}
+
 function ContinuityStrip({
-  prevScene,
-  nextScene,
+  prev,
+  next,
   onNavigate,
 }: {
-  prevScene?: EventData
-  nextScene?: EventData
+  prev?: NavTarget
+  next?: NavTarget
   onNavigate: (direction: 'prev' | 'next') => void
 }) {
   const { t } = useTranslation()
+
+  const target = (nav: NavTarget | undefined, heading: string, otherChapter: string, end: string) => (
+    <div className="min-w-0 flex-1">
+      <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{nav?.chapterLabel ? otherChapter : heading}</div>
+      {nav ? (
+        <>
+          {nav.chapterLabel ? <div className="text-[11px] text-text-muted truncate">{nav.chapterLabel}</div> : null}
+          <div className="text-xs font-medium text-text truncate">{sceneTitleShown(nav.scene.data.title)}</div>
+          {nav.scene.data.summary ? (
+            <div className="text-[11px] text-text-muted line-clamp-1 mt-0.5">{nav.scene.data.summary}</div>
+          ) : null}
+        </>
+      ) : (
+        <div className="text-xs text-text-light">{end}</div>
+      )}
+    </div>
+  )
 
   return (
     <div className="bg-white border-t border-gray-200 flex">
       {/* Previous */}
       <button
         onClick={() => onNavigate('prev')}
-        disabled={!prevScene}
+        disabled={!prev}
         className="flex-1 flex items-center gap-2 px-4 py-2.5 text-left hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-default border-r border-gray-100"
       >
         <ChevronLeft className="w-4 h-4 text-text-muted flex-shrink-0" />
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{t('scenes.previous')}</div>
-          {prevScene ? (
-            <>
-              <div className="text-xs font-medium text-text truncate">{sceneTitleShown(prevScene.title)}</div>
-              {prevScene.summary ? (
-                <div className="text-[11px] text-text-muted line-clamp-1 mt-0.5">{prevScene.summary}</div>
-              ) : null}
-            </>
-          ) : (
-            <div className="text-xs text-text-light">{t('scenes.start_of_chapter')}</div>
-          )}
-        </div>
+        {target(prev, t('scenes.previous'), t('scenes.previous_chapter'), t('scenes.start_of_book'))}
       </button>
 
       {/* Next */}
       <button
         onClick={() => onNavigate('next')}
-        disabled={!nextScene}
+        disabled={!next}
         className="flex-1 flex items-center gap-2 px-4 py-2.5 text-right hover:bg-surface transition-colors disabled:opacity-30 disabled:cursor-default"
       >
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] font-medium text-text-muted uppercase tracking-wide">{t('scenes.next')}</div>
-          {nextScene ? (
-            <>
-              <div className="text-xs font-medium text-text truncate">{sceneTitleShown(nextScene.title)}</div>
-              {nextScene.summary ? (
-                <div className="text-[11px] text-text-muted line-clamp-1 mt-0.5">{nextScene.summary}</div>
-              ) : null}
-            </>
-          ) : (
-            <div className="text-xs text-text-light">{t('scenes.end_of_chapter')}</div>
-          )}
-        </div>
+        {target(next, t('scenes.next'), t('scenes.next_chapter'), t('scenes.end_of_book'))}
         <ChevronRight className="w-4 h-4 text-text-muted flex-shrink-0" />
       </button>
     </div>
@@ -1184,6 +1183,21 @@ function SceneEditor({
     return { prevScene: prev, nextScene: next }
   }, [structure, scenePosition, sceneId, eventMap])
 
+  // The continuity strip's arrows follow reading order across chapters, so
+  // the last scene of a chapter leads into the next chapter. Merge and the
+  // analysis context keep prevScene/nextScene: they must stay in the chapter.
+  const navTargets = useMemo(() => {
+    const target = (direction: 'prev' | 'next'): NavTarget | undefined => {
+      const step = structure?.getSceneInReadingOrder(sceneId, direction)
+      const scene = step ? eventMap.get(step.sceneId) : undefined
+      if (!step || !scene) return undefined
+      if (step.chapterId === scenePosition?.chapterId) return { scene }
+      const title = chapters.find((c) => c.document_id === step.chapterId)?.data.title
+      return { scene, chapterLabel: chapterLabel(t, structure!.getDisplayNumber(step.chapterId), title) }
+    }
+    return { prev: target('prev'), next: target('next') }
+  }, [structure, scenePosition, sceneId, eventMap, chapters, t])
+
   // Resolve initial content: localStorage draft if newer, else WIP prose
   const initialContent = useMemo(() => {
     const wipProse = sceneData?.prose ?? ''
@@ -1446,13 +1460,13 @@ function SceneEditor({
 
   const handleNavigate = useCallback(
     (direction: 'prev' | 'next') => {
-      const target = direction === 'prev' ? prevScene : nextScene
+      const target = navTargets[direction]?.scene
       if (target) {
         flushDraft()
         onNavigate(target.document_id)
       }
     },
-    [prevScene, nextScene, onNavigate, flushDraft]
+    [navTargets, onNavigate, flushDraft]
   )
 
   const handleBack = useCallback(() => {
@@ -2287,8 +2301,8 @@ function SceneEditor({
 
       {/* Continuity strip (bottom) */}
       <ContinuityStrip
-        prevScene={prevScene?.data}
-        nextScene={nextScene?.data}
+        prev={navTargets.prev}
+        next={navTargets.next}
         onNavigate={handleNavigate}
       />
     </div>

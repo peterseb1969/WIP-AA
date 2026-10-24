@@ -82,6 +82,33 @@ describe('buildStructure: positions and scenes', () => {
   })
 })
 
+describe('buildStructure: reading order across chapters', () => {
+  const s = buildStructure({
+    book_title: 'Book',
+    chapters: [
+      slot('a', { scene_ids: ['a1', 'a2'] }),
+      slot('empty'),
+      slot('b', { scene_ids: ['b1'] }),
+    ],
+  })
+
+  it('steps within a chapter', () => {
+    expect(s.getSceneInReadingOrder('a1', 'next')).toEqual({ sceneId: 'a2', chapterId: 'a' })
+    expect(s.getSceneInReadingOrder('a2', 'prev')).toEqual({ sceneId: 'a1', chapterId: 'a' })
+  })
+
+  it('crosses into the next and previous chapter, skipping empty ones', () => {
+    expect(s.getSceneInReadingOrder('a2', 'next')).toEqual({ sceneId: 'b1', chapterId: 'b' })
+    expect(s.getSceneInReadingOrder('b1', 'prev')).toEqual({ sceneId: 'a2', chapterId: 'a' })
+  })
+
+  it('ends at the start and end of the book, and for a scene in no chapter', () => {
+    expect(s.getSceneInReadingOrder('a1', 'prev')).toBeUndefined()
+    expect(s.getSceneInReadingOrder('b1', 'next')).toBeUndefined()
+    expect(s.getSceneInReadingOrder('nope', 'next')).toBeUndefined()
+  })
+})
+
 describe('ruleOf', () => {
   it('maps a slot to its numbering rule', () => {
     expect(ruleOf(slot('a'))).toEqual({ kind: 'continue' })
