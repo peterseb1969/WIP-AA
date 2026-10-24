@@ -44,7 +44,8 @@
     "import": "Import Book",
     "settings": "Settings",
     "prompts": "Prompts",
-    "media": "Images"
+    "media": "Images",
+    "export": "Export Book"
   },
   "language": {
     "label": "Language",
@@ -856,5 +857,18 @@
     "taken_merge": "\u201c{{name}}\u201d already has this name. To make them one, use Merge\u2026 on the list page.",
     "save_first": "Save the scene before renaming it.",
     "click_to_rename": "Click to rename"
+  },
+  "export": {
+    "title": "Export Book",
+    "description": "Download the manuscript: every chapter in book order, with the chapter numbers the app shows. Scenes in no chapter are left out.",
+    "options": "Options",
+    "scene_titles": "Include scene titles",
+    "scene_titles_hint": "Off by default: titles like \u201cScene 2\u201d are labels for you, not text for readers.",
+    "download": "Download",
+    "download_format": "Download {{format}}",
+    "format_md": "Markdown",
+    "format_md_hint": "For backups and editing in any text editor. Can be imported again.",
+    "format_txt": "Plain text",
+    "format_txt_hint": "Text only, no formatting. Can be imported again."
   }
 }

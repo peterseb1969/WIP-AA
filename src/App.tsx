@@ -24,6 +24,7 @@ const WorldRulesPage = lazy(() => import('./pages/WorldRulesPage'))
 const PromptsPage = lazy(() => import('./pages/PromptsPage'))
 const MediaLibraryPage = lazy(() => import('./pages/MediaLibraryPage'))
 const ImportPage = lazy(() => import('./pages/ImportPage'))
+const ExportPage = lazy(() => import('./pages/ExportPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 // CASE-370 surface #10: when the app is mounted under a path prefix
@@ -54,6 +55,7 @@ export default function App() {
                 <Route path="/prompts" element={<PromptsPage />} />
                 <Route path="/media" element={<MediaLibraryPage />} />
                 <Route path="/import" element={<ImportPage />} />
+                <Route path="/export" element={<ExportPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
             </Routes>

@@ -18,6 +18,7 @@ import {
   StickyNote,
   Globe,
   Upload,
+  FileDown,
   Settings,
   Sparkles,
   Menu,
@@ -39,6 +40,7 @@ const NAV_ITEMS = [
   { to: '/media', labelKey: 'nav.media', icon: Images },
   { to: '/prompts', labelKey: 'nav.prompts', icon: Sparkles },
   { to: '/import', labelKey: 'nav.import', icon: Upload },
+  { to: '/export', labelKey: 'nav.export', icon: FileDown },
   { to: '/settings', labelKey: 'nav.settings', icon: Settings },
 ] as const
 

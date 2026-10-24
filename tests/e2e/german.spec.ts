@@ -11,7 +11,7 @@ const de = JSON.parse(readFileSync(new URL('../../src/i18n/locales/de.json', imp
 // A raw key shows as "<section>.<key>", e.g. "dashboard.delete_book".
 const rawKey = new RegExp(`\\b(${Object.keys(en).join('|')})\\.[a-z_]+`)
 
-const pages = ['/', '/scenes', '/corkboard', '/characters', '/chapters', '/timeline', '/locations', '/plot-threads', '/notes', '/world-rules', '/media', '/prompts', '/import', '/settings']
+const pages = ['/', '/scenes', '/corkboard', '/characters', '/chapters', '/timeline', '/locations', '/plot-threads', '/notes', '/world-rules', '/media', '/prompts', '/import', '/export', '/settings']
 
 test('switch to German; every page is German, no raw keys', async ({ page }) => {
   const seen = watch(page)

@@ -11,6 +11,7 @@ import { analyse } from './analyse.js'
 import bootstrapRoutes from './bootstrap.routes.js'
 import configRoutes from './config.routes.js'
 import demoRoutes from './demo.routes.js'
+import exportRoutes from './export.routes.js'
 import { bookContents, deleteBook, deploymentBook } from './lib/book-space.js'
 
 const PORT = parseInt(process.env.PORT || '3014')
@@ -63,6 +64,9 @@ router.use('/server-api', configRoutes)
 
 // Demo book ("Load the demo book" in an empty book)
 router.use('/server-api', demoRoutes)
+
+// Book export (manuscript download)
+router.use('/api', exportRoutes)
 
 // --- Ask endpoint ---
 router.post('/api/ask', async (req, res) => {

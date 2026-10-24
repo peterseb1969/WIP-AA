@@ -44,7 +44,8 @@
     "import": "Buch importieren",
     "settings": "Einstellungen",
     "prompts": "Prompts",
-    "media": "Bilder"
+    "media": "Bilder",
+    "export": "Buch exportieren"
   },
   "language": {
     "label": "Sprache",
@@ -856,5 +857,18 @@
     "taken_merge": "\u201e{{name}}\u201c tr\u00e4gt diesen Namen bereits. Um beide zu vereinen, nutze \u201eZusammenf\u00fchren\u2026\u201c auf der Listenseite.",
     "save_first": "Speichere die Szene, bevor du sie umbenennst.",
     "click_to_rename": "Zum Umbenennen klicken"
+  },
+  "export": {
+    "title": "Buch exportieren",
+    "description": "Das Manuskript herunterladen: alle Kapitel in Buchreihenfolge, mit den Kapitelnummern der App. Szenen ohne Kapitel fehlen.",
+    "options": "Optionen",
+    "scene_titles": "Szenentitel einf\u00fcgen",
+    "scene_titles_hint": "Standardm\u00e4\u00dfig aus: Titel wie \u201eSzene 2\u201c sind Etiketten f\u00fcr dich, kein Text f\u00fcr Leser.",
+    "download": "Herunterladen",
+    "download_format": "{{format}} herunterladen",
+    "format_md": "Markdown",
+    "format_md_hint": "F\u00fcr Sicherungen und zum Bearbeiten in jedem Texteditor. L\u00e4sst sich wieder importieren.",
+    "format_txt": "Reiner Text",
+    "format_txt_hint": "Nur Text, ohne Formatierung. L\u00e4sst sich wieder importieren."
   }
 }

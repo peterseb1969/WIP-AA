@@ -40,7 +40,7 @@ export async function doc(id: string) {
  * so specs share it: this sets its chapters (creating it on first use) and
  * returns its id.
  */
-export async function setStructure(chapters: Array<{ chapter_id: string; scene_ids: string[] }>) {
+export async function setStructure(chapters: Array<{ chapter_id: string; scene_ids: string[]; unnumbered?: boolean; number_start?: number }>) {
   const { json } = await wipFetch('POST', '/api/document-store/documents/query', { template_id: `${ns()}:AA_BOOK_STRUCTURE`, status: 'active', page_size: 5 })
   const existing = (json as { items: Array<{ document_id: string }> }).items[0]?.document_id
   if (!existing) return create('AA_BOOK_STRUCTURE', { book_title: 'E2E book', chapters })

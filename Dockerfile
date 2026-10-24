@@ -31,6 +31,9 @@ RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
 # Copy server source (run via tsx). Server reads its own .env, agent prompts,
 # import logic — all live under server/.
 COPY server/ server/
+# The export imports pure helpers shared with the app (chapter numbering,
+# title display); they import nothing at runtime.
+COPY src/lib/bookStructure.ts src/lib/titles.ts src/lib/
 COPY tsconfig.json ./
 
 # Copy built frontend

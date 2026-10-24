@@ -19,6 +19,7 @@ const pages = [
   ['/media', 'Images'],
   ['/prompts', 'Prompts'],
   ['/import', 'Import Book'],
+  ['/export', 'Export Book'],
   ['/settings', 'Settings'],
 ] as const
 
