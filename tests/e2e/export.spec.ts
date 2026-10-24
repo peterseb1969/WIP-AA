@@ -1,4 +1,5 @@
 import { readFileSync } from 'fs'
+import JSZip from 'jszip'
 import { expect, test, type Page } from '@playwright/test'
 import { create, setStructure, tag } from './support/book'
 import { watch } from './support/page'
@@ -28,7 +29,8 @@ test.beforeAll(async () => {
 
 async function download(page: Page, format: string) {
   const [file] = await Promise.all([page.waitForEvent('download'), page.getByRole('link', { name: `Download ${format}` }).click()])
-  return { name: file.suggestedFilename(), text: readFileSync((await file.path())!, 'utf8') }
+  const bytes = readFileSync((await file.path())!)
+  return { name: file.suggestedFilename(), bytes, text: bytes.toString('utf8') }
 }
 
 test('Markdown: headings, scene breaks and marks', async ({ page }) => {
@@ -49,5 +51,16 @@ test('plain text with scene titles', async ({ page }) => {
   const { name, text } = await download(page, 'Plain text')
   expect(name).toBe('e2e-book.txt')
   expect(text).toContain(`Chapter 1: ${titles.chapter}\n\n${titles.s2}\n\nShe was late & wet.\n\nFROM: a\nTO: b`)
+  expect(seen.problems).toEqual([])
+})
+
+test('Word in manuscript format', async ({ page }) => {
+  const seen = watch(page)
+  await page.goto('/export')
+  const { name, bytes } = await download(page, 'Word — manuscript format')
+  expect(name).toBe('e2e-book.docx')
+  const document = await (await JSZip.loadAsync(bytes)).file('word/document.xml')!.async('string')
+  expect(document).toContain(`Chapter 1: ${titles.chapter}`)
+  expect(document).toMatch(/about \d+ words/)
   expect(seen.problems).toEqual([])
 })

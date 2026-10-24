@@ -1,13 +1,16 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Download, FileDown, FileText, Hash } from 'lucide-react'
+import { BookOpenText, Download, FileDown, FileText, FileType, Hash } from 'lucide-react'
 
 // Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
 const EXPORT_API = `${import.meta.env.BASE_URL}api/export`
 
+// `id` names the strings; `format` and `query` make the download URL.
 const FORMATS = [
-  { id: 'md', icon: Hash },
-  { id: 'txt', icon: FileText },
+  { id: 'docx_manuscript', format: 'docx', query: '&style=manuscript', icon: FileType },
+  { id: 'docx_reading', format: 'docx', query: '&style=reading', icon: BookOpenText },
+  { id: 'md', format: 'md', query: '', icon: Hash },
+  { id: 'txt', format: 'txt', query: '', icon: FileText },
 ] as const
 
 export default function ExportPage() {
@@ -16,7 +19,7 @@ export default function ExportPage() {
 
   // The words the export adds ("Chapter", "by") follow the UI language.
   const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
-  const href = (format: string) => `${EXPORT_API}/${format}?lang=${lang}${sceneTitles ? '&scene_titles=1' : ''}`
+  const href = (format: string, query: string) => `${EXPORT_API}/${format}?lang=${lang}${sceneTitles ? '&scene_titles=1' : ''}${query}`
 
   return (
     <div className="p-6 max-w-2xl">
@@ -38,7 +41,7 @@ export default function ExportPage() {
       </div>
 
       <div className="space-y-3">
-        {FORMATS.map(({ id, icon: Icon }) => (
+        {FORMATS.map(({ id, format, query, icon: Icon }) => (
           <div key={id} className="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-4">
             <Icon className="w-5 h-5 text-text-muted flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -46,7 +49,7 @@ export default function ExportPage() {
               <div className="text-xs text-text-muted">{t(`export.format_${id}_hint`)}</div>
             </div>
             <a
-              href={href(id)}
+              href={href(format, query)}
               download
               className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
               aria-label={t('export.download_format', { format: t(`export.format_${id}`) })}
