@@ -10,6 +10,11 @@
  * the words the export adds itself ("Chapter", "by"); the book's own text
  * is never translated. Scene titles are left out unless `scene_titles=1`: imported
  * titles ("Scene 2") are labels for the writer, not text for readers.
+ *
+ *   GET /api/export/bible/:format?lang=en|de
+ *
+ * The story bible (characters, locations, plot threads, world rules, notes)
+ * as `md` (download) or `print` (opened in the browser, for a PDF).
  * Mounted at `/api` in server/index.ts.
  */
 
@@ -20,6 +25,7 @@ import { toMarkdown, toPlainText, type TextOptions } from './lib/export/text.js'
 import { toDocx } from './lib/export/docx.js'
 import { toEpub } from './lib/export/epub.js'
 import { toPrintHtml, type PageSize } from './lib/export/print.js'
+import { loadBible, toBibleMarkdown, toBiblePrintHtml } from './lib/export/bible.js'
 
 const router = Router()
 
@@ -59,6 +65,29 @@ router.get('/export/:format', async (req, res) => {
     res.send(body)
   } catch (err) {
     console.error('Export error:', err)
+    res.status(500).json({ error: (err as Error).message || 'Export failed' })
+  }
+})
+
+router.get('/export/bible/:format', async (req, res) => {
+  const format = req.params.format
+  if (format !== 'md' && format !== 'print') {
+    res.status(404).json({ error: `unknown story bible format: ${format}` })
+    return
+  }
+  const lang: ExportLanguage = req.query.lang === 'de' ? 'de' : 'en'
+  try {
+    const bible = await loadBible(deploymentBook(), lang)
+    if (format === 'print') {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.send(toBiblePrintHtml(bible, lang))
+      return
+    }
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8')
+    res.setHeader('Content-Disposition', `attachment; filename="${fileStem(bible)}-${lang === 'de' ? 'story-bibel' : 'story-bible'}.md"`)
+    res.send(toBibleMarkdown(bible, lang))
+  } catch (err) {
+    console.error('Story bible export error:', err)
     res.status(500).json({ error: (err as Error).message || 'Export failed' })
   }
 })

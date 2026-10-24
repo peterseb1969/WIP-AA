@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BookOpenText, Download, ExternalLink, FileDown, FileText, FileType, Hash, Printer, TabletSmartphone } from 'lucide-react'
+import { BookOpenText, BookUser, Download, ExternalLink, FileDown, FileText, FileType, Hash, Printer, TabletSmartphone } from 'lucide-react'
 
 // Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
 const EXPORT_API = `${import.meta.env.BASE_URL}api/export`
@@ -78,6 +78,32 @@ export default function ExportPage() {
             </a>
           </div>
         ))}
+      </div>
+
+      <h2 className="text-lg font-semibold text-text mt-8 mb-1">{t('export.bible_title')}</h2>
+      <p className="text-sm text-text-muted mb-3">{t('export.bible_description')}</p>
+      <div className="bg-white border border-gray-200 rounded-lg p-4 flex items-center gap-4">
+        <BookUser className="w-5 h-5 text-text-muted flex-shrink-0" />
+        <div className="flex-1 min-w-0 text-sm font-semibold text-text">{t('export.bible_title')}</div>
+        <a
+          href={`${EXPORT_API}/bible/print?lang=${lang}`}
+          target="_blank"
+          rel="noopener"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
+          aria-label={t('export.open_format', { format: t('export.bible_print') })}
+        >
+          <ExternalLink className="w-4 h-4" />
+          {t('export.bible_pdf')}
+        </a>
+        <a
+          href={`${EXPORT_API}/bible/md?lang=${lang}`}
+          download
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary text-sm rounded-lg hover:bg-primary/5 transition-colors"
+          aria-label={t('export.download_format', { format: t('export.bible_md') })}
+        >
+          <Download className="w-4 h-4" />
+          Markdown
+        </a>
       </div>
     </div>
   )

@@ -92,3 +92,14 @@ test('PDF print view opens in a new tab and prints', async ({ page, context }) =
   expect(pdf.match(/\/Type\s*\/Page[^s]/g)).toHaveLength(3)
   expect(seen.problems).toEqual([])
 })
+
+test('story bible: Markdown download and print view', async ({ page, context }) => {
+  const seen = watch(page)
+  await page.goto('/export')
+  const { name, text } = await download(page, 'story bible as Markdown')
+  expect(name).toBe('e2e-book-story-bible.md')
+  expect(text).toMatch(/^# E2E book — Story Bible\n/)
+  const [view] = await Promise.all([context.waitForEvent('page'), page.getByRole('link', { name: 'Open story bible as PDF (print view)' }).click()])
+  await expect(view.getByRole('heading', { level: 1, name: 'E2E book — Story Bible' })).toBeVisible()
+  expect(seen.problems).toEqual([])
+})

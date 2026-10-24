@@ -46,7 +46,7 @@ export function chapterHeading(chapter: ExportChapter, lang: ExportLanguage) {
 }
 
 /** A file name for the book: its title, lower case, dashes for anything else. */
-export function fileStem(book: ExportBook) {
+export function fileStem(book: Pick<ExportBook, 'title'>) {
   return book.title.replace(/ß/g, 'ss').normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'book'
 }
 

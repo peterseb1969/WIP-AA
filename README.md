@@ -24,6 +24,7 @@ Known issues are tracked in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 | World Rules | `/world-rules` | World-building rules organized by domain |
 | Prompts | `/prompts` | Prompt library for the scene editor's Analyse (✨) menu: create, edit, starter prompts |
 | Import | `/import` | Multi-step AI manuscript import: upload, structure, entity extraction, review, create |
+| Export | `/export` | Manuscript as PDF (print view), Word (manuscript format or reading copy), EPUB, Markdown or plain text; story bible as PDF or Markdown |
 
 All entity pages support create, edit, and delete via a shared `CreateEntityModal` component.
 
