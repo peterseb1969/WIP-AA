@@ -54,3 +54,7 @@ WIP_NAMESPACE=aa-demo-book PORT=3018 VITE_PORT=5183 \
 | German UI | the language switch at the bottom of the sidebar |
 
 Not covered: a scene titled like its chapter. WIP refuses a scene whose title is also a chapter's title in the same namespace (2026-10-22), so the demo avoids it.
+
+## A second manuscript: *The Crumbs of Meridian Tower*
+
+`demo/the-crumbs-of-meridian-tower.txt` (~6,800 words; prologue, 9 chapters, interlude, epilogue; 25 scenes) is a test manuscript for the import, not a demo book: two mice leave their office tower's basement, one is killed by a cat, the other comes home to the pest control's bait. The interlude is an email exchange, the front matter is a title and byline. Imported into `aa` on 2026-10-24 with the real AI extraction (about a minute); see ROADMAP Backlog for what that run showed about duplicate entities.
