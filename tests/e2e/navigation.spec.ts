@@ -9,6 +9,10 @@ import { watch } from './support/page'
 const ids = { chapterA: '', empty: '', chapterC: '', a1: '', a2: '', c1: '' }
 const titles = { chapterA: '', chapterC: '', a2: '', c1: '' }
 
+// Long enough to scroll: the scroll position only carries over (the bug) when
+// the next scene is long too.
+const long = (word: string) => Array.from({ length: 80 }, (_, i) => `<p>${word} paragraph ${i + 1}.</p>`).join('')
+
 const previous = (page: Page) => page.getByRole('button', { name: /^Previous/ })
 const next = (page: Page) => page.getByRole('button', { name: /^Next/ })
 
@@ -23,8 +27,8 @@ test.beforeAll(async () => {
   ids.empty = await create('AA_CHAPTER', { title: `Nav empty${tag()}` })
   ids.chapterC = await create('AA_CHAPTER', { title: titles.chapterC })
   ids.a1 = await create('AA_EVENT', { title: `Nav landing${tag()}`, event_type: 'SCENE', story_time_sort: 1, summary: 's', prose: '<p>One.</p>' })
-  ids.a2 = await create('AA_EVENT', { title: titles.a2, event_type: 'SCENE', story_time_sort: 2, summary: 's', prose: '<p>Two.</p>' })
-  ids.c1 = await create('AA_EVENT', { title: titles.c1, event_type: 'SCENE', story_time_sort: 3, summary: 's', prose: '<p>Three.</p>' })
+  ids.a2 = await create('AA_EVENT', { title: titles.a2, event_type: 'SCENE', story_time_sort: 2, summary: 's', prose: long('Two') })
+  ids.c1 = await create('AA_EVENT', { title: titles.c1, event_type: 'SCENE', story_time_sort: 3, summary: 's', prose: long('Three') })
   await setStructure([
     { chapter_id: ids.chapterA, scene_ids: [ids.a1, ids.a2] },
     { chapter_id: ids.empty, scene_ids: [] },
@@ -67,5 +71,19 @@ test('the arrows stop only at the start and end of the book', async ({ page }) =
   await expect(next(page)).toContainText('End of book')
   // Merge still only offers neighbours in the same chapter: this one has none.
   await expect(page.getByRole('button', { name: 'Merge with the previous or next scene' })).toBeDisabled()
+  expect(seen.problems).toEqual([])
+})
+
+test('the next scene opens at its top, not where the last one was scrolled to', async ({ page }) => {
+  const seen = watch(page)
+  const scrollArea = page.getByRole('textbox', { name: 'Scene text' }).locator('xpath=ancestor::div[contains(@class, "overflow-y-auto")][1]')
+  await page.goto(`/scenes?id=${ids.a2}`)
+  await expect(page.getByText('Two paragraph 80.')).toBeAttached()
+  await scrollArea.evaluate((el) => el.scrollTo({ top: el.scrollHeight }))
+  await expect.poll(() => scrollArea.evaluate((el) => el.scrollTop)).toBeGreaterThan(0)
+
+  await next(page).click()
+  await expect(page.getByText('Three paragraph 80.')).toBeAttached()
+  await expect.poll(() => scrollArea.evaluate((el) => el.scrollTop)).toBe(0)
   expect(seen.problems).toEqual([])
 })

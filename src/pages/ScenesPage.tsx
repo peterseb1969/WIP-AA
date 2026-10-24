@@ -1256,6 +1256,13 @@ function SceneEditor({
     [sceneId]
   )
 
+  // The scroll area around the prose outlives the editor, which is rebuilt
+  // for each scene: start every scene at its top, not where the last one was.
+  const proseScrollRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    proseScrollRef.current?.scrollTo({ top: 0 })
+  }, [sceneId, editor])
+
   // Mark dirty on mount if we loaded a localStorage draft that differs from WIP
   useEffect(() => {
     if (initialContent !== (sceneData?.prose ?? '')) {
@@ -2001,7 +2008,7 @@ function SceneEditor({
         </div>
 
         {/* Prose editor — full screen */}
-        <div className="flex-1 overflow-y-auto flex justify-center">
+        <div ref={proseScrollRef} className="flex-1 overflow-y-auto flex justify-center">
           <div className="w-full max-w-2xl px-8 py-8">
             <EditorContent
               editor={editor}
@@ -2253,7 +2260,7 @@ function SceneEditor({
       <div className="flex-1 flex min-h-0">
         {/* Prose editor (center) */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div className="flex-1 overflow-y-auto">
+          <div ref={proseScrollRef} className="flex-1 overflow-y-auto">
             <div className="max-w-3xl mx-auto px-6 py-6">
               <EditorContent editor={editor} />
             </div>
