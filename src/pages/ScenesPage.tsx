@@ -1587,7 +1587,7 @@ function SceneEditor({
   // every status is checked.
   const uniqueSceneTitle = useCallback(async (base: string) => {
     const inUse = async (title: string) => {
-      for (const status of ['active', 'inactive', 'archived'] as const) {
+      for (const status of ['active', 'inactive'] as const) {
         const found = await wipClient.documents.queryDocuments(
           {
             template_id: TEMPLATES.EVENT,

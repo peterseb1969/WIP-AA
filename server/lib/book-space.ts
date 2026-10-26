@@ -64,7 +64,7 @@ export function bookClient(t: BookTarget) {
   }
 
   /** Documents of one template in one status (active by default), up to `limit`. */
-  async function active(template: string, limit = 100, docStatus: 'active' | 'inactive' | 'archived' = 'active') {
+  async function active(template: string, limit = 100, docStatus: 'active' | 'inactive' = 'active') {
     const { status, json } = await call('POST', '/api/document-store/documents/query', { template_id: `${t.namespace}:${template}`, status: docStatus, page_size: limit })
     if (status !== 200) throw new Error(`reading ${template}: HTTP ${status}`)
     return ((json as { items?: Array<{ document_id: string; data: Record<string, unknown> }> }).items ?? [])
@@ -162,7 +162,7 @@ export async function deleteBook(t: BookTarget) {
   let names = 0
 
   for (const template of BOOK_TEMPLATES) {
-    for (const docStatus of ['active', 'inactive', 'archived'] as const) {
+    for (const docStatus of ['active', 'inactive'] as const) {
       for (let round = 0; ; round++) {
         const batch = await c.active(template, 100, docStatus)
         if (!batch.length) break
