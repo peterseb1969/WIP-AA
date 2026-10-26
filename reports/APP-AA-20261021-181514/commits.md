@@ -110,3 +110,77 @@
 **What:** Dashboard Recent Scenes show location names (useEntityNames). New specs: dashboard, entities (location/thread/note/world rule create-view-update, version 2 of the same doc), move (between two scenes + Undo), numbering (no number, start at, Undo; shown number + stored slot), rename (relabel, chapter/scene copy, names in use refused), german (switch, reload, no raw keys on any page). A11y for selectors: named cards/rows (role=article), Move and numbering dialogs named, labelled chapter select / number field / scene title field / language select; scene title keyboard-reachable. German wording aligned (Figuren, Schauplätze).
 **Why:** Peter: fix Recent Scenes, then close the ROADMAP's e2e gaps.
 **Discovered:** test data hit CASE-926 (numbering chapters titled like scenes.spec's scenes) — renamed; drag spec measured before render (flake 1/75) — waits now. Only remaining ROADMAP test item: running the suite automatically.
+
+## 174f5b4 — demo: second test manuscript for the import; backlog items from its first run
+**Time:** 2026-10-24 21:28
+**Files:** 3 changed, +542/-0
+**Tests:** pre-commit hook (type-check, unit) passed
+**What:** `demo/the-crumbs-of-meridian-tower.txt` (~6,800 words, 12 parts, 25 scenes) as a second import test manuscript. Two ROADMAP backlog items from its first real import: duplicate entities, and the title taken from the file name.
+**Why:** Peter asked for a longer test novel. It was imported into `aa` with the real AI extraction.
+**Discovered:** The per-chapter extraction gave 18/43/39 characters/locations/threads for a story with about 11/14/8; the clean-up took about 20 manual merges.
+
+## d1c57db — scene editor: Previous/Next cross into the neighbouring chapter
+**Time:** 2026-10-24 21:36
+**Files:** 6 changed, +170/-40
+**Tests:** 3 new unit tests, new e2e `navigation.spec.ts` (fails on the old code); 23 e2e passed
+**What:** `getSceneInReadingOrder` on the book structure. The arrows say "Next chapter" / "Previous chapter" with the chapter label, skip empty chapters, and end at the start or end of the book. Merge and the analysis context keep using the neighbours within the chapter.
+**Why:** Peter: there was no way to go from a scene to the next chapter in edit mode.
+
+## 3c55727 — import: store scene prose as paragraphs, not plain text
+**Time:** 2026-10-24 21:40
+**Files:** 6 changed, +117/-3
+**Tests:** 5 unit (`prose.test.ts`); import e2e extended (fails without the fix)
+**What:** `proseFromText` turns manuscript text into escaped `<p>` paragraphs. `tools/convert-plain-prose.ts` converted aa's 25 scenes in place (if_match; a re-run finds 0 left). CASE-937 filed and set to implemented.
+**Why:** Every imported scene opened as one long paragraph: the editor reads prose as HTML.
+**Discovered:** Found by eye in the editor; the import e2e test only matched the start of the text.
+
+## 834206d — scene editor: open each scene at its top
+**Time:** 2026-10-24 21:57
+**Files:** 2 changed, +29/-4
+**Tests:** navigation e2e extended (scrollTop 2840 vs 0 without the fix)
+**What:** The prose scroll area resets to the top when the scene changes, also in composition mode.
+**Why:** Peter: switching scenes kept the previous scroll position.
+
+## 5f53988, 7d0ca37, a05edeb, d450e02, 15a1223 — Export page: Markdown, plain text, DOCX, EPUB, PDF print view, story bible
+**Time:** 2026-10-24 22:24–22:38
+**Files:** 53 changed, +1834/-187
+**Tests:** 20 export unit tests, `export.spec.ts` (7 e2e); full e2e 65 passed
+**What:** `server/lib/export/` and `GET /api/export/...`:
+- Markdown and plain text read back through the import unchanged (checked on aa: 12 parts, 25 scenes, identical prose).
+- DOCX in manuscript format or as a reading copy (`docx` 9.9.0, pinned to a version more than two weeks old).
+- EPUB 3 (`jszip`).
+- A print view for the PDF, with page margin boxes for page numbers.
+- The story bible as a print view or Markdown.
+
+The pure structure code moved to `src/lib/bookStructure.ts`; the production Dockerfile copies it and `titles.ts`.
+**Why:** Peter asked for export formats; order agreed: md/txt → DOCX → EPUB → PDF → bible.
+**Discovered:** A new runtime dependency kills the bind-mounted dev server until the container restarts (CASE-721 pattern); a `podman restart wip-wip-aa` lets the entrypoint run `npm ci`. Two links with the same accessible name ("Open PDF (print view)") were caught by the e2e test.
+
+## 283a32a — import: merged descriptions no longer get a doubled full stop
+**Time:** 2026-10-24 23:59
+**Files:** 4 changed, +32/-8
+**Tests:** 3 unit (`joinSentences`)
+**What:** The review-step merge joins with a space after text that already ends in punctuation. 18 entries in aa were fixed in place (`..` + space → `.`; new versions with if_match).
+**Why:** The story bible export showed "evidence.. Facility Manager".
+
+## 1accf43 — fix: stop querying the archived document status WIP no longer has
+**Time:** 2026-10-26 22:53
+**Files:** 2 changed, +3/-3
+**Tests:** full e2e 65 passed
+**What:** Delete book and the split's title check query active and inactive only.
+**Why:** WIP removed `archived`; status=archived answers 422, which broke both features in the running app.
+**Discovered:** Surfaced by the new `@wip/client` types after the scaffold refresh, not by a failing test: no e2e had run against the new WIP.
+
+## 07d9715 — chore: scaffold refresh — @wip/client 0.63.0, @wip/react 0.23.0, agent status line
+**Time:** 2026-10-26 22:54
+**Files:** 21 changed, +406/-80
+**Tests:** type-check, 160 unit, 65 e2e passed
+**What:** New library tarballs, force-added because `*.tgz` is gitignored but `package.json` installs from them. `useReportQuery` `queryKey` workarounds dropped (CASE-893 item 3, comment #4). `.mcp.json` and `.claude/kb.json` untracked. The dev container was restarted onto the new libraries.
+**Why:** Peter ran `create-app-project.sh .`.
+
+## 7d11498 — bootstrap: refuse a resume on a namespace in use (resume_blocked); CLAUDE.md refresh merged
+**Time:** 2026-10-26 23:08
+**Files:** 5 changed, +165/-38
+**Tests:** 3 new integration tests (24 passed; the refusal tests fail on the old code), 65 e2e
+**What:** Port of WIP 8aa39958: `checkStatusDetail()` returns `resume_blocked` with a message; the gate has a panel without a resume button; `runBootstrap` refuses `resume_blocked` and `ready`. CLAUDE.md takes three parts of the refresh and corrects the legacy-record paragraph.
+**Why:** The CLAUDE.md refresh described the guard; taking the text without the code would have made it aspirational.
