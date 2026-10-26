@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { useReportQuery, wipKeys } from '@wip/react'
+import { useReportQuery } from '@wip/react'
 import { Link } from 'react-router-dom'
 import { Link2 } from 'lucide-react'
 import { NAMESPACE } from '../lib/constants'
@@ -45,13 +45,7 @@ function RefGroup({ query, termId }: { query: RefQuery; termId: string }) {
   const { t } = useTranslation()
   // A reporting table only exists once its template has a synced document,
   // so a query against an unused template fails — that just means "none".
-  // (The hook's option type wrongly requires queryKey; this is the key the
-  // hook would build itself.)
-  const { data } = useReportQuery(query.sql, [termId], {
-    namespace: NAMESPACE,
-    retry: false,
-    queryKey: wipKeys.reporting.query(query.sql, [termId], NAMESPACE),
-  })
+  const { data } = useReportQuery(query.sql, [termId], { namespace: NAMESPACE, retry: false })
   const rows = (data?.rows ?? []) as Array<{ document_id: string; name: string }>
   if (!rows.length) return null
   return (

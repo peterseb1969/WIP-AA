@@ -25,3 +25,7 @@ yac-discussions
 # Playwright output
 test-results/
 playwright-report/
+.mcp.json
+.claude/kb.json
+.claude/.session-role
+.claude/settings.local.json

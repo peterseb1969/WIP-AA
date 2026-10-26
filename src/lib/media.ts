@@ -98,12 +98,7 @@ export function useCharacterPortraits() {
     CROSS JOIN jsonb_array_elements(COALESCE(c.term_references_json, '[]'::jsonb)) tr
     WHERE a.status = 'active' AND a.role = 'PORTRAIT' AND tr->>'field_path' = 'name'
     ORDER BY a.sort_order NULLS LAST`
-  const { data } = useReportQuery(sql, [], {
-    namespace: NAMESPACE,
-    retry: false,
-    // The hook's option type wrongly requires queryKey; this is the key it builds itself.
-    queryKey: wipKeys.reporting.query(sql, [], NAMESPACE),
-  })
+  const { data } = useReportQuery(sql, [], { namespace: NAMESPACE, retry: false })
   return useMemo(() => {
     const map = new Map<string, string>()
     for (const row of (data?.rows ?? []) as Array<{ term_id: string; file_id: string }>) {
