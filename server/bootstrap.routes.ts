@@ -2,7 +2,7 @@
  * Bootstrap routes — wires the bootstrap library to two HTTP endpoints
  * the React BootstrapGate consumes.
  *
- *   GET  /server-api/bootstrap/status  → { status: BootstrapStatus }
+ *   GET  /server-api/bootstrap/status  → { status: BootstrapStatus, message? }
  *   POST /server-api/bootstrap/run     → SSE stream of BootstrapProgress
  *
  * Mounted at `/server-api` in server/index.ts. The SSE stream is what makes
@@ -11,7 +11,7 @@
  */
 
 import { Router } from 'express'
-import { checkStatus, runBootstrap, type BootstrapProgress } from './lib/bootstrap.js'
+import { checkStatusDetail, runBootstrap, type BootstrapProgress } from './lib/bootstrap.js'
 import { initSSE, sendSSE, endSSE } from './lib/sse.js'
 
 const router = Router()
@@ -22,8 +22,7 @@ const router = Router()
  */
 router.get('/bootstrap/status', async (_req, res) => {
   try {
-    const status = await checkStatus()
-    res.json({ status })
+    res.json(await checkStatusDetail())
   } catch (err) {
     res.json({ status: 'wip_unreachable', error: (err as Error).message })
   }

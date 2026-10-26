@@ -8,8 +8,11 @@
  * a module-level copy would capture it before main.tsx has set it.
  *
  * States: checking / wip_unreachable / needs_bootstrap / incomplete /
- * bootstrapping / error / ready. `incomplete` = the namespace exists but
- * holds no bootstrap record; it only OFFERS a resume, never runs one. The "restore from backup is the user's other option"
+ * resume_blocked / bootstrapping / error / ready. `incomplete` = the
+ * namespace exists, empty, without a bootstrap record; it only OFFERS a
+ * resume, never runs one. `resume_blocked` = no record, but the namespace
+ * holds documents: it is in use, so no resume is offered, only the server's
+ * explanation. The "restore from backup is the user's other option"
  * message under needs_bootstrap is load-bearing — without it the app
  * implicitly says "your only choice is a fresh namespace", which can
  * destroy data the user meant to restore.
@@ -26,7 +29,7 @@ const APP_TITLE = 'AuthorAssist'
 // it's `/apps/aa/`.
 const SERVER_API = `${import.meta.env.BASE_URL}server-api`
 
-type AppStatus = 'checking' | 'wip_unreachable' | 'needs_bootstrap' | 'incomplete' | 'bootstrapping' | 'ready' | 'error'
+type AppStatus = 'checking' | 'wip_unreachable' | 'needs_bootstrap' | 'incomplete' | 'resume_blocked' | 'bootstrapping' | 'ready' | 'error'
 
 interface BootstrapProgress {
   step: string
@@ -39,6 +42,8 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AppStatus>('checking')
   const [progress, setProgress] = useState<BootstrapProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // For 'resume_blocked': the server's sentence naming the namespace and its documents.
+  const [blockedMessage, setBlockedMessage] = useState<string | null>(null)
 
   const checkStatus = useCallback(async () => {
     setStatus('checking')
@@ -47,6 +52,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${SERVER_API}/bootstrap/status`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
+      setBlockedMessage(data.message ?? null)
       setStatus(data.status as AppStatus)
     } catch {
       setStatus('wip_unreachable')
@@ -215,6 +221,24 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
                 <RefreshCw className="h-4 w-4" /> Check Again
               </button>
             </div>
+          </div>
+        )}
+
+        {status === 'resume_blocked' && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+              <div>
+                <p className="font-medium text-red-800">Bootstrap record missing</p>
+                <p className="mt-1 text-sm text-red-700">{blockedMessage}</p>
+              </div>
+            </div>
+            <button
+              onClick={checkStatus}
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium hover:bg-gray-200"
+            >
+              <RefreshCw className="h-4 w-4" /> Check Again
+            </button>
           </div>
         )}
 
