@@ -5,6 +5,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'fs'
 import { anthropicKey } from './lib/anthropic-key.js'
+import { backoffMs, errorStatus, retryDecision } from './lib/agent-retry.js'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -15,6 +16,13 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 let mcpClient: Client | null = null
 let mcpTools: Anthropic.Tool[] = []
 let systemPrompt = ''
+
+// Where the background connection stands (startAgent). `mcpClient` is set only
+// once a connection fully succeeded, so it alone decides readiness.
+type AgentState = 'no-key' | 'connecting' | 'ready' | 'failed'
+let agentState: AgentState = 'no-key'
+let agentError = ''
+let agentLoop: Promise<void> | null = null
 
 // Read env at call time so dotenv/config has loaded
 const env = () => ({
@@ -118,48 +126,115 @@ export function isAgentReady(): boolean {
   return mcpClient !== null
 }
 
-export async function initAgent() {
+/** Why /api/ask cannot answer yet, or '' when it can. */
+export function agentUnavailableReason(): string {
+  if (mcpClient) return ''
+  switch (agentState) {
+    case 'no-key': return 'No Anthropic API key — set one in Settings.'
+    case 'connecting': return `The assistant is still connecting to WIP${agentError ? ` (last attempt: ${agentError})` : ''}.`
+    case 'failed': return `The assistant could not connect to WIP: ${agentError}. Check the WIP API key.`
+    default: return 'The assistant is not ready.'
+  }
+}
+
+/**
+ * Connect the agent in the background, retrying until the platform answers
+ * (see lib/agent-retry.ts). Never throws and never blocks the caller: the
+ * server listens first, and Ask comes up when MCP does. A second call while
+ * a connection is underway or done is a no-op.
+ */
+export function startAgent(): void {
   if (!anthropicKey()) {
+    agentState = 'no-key'
     console.warn('⚠ No Anthropic key (override/file/env) — /api/ask unavailable until one is set via Settings')
     return
   }
-  if (mcpClient) return // already initialised
+  if (agentLoop || mcpClient) return
+  agentState = 'connecting'
+  agentLoop = (async () => {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await connectAgent()
+        agentState = 'ready'
+        agentError = ''
+        return
+      } catch (err) {
+        agentError = (err as Error)?.message || String(err)
+        if (retryDecision(err) === 'stop') {
+          agentState = 'failed'
+          console.error(`✗ MCP connect refused (HTTP ${errorStatus(err)}): ${agentError} — check the WIP API key; Ask stays unavailable`)
+          return
+        }
+        const delay = backoffMs(attempt)
+        console.warn(`⚠ MCP connect attempt ${attempt + 1} failed: ${agentError} — retrying in ${delay / 1000}s`)
+        await new Promise((r) => setTimeout(r, delay))
+      }
+    }
+  })().finally(() => { agentLoop = null })
+}
 
-  const transport = createTransport()
-  mcpClient = new Client({ name: 'wip-query-agent', version: '0.1.0' })
-  await mcpClient.connect(transport)
+/** Resolves when the agent is ready, gave up, or `ms` passed — whichever comes first. */
+export async function agentSettled(ms: number): Promise<void> {
+  if (!agentLoop) return
+  await Promise.race([agentLoop, new Promise((r) => setTimeout(r, ms))])
+}
+
+/**
+ * One connection attempt: a fresh transport and client, published (client,
+ * tools, prompt) only after connect and listTools succeed. A failed attempt
+ * closes its client, so a dead client is never taken for a ready agent.
+ */
+async function connectAgent() {
+  const client = new Client({ name: 'wip-query-agent', version: '0.1.0' })
+  try {
+    await client.connect(createTransport())
+  } catch (err) {
+    await client.close().catch(() => {})
+    throw err
+  }
   console.log('✓ MCP client connected')
 
   // Fetch and filter tools
-  const toolsResult = await mcpClient.listTools()
-  mcpTools = toolsResult.tools
+  let toolsResult: Awaited<ReturnType<Client['listTools']>>
+  try {
+    toolsResult = await client.listTools()
+  } catch (err) {
+    await client.close().catch(() => {})
+    throw err
+  }
+  const tools = toolsResult.tools
     .filter(t => ALLOWED_TOOLS.has(t.name))
     .map(t => ({
       name: t.name,
       description: t.description || '',
       input_schema: t.inputSchema as Anthropic.Tool['input_schema'],
     }))
-  console.log(`✓ ${mcpTools.length} tools available (filtered from ${toolsResult.tools.length})`)
+  console.log(`✓ ${tools.length} tools available (filtered from ${toolsResult.tools.length})`)
 
   // Read the query assistant prompt resource for system prompt
+  let prompt = ''
   try {
-    const resource = await mcpClient.readResource({ uri: 'wip://query-assistant-prompt' })
-    systemPrompt = (resource.contents[0] as any)?.text || ''
-    console.log(`✓ System prompt loaded from wip://query-assistant-prompt (${systemPrompt.length} chars)`)
+    const resource = await client.readResource({ uri: 'wip://query-assistant-prompt' })
+    prompt = (resource.contents[0] as any)?.text || ''
+    console.log(`✓ System prompt loaded from wip://query-assistant-prompt (${prompt.length} chars)`)
   } catch {
     console.warn('⚠ Could not read wip://query-assistant-prompt — using fallback')
-    systemPrompt = 'You are a helpful query assistant for a WIP data store. Use the available tools to answer questions about the data.'
+    prompt = 'You are a helpful query assistant for a WIP data store. Use the available tools to answer questions about the data.'
   }
 
   // Append app-specific instructions if available
   try {
     const extra = readFileSync(join(__dirname, 'prompts', 'assistant.md'), 'utf-8')
     if (extra.trim()) {
-      systemPrompt += '\n\n' + extra
+      prompt += '\n\n' + extra
     }
   } catch {
     // No app-specific prompt — that's fine
   }
+
+  mcpTools = tools
+  systemPrompt = prompt
+  mcpClient = client
 }
 
 // ---------- Ask ----------
@@ -169,7 +244,7 @@ export async function ask(
   sessionId?: string,
 ): Promise<{ answer: string; toolCalls: number; sessionId: string }> {
   if (!mcpClient) {
-    throw new Error('Agent not initialised — set an Anthropic API key in Settings')
+    throw new Error(agentUnavailableReason())
   }
 
   const id = sessionId || crypto.randomUUID()

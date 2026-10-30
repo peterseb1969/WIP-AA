@@ -5,7 +5,8 @@ import path from 'path'
 import { fileURLToPath } from 'url'
 import { wipProxy, appConfigHandler } from '@wip/proxy'
 import { createWipClient } from '@wip/client'
-import { initAgent, ask } from './agent.js'
+import { startAgent, ask, isAgentReady, agentUnavailableReason } from './agent.js'
+import { backoffMs } from './lib/agent-retry.js'
 import { parseText, extractEntities } from './import.js'
 import { analyse } from './analyse.js'
 import bootstrapRoutes from './bootstrap.routes.js'
@@ -73,6 +74,11 @@ router.post('/api/ask', async (req, res) => {
   const { question, sessionId } = req.body
   if (!question) {
     res.status(400).json({ error: 'question is required' })
+    return
+  }
+  // Still connecting, no key, or a rejected key: say which, as a 503.
+  if (!isAgentReady()) {
+    res.status(503).json({ error: agentUnavailableReason() })
     return
   }
   try {
@@ -170,8 +176,21 @@ async function loadTermEnums() {
       locationTypes: locTypes.items.map((t: any) => t.value),
     }
     console.log(`Loaded term enums: ${termEnums.roles.length} roles, ${termEnums.locationTypes.length} location types`)
+    return true
   } catch (err: any) {
-    console.warn('Failed to load term enums from WIP, using defaults:', err.message)
+    console.warn('Failed to load term enums from WIP, using defaults for now:', err.message)
+    return false
+  }
+}
+
+/**
+ * The extraction's role and location-type lists, loaded in the background:
+ * WIP may still be starting when the server does, so a failed load is retried
+ * with the agent's backoff instead of keeping the defaults until a restart.
+ */
+async function loadTermEnumsUntilLoaded() {
+  for (let attempt = 0; !(await loadTermEnums()); attempt++) {
+    await new Promise((r) => setTimeout(r, backoffMs(attempt)))
   }
 }
 
@@ -204,15 +223,19 @@ if (process.env.NODE_ENV === 'production') {
 app.use(BASE_PATH, router)
 
 // --- Start ---
+// Listen first. Nothing at startup waits for WIP: the platform may still be
+// coming up (on a redeploy the MCP server answers 503 until the Registry is
+// reachable), and an exited server is not restarted in the dev container. The
+// Ask agent and the term lists connect in the background and retry.
 async function main() {
-  await initAgent()
-  await loadTermEnums()
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`)
     if (BASE_PATH !== '/') {
       console.log(`  base path: ${BASE_PATH}`)
     }
   })
+  startAgent()
+  void loadTermEnumsUntilLoaded()
 }
 
 main().catch(err => {

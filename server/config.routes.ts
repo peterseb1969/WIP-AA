@@ -13,7 +13,7 @@
 
 import { Router } from 'express'
 import { getKeyStatus, validateKey, setKey } from './lib/anthropic-key.js'
-import { initAgent, isAgentReady } from './agent.js'
+import { agentSettled, isAgentReady, startAgent } from './agent.js'
 
 const router = Router()
 
@@ -43,13 +43,11 @@ router.post('/config/anthropic-key', async (req, res) => {
     return
   }
 
-  // Bring the agent online if it started without a key.
+  // Bring the agent online if it started without a key. It connects in the
+  // background; wait briefly so the answer usually reports it ready.
   if (!isAgentReady()) {
-    try {
-      await initAgent()
-    } catch (err) {
-      console.warn('Agent init after key set failed:', err)
-    }
+    startAgent()
+    await agentSettled(10_000)
   }
 
   res.json({ ...getKeyStatus(), agentReady: isAgentReady(), persisted })
