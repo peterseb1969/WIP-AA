@@ -184,3 +184,10 @@ The pure structure code moved to `src/lib/bookStructure.ts`; the production Dock
 **Tests:** 3 new integration tests (24 passed; the refusal tests fail on the old code), 65 e2e
 **What:** Port of WIP 8aa39958: `checkStatusDetail()` returns `resume_blocked` with a message; the gate has a panel without a resume button; `runBootstrap` refuses `resume_blocked` and `ready`. CLAUDE.md takes three parts of the refresh and corrects the legacy-record paragraph.
 **Why:** The CLAUDE.md refresh described the guard; taking the text without the code would have made it aspirational.
+
+## f31b0cc — server: listen first; the Ask agent connects in the background and retries (CASE-1001)
+**Time:** 2026-10-30
+**Files:** 6 changed
+**Tests:** 164 unit (4 new, `server/lib/agent-retry.test.ts`), 65 e2e; local server checked unreachable / wrong key / right key; the old code never listened
+**What:** `main()` listens first. `startAgent()` connects in the background (backoff 1–30 s, stops on 401/403) and publishes the client only after a full connect. `/api/ask` answers 503 with the reason. The extraction term lists load with retries. CASE-1001#4 posted; the case stays open for wip-cooking.
+**Why:** On the 2026-10-30 redeploy the MCP server answered 503 while the Registry came up; AA exited during startup, and the dev container never restarted it.
