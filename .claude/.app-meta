@@ -2,6 +2,7 @@
 # regenerate CLAUDE.md. Edit deliberately if the app's metadata changes.
 APP_NAME="AuthorAssist"
 APP_SLUG="authorassist"
-DEV_NAMESPACE="dev-authorassist"
+APP_NAMESPACE="dev-authorassist"
 PRESET="standard"
+PROFILE="full"
 ROLE_PREFIX="APP-AA"

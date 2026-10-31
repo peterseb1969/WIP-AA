@@ -79,7 +79,7 @@ GET requests retry automatically on 502/503/504 with exponential backoff (defaul
 import { createWipClient } from '@wip/client'
 
 const client = createWipClient({
-  baseUrl: '/wip',  // In browser: resolved to window.location.origin + '/wip'
+  baseUrl: `${import.meta.env.BASE_URL}wip`,  // In browser: the app's @wip/proxy mount
   auth: { type: 'api-key', key: 'dev_master_key_for_testing' },
 })
 
@@ -123,10 +123,11 @@ import { createWipClient, ApiKeyAuthProvider, OidcAuthProvider } from '@wip/clie
 
 const client = createWipClient({
   // Required: base URL of your WIP instance
-  // In browser behind Vite proxy: '/wip' (resolved to origin + '/wip')
+  // In browser behind the app's @wip/proxy mount: `${import.meta.env.BASE_URL}wip`
+  //   (a deployed app lives under /apps/<name>/; a bare '/wip' works only at '/')
   // In browser direct to Caddy: '' (resolved to window.location.origin)
   // For Node.js scripts: 'https://localhost:8443' or 'https://your-host:8443'
-  baseUrl: '/wip',
+  baseUrl: `${import.meta.env.BASE_URL}wip`,
 
   // Auth: API key, OIDC token callback, or custom AuthProvider
   auth: { type: 'api-key', key: 'your-key' },
@@ -176,7 +177,7 @@ for typing and subclassing; in normal use you reach them through the
 client properties above rather than constructing them directly. The
 sections below document each service's methods through those properties.
 
-All services route through the `baseUrl`. The Caddy reverse proxy routes `/api/def-store/*`, `/api/template-store/*`, etc. to the correct service port. The client always sends requests to `baseUrl + /api/<service>/...` — Caddy is required to route them correctly. In browser apps behind a Vite proxy, use `baseUrl: '/wip'` (resolved to `window.location.origin + '/wip'`). Use `baseUrl: ''` for direct Caddy access. In Node.js scripts, use `baseUrl: 'https://your-host:8443'`.
+All services route through the `baseUrl`. The Caddy reverse proxy routes `/api/def-store/*`, `/api/template-store/*`, etc. to the correct service port. The client always sends requests to `baseUrl + /api/<service>/...` — Caddy is required to route them correctly. In browser apps behind the `@wip/proxy` mount, use ``baseUrl: `${import.meta.env.BASE_URL}wip` `` — a deployed app lives under `/apps/<name>/`, so a bare `'/wip'` works only for an app served at `/`. Use `baseUrl: ''` for direct Caddy access. In Node.js scripts, use `baseUrl: 'https://your-host:8443'`.
 
 ---
 
@@ -589,6 +590,54 @@ if (preview.failed === 0) {
 // Per-document outcome in results[i]: status 'updated' | 'error'
 // (error_code 'validation_failed' | 'identity_fields_changed')
 ```
+
+### Maintenance: Rehashing Identities and Requalifying Synonyms
+
+Two per-namespace repair passes, both requiring admin permission on the
+namespace and both defaulting to a dry run on the server. The namespace goes
+in the request body.
+
+`rehashIdentities` recomputes the identity hash of documents whose identity
+fields are term- or reference-typed, so that documents written before the
+resolved-referent rule carry the same hash a new write would produce. It is
+synchronous (no job to poll) and slower on large namespaces. Documents that
+would converge on one identity are reported as collisions and never applied.
+Read `registry_status` per item: `applied` counts rewritten documents whether
+or not their Registry re-key succeeded.
+
+```typescript
+const preview = await client.documents.rehashIdentities({
+  namespace: 'clinic-a',
+  template_values: ['ROLE_ASSIGNMENT'],   // optional filter
+  // dry_run defaults to true
+})
+// preview.items[i].status: 'changed' | 'unresolved' | 'collision' | 'error'
+// preview.collision_groups lists documents that converge on one identity
+
+if (preview.collisions === 0 && preview.errors === 0) {
+  const applied = await client.documents.rehashIdentities({
+    namespace: 'clinic-a',
+    template_values: ['ROLE_ASSIGNMENT'],
+    dry_run: false,
+  })
+  // applied.items[i].registry_status: per-document Registry re-key outcome
+  // applied.reporting_note: how to refresh reporting (the pass does not)
+}
+```
+
+`requalifyIdentitySynonyms` re-keys identity-value synonyms to the
+template-qualified form (`{"@template": <template value>, ...}`):
+
+```typescript
+const report = await client.documents.requalifyIdentitySynonyms({
+  namespace: 'clinic-a',
+  dry_run: false,
+})
+// report.items[i].status: 'requalified' | 'no_entry' | 'error'
+```
+
+In React, use `useRehashIdentities()` and `useRequalifyIdentitySynonyms()`
+from `@wip/react`.
 
 ---
 
