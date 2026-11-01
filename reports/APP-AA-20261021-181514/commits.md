@@ -205,3 +205,18 @@ and the post-commit hook that appends each commit to the session's
 commits.md from git. Tarballs force-added (*.tgz is ignored).
 
 Tests: type-check, 164 unit, 65 e2e, 24 integration passed against the new libraries
+
+## 24b289f — docs: CLAUDE.md takes the scaffold refresh's key, commit-log, toolkit and client notes
+**Time:** 2026-11-01 19:50
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 2 changed, +40/-30
+**Tests:** not recorded
+**Why:** Per-app keys (app-<name>, derived from the manifest) with what that means
+for AA: it already runs as app-wip-aa; .env stays on the master key
+because the tests create throwaway namespaces, so calls outside aa are
+not caught by them. The post-commit hook replaces the manual commits.md
+recipe; wip-toolkit's restore/inspect verbs; baseUrl under BASE_URL; the
+provider error text; the seed stubs. AA's namespace, legacy-record and
+git-hook sections stay. Also commits the hook's log entry for d55c803.
+
+Tests: not run (docs only)
