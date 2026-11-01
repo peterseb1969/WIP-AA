@@ -21,7 +21,8 @@ test('import a manuscript with prologue, interlude, epilogue and front matter', 
   const seen = watch(page)
   // The summary names the chapter it was asked about, so a summary stored on
   // the wrong chapter shows.
-  await page.route('**/api/import/extract', async (route) => {
+  // The book travels as ?book=, so match the path with any query.
+  await page.route(/\/api\/import\/extract(\?|$)/, async (route) => {
     const { title } = route.request().postDataJSON() as { title: string }
     await route.fulfill({ json: {
       characters: [{ name: 'Wren Halloway', role: 'PROTAGONIST', description: 'The new keeper.' }],

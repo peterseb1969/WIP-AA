@@ -15,13 +15,6 @@ export interface BookTarget {
   apiKey: string
 }
 
-/** The deployment's book (server env), read per call like the bootstrap. */
-export const deploymentBook = (): BookTarget => ({
-  namespace: process.env.WIP_NAMESPACE || 'aa',
-  baseUrl: process.env.WIP_BASE_URL || 'https://localhost:8443',
-  apiKey: process.env.WIP_API_KEY || '',
-})
-
 // Deletion runs in this order: attachments before the images and documents
 // they connect, images (and their stored files) before the rest.
 export const BOOK_TEMPLATES = [

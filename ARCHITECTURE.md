@@ -16,14 +16,16 @@ Browser (React SPA, port 5180 in dev)
 
 ```
 src/
-├── main.tsx                  Entry point: fetches /api/app-config (namespace) before first render
+├── main.tsx                  Entry point: picks the book from the URL (or the default book from /api/app-config) before first render
+├── BooksApp.tsx              The book list (<base>/books): open a book, set up a new one
 ├── App.tsx                   Router (14 routes), providers (QueryClient, WipProvider, BrowserRouter, BootstrapGate)
 ├── index.css                 Tailwind base + TipTap editor styles + composition mode
 ├── i18n/                     react-i18next setup; locales/en.json, de.json (+ duplicate-key test)
 ├── lib/
 │   ├── wip.ts                WipClient + QueryClient (baseUrl = BASE_URL + wip)
-│   ├── app-config.ts         Runtime app config (namespace) from the server
-│   ├── constants.ts          NAMESPACE (set at boot), TEMPLATES, TERMINOLOGIES, color maps
+│   ├── app-config.ts         Runtime app config (the default book) from the server
+│   ├── books.ts              The book in the URL, ?book= on server calls, the last book used
+│   ├── constants.ts          NAMESPACE (the current book, set at boot), TEMPLATES, TERMINOLOGIES, color maps
 │   ├── useBookStructure.ts   Book structure: chapter order, scene positions, chapter numbering
 │   ├── structureUndo.tsx     Undo for structure moves (drag-and-drop, Move, merge)
 │   ├── pointerDrag.ts        Pointer-based dragging shared by every drag in the app
@@ -69,7 +71,8 @@ src/
     └── SettingsPage.tsx       Anthropic key (set/rotate at runtime)
 
 server/
-├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /api/ask, /api/import/*, /api/book (contents, delete), /wip proxy;
+├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /server-api/books, /api/ask, /api/import/*, /api/book (contents, delete), /wip proxy;
+│                             book-scoped routes take ?book= (lib/books.ts requireBook: 400 malformed, 404 unknown_book);
 │                             in production serves dist/ with an SPA fallback (unknown API paths → 404 JSON)
 ├── agent.ts                  MCP client + agentic Claude loop for the Ask bar (read-only tools)
 ├── analyse.ts                Analyse endpoint (prompts built in the browser)
@@ -78,7 +81,7 @@ server/
 ├── config.routes.ts          Runtime Anthropic key endpoints
 ├── demo.routes.ts            GET /server-api/demo/status, POST /server-api/demo/load (SSE)
 ├── demo/book.ts              The demo novel as data (loaded by lib/demo-book.ts)
-├── lib/                      bootstrap.ts (seed-driven bootstrap), book-space.ts (what a book is: empty? contents, delete all), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
+├── lib/                      books.ts (which namespaces are books, the ?book= check), bootstrap.ts (seed-driven bootstrap, per book), book-space.ts (what a book is: empty? contents, delete all), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
 ├── seed/                     Terminologies and templates the bootstrap creates
 └── prompts/assistant.md      Optional system prompt supplement for the Ask bar
 
@@ -89,7 +92,7 @@ tests/
 
 ## Data model mapping
 
-Every page maps to one or more WIP templates. All entities live in the `aa` namespace.
+Every page maps to one or more WIP templates. All entities of a book live in that book's namespace: `aa` is the default book, and the app serves every namespace its key owns that holds AA's templates (`server/lib/books.ts`). The browser carries the book in the URL (`<base>/book/<ns>/…`, the router's basename) and passes it to the server's own routes as `?book=` (DESIGN.md "Several books in one app").
 
 | Template | Identity field | Primary page | Also used on |
 |----------|---------------|--------------|--------------|
@@ -147,7 +150,7 @@ Every page maps to one or more WIP templates. All entities live in the `aa` name
 ### Ask bar
 - Server connects to WIP via MCP (stdio, SSE, or HTTP transport)
 - Tool set filtered to read-only operations (no create/delete/update)
-- `WIP_NAMESPACE` injected into the arguments of every tool that takes a namespace
+- The request's book injected into the arguments of every tool that takes a namespace; a session stays with the book it started in
 - Sessions cached in memory with 30-minute TTL
 
 ## Proxy setup

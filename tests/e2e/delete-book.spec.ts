@@ -22,8 +22,8 @@ async function names(terminology: string) {
 test('delete the whole book from the danger zone', async ({ page }) => {
   const seen = watch(page)
   // A book with every kind of content: the demo.
-  expect((await page.request.delete('/api/book')).status()).toBe(200)
-  const loaded = await page.request.post('/server-api/demo/load')
+  expect((await page.request.delete(`/api/book?book=${ns}`)).status()).toBe(200)
+  const loaded = await page.request.post(`/server-api/demo/load?book=${ns}`)
   expect(await loaded.text()).toContain('event: complete')
   const files = (await active('AA_MEDIA')).map((m) => String(m.data.file))
   expect(files).toHaveLength(6)

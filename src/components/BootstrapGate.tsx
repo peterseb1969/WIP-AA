@@ -22,12 +22,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { Database, AlertTriangle, RefreshCw, Loader2, ServerCrash, BookOpen } from 'lucide-react'
 import { NAMESPACE } from '../lib/constants'
 import { loadDemoBook } from '../lib/sse'
+import { bookApi, booksPage } from '../lib/books'
 
 const APP_TITLE = 'AuthorAssist'
-
-// Vite BASE_URL always ends in `/`. In dev it's `/`; behind the gateway
-// it's `/apps/aa/`.
-const SERVER_API = `${import.meta.env.BASE_URL}server-api`
 
 type AppStatus = 'checking' | 'wip_unreachable' | 'needs_bootstrap' | 'incomplete' | 'resume_blocked' | 'bootstrapping' | 'ready' | 'error'
 
@@ -49,7 +46,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     setStatus('checking')
     setError(null)
     try {
-      const res = await fetch(`${SERVER_API}/bootstrap/status`)
+      const res = await fetch(bookApi('server-api/bootstrap/status'))
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setBlockedMessage(data.message ?? null)
@@ -70,7 +67,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     let bootstrapped = false
 
     try {
-      const response = await fetch(`${SERVER_API}/bootstrap/run`, { method: 'POST' })
+      const response = await fetch(bookApi('server-api/bootstrap/run'), { method: 'POST' })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
       if (!response.body) throw new Error('No response body')
 
@@ -125,6 +122,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
         <div className="mb-6 flex items-center gap-3">
           <Database className="h-8 w-8 text-blue-600" />
           <h1 className="text-xl font-semibold">{APP_TITLE}</h1>
+          <a href={booksPage()} className="ml-auto text-sm text-blue-700 underline">All books</a>
         </div>
 
         {status === 'checking' && (
@@ -159,12 +157,18 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
             <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
               <div>
-                <p className="font-medium text-amber-800">Namespace not found</p>
+                <p className="font-medium text-amber-800">Book not set up yet</p>
                 <p className="mt-1 text-sm text-amber-600">
-                  The <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> namespace
-                  does not exist. You can bootstrap it now, or restore from a backup first
+                  The book <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> does
+                  not exist yet. You can bootstrap it now, or restore from a backup first
                   (via the WIP console / <code className="rounded bg-amber-100 px-1">wip-deploy</code>).
                 </p>
+                <p className="mt-2 text-sm text-amber-600">
+                  The app can only set up a book whose name the administrator has reserved for it:
+                </p>
+                <pre className="mt-1 overflow-x-auto rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">
+                  wip-deploy app-namespace add wip-aa {NAMESPACE} --setting deletion_mode=full
+                </pre>
               </div>
             </div>
             <div className="flex gap-3">

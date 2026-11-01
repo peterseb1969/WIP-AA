@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
 import { BookOpen, Loader2 } from 'lucide-react'
 import { loadDemoBook } from '../lib/sse'
+import { bookApi } from '../lib/books'
 
 /**
  * "Load the demo book": offered only while the book is empty (the server
@@ -19,7 +20,7 @@ export default function LoadDemoBook({ onLoaded }: { onLoaded?: () => void }) {
 
   useEffect(() => {
     let current = true
-    fetch(`${import.meta.env.BASE_URL}server-api/demo/status`)
+    fetch(bookApi('server-api/demo/status'))
       .then((r) => r.json())
       .then((d: { available?: boolean }) => { if (current) setAvailable(!!d.available) })
       .catch(() => { /* not offered */ })

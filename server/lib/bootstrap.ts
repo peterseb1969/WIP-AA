@@ -3,7 +3,8 @@
  *
  * Adapted from templates/bootstrap/bootstrap.server.ts.template. APP-AA
  * additions to the gene-pool body:
- *   - NAMESPACE = WIP_NAMESPACE, default 'aa'.
+ *   - Every function takes the book's namespace: one app serves several
+ *     books, one namespace each (server/lib/books.ts).
  *   - checkStatus() also accepts the legacy unprefixed BOOTSTRAP_RECORD
  *     as proof of a finished bootstrap: copies of the book bootstrapped
  *     before the record template became namespace-prefixed carry only that
@@ -44,7 +45,7 @@
  * AA_BOOTSTRAP_RECORD template — keep the two in sync when the model evolves.
  */
 
-import { wipGet, wipPost, wipPut } from './wip-api.js'
+import { wipGet, wipPost, wipPut, WipHttpError } from './wip-api.js'
 import { readFileSync, readdirSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -53,7 +54,6 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const SEED_DIR = join(__dirname, '..', 'seed')
 
 const DEFAULT_NAMESPACE = 'aa'
-const NAMESPACE = process.env.WIP_NAMESPACE || DEFAULT_NAMESPACE
 
 // Derived from the authored namespace, not the runtime one, so it always
 // matches the seed file (server/seed/templates/00_AA_BOOTSTRAP_RECORD.json).
@@ -127,12 +127,12 @@ export interface BootstrapProgress {
  * not half-built; a resume there would re-post the seed templates over live
  * data, so it is refused instead of offered.
  */
-export async function checkStatus(): Promise<BootstrapStatus> {
-  return (await checkStatusDetail()).status
+export async function checkStatus(ns: string): Promise<BootstrapStatus> {
+  return (await checkStatusDetail(ns)).status
 }
 
 /** checkStatus() plus the message the gate shows for 'resume_blocked'. */
-export async function checkStatusDetail(): Promise<BootstrapStatusDetail> {
+export async function checkStatusDetail(ns: string): Promise<BootstrapStatusDetail> {
   let namespaces: Array<{ prefix: string }>
   try {
     namespaces = (await wipGet('/api/registry/namespaces')) as Array<{ prefix: string }>
@@ -140,23 +140,23 @@ export async function checkStatusDetail(): Promise<BootstrapStatusDetail> {
     return { status: 'wip_unreachable' }
   }
 
-  if (!namespaces.some((ns) => ns.prefix === NAMESPACE)) return { status: 'needs_bootstrap' }
-  if (await hasBootstrapRecord(BOOTSTRAP_RECORD_VALUE)) return { status: 'ready' }
-  if (await hasBootstrapRecord(LEGACY_BOOTSTRAP_RECORD_VALUE)) return { status: 'ready' }
+  if (!namespaces.some((n) => n.prefix === ns)) return { status: 'needs_bootstrap' }
+  if (await hasBootstrapRecord(ns, BOOTSTRAP_RECORD_VALUE)) return { status: 'ready' }
+  if (await hasBootstrapRecord(ns, LEGACY_BOOTSTRAP_RECORD_VALUE)) return { status: 'ready' }
 
-  const n = await countDocuments()
+  const n = await countDocuments(ns)
   if (n === null) {
     // Fail closed: a resume is only offered when emptiness is confirmed.
     return {
       status: 'resume_blocked',
-      message: `Cannot resume bootstrap: could not check whether '${NAMESPACE}' already holds documents (the document listing failed). Check that WIP is healthy and reload.`,
+      message: `Cannot resume bootstrap: could not check whether '${ns}' already holds documents (the document listing failed). Check that WIP is healthy and reload.`,
     }
   }
   if (n > 0) {
     return {
       status: 'resume_blocked',
       message:
-        `Cannot resume bootstrap: '${NAMESPACE}' (${n} document${n === 1 ? '' : 's'}) already holds data but no bootstrap record, ` +
+        `Cannot resume bootstrap: '${ns}' (${n} document${n === 1 ? '' : 's'}) already holds data but no bootstrap record, ` +
         `so this namespace is in use, not half-built. Resuming would re-post the app's templates over that data. ` +
         `Delete all documents first, or repair the namespace from the console (restore a backup, or write the missing bootstrap record).`,
     }
@@ -165,9 +165,9 @@ export async function checkStatusDetail(): Promise<BootstrapStatusDetail> {
 }
 
 /** Number of documents in the namespace, or null when the listing fails. */
-async function countDocuments(): Promise<number | null> {
+async function countDocuments(ns: string): Promise<number | null> {
   try {
-    const docs = (await wipGet(`/api/document-store/documents?namespace=${NAMESPACE}&page_size=1`)) as { total?: number; items?: unknown[] }
+    const docs = (await wipGet(`/api/document-store/documents?namespace=${ns}&page_size=1`)) as { total?: number; items?: unknown[] }
     return docs.total ?? docs.items?.length ?? 0
   } catch {
     return null
@@ -179,13 +179,13 @@ async function countDocuments(): Promise<number | null> {
  * bootstrap-record template. A missing template (404) or any other error
  * counts as "no record".
  */
-async function hasBootstrapRecord(templateValue: string): Promise<boolean> {
+async function hasBootstrapRecord(ns: string, templateValue: string): Promise<boolean> {
   try {
     const tmpl = (await wipGet(
-      `/api/template-store/templates/by-value/${templateValue}?namespace=${NAMESPACE}`,
+      `/api/template-store/templates/by-value/${templateValue}?namespace=${ns}`,
     )) as { template_id: string }
     const docs = (await wipGet(
-      `/api/document-store/documents?namespace=${NAMESPACE}&template_id=${tmpl.template_id}&page_size=1`,
+      `/api/document-store/documents?namespace=${ns}&template_id=${tmpl.template_id}&page_size=1`,
     )) as { total?: number; items?: unknown[] }
     return (docs.total ?? docs.items?.length ?? 0) > 0
   } catch {
@@ -203,6 +203,7 @@ async function hasBootstrapRecord(templateValue: string): Promise<boolean> {
  * resume, which checkStatusDetail() only allows on an empty namespace.
  */
 export async function runBootstrap(
+  ns: string,
   onProgress: (p: BootstrapProgress) => void,
 ): Promise<void> {
   const progress = (step: string, detail: string) =>
@@ -211,10 +212,10 @@ export async function runBootstrap(
   // The gate only offers a run for 'needs_bootstrap' and 'incomplete'; refuse
   // the rest here too, so a direct POST cannot re-post the seed templates over
   // a namespace that is in use.
-  const current = await checkStatusDetail()
+  const current = await checkStatusDetail(ns)
   if (current.status === 'resume_blocked') throw new Error(current.message)
   if (current.status === 'ready') {
-    throw new Error(`Bootstrap already complete: '${NAMESPACE}' holds its bootstrap record. Nothing to run; re-bootstrapping a namespace in use is a console action.`)
+    throw new Error(`Bootstrap already complete: '${ns}' holds its bootstrap record. Nothing to run; re-bootstrapping a namespace in use is a console action.`)
   }
 
   const startedAt = new Date().toISOString()
@@ -224,18 +225,31 @@ export async function runBootstrap(
 
   try {
     // Step 1: Create namespace (idempotent upsert via PUT)
-    progress('namespace', `Creating ${NAMESPACE} namespace...`)
+    progress('namespace', `Creating ${ns} namespace...`)
     // A new book is created with deletion_mode `full`, so "Delete book" can
     // remove it for good (soft-deleted documents plus re-created names block
     // a later import or demo load in WIP, see server/lib/book-space.ts).
     // Every other delete in the app stays soft. An existing namespace (a
     // resumed bootstrap) keeps its mode: switching retain → full needs an
     // explicit confirmation and is the operator's decision.
-    const existing = ((await wipGet('/api/registry/namespaces')) as Array<{ prefix: string }>).some((n) => n.prefix === NAMESPACE)
-    await wipPut(`/api/registry/namespaces/${NAMESPACE}`, {
-      description: 'AuthorAssist app data (bootstrap created)',
-      ...(existing ? {} : { deletion_mode: 'full' }),
-    })
+    const existing = ((await wipGet('/api/registry/namespaces')) as Array<{ prefix: string }>).some((n) => n.prefix === ns)
+    try {
+      await wipPut(`/api/registry/namespaces/${ns}`, {
+        description: 'AuthorAssist app data (bootstrap created)',
+        ...(existing ? {} : { deletion_mode: 'full' }),
+      })
+    } catch (err) {
+      // The app's own key may create only the namespaces the install reserved
+      // for it, with the reserved settings; anything else is a 403.
+      if (err instanceof WipHttpError && err.status === 403) {
+        throw new Error(
+          `WIP refused to create '${ns}': this app may only create books whose names the operator has reserved for it, ` +
+          `with deletion mode full. Reserve it with: wip-deploy app-namespace add wip-aa ${ns} --setting deletion_mode=full ` +
+          `(WIP said: ${err.body.slice(0, 300) || err.message})`,
+        )
+      }
+      throw err
+    }
 
     // Step 2: Load and create terminologies
     progress('terminologies', 'Loading seed data...')
@@ -257,7 +271,7 @@ export async function runBootstrap(
       value: t.value,
       label: t.label,
       description: t.description || '',
-      namespace: NAMESPACE,
+      namespace: ns,
       ...(t.mutable !== undefined ? { mutable: t.mutable } : {}),
       ...(t.extensible !== undefined ? { extensible: t.extensible } : {}),
       ...(t.case_sensitive !== undefined ? { case_sensitive: t.case_sensitive } : {}),
@@ -321,7 +335,7 @@ export async function runBootstrap(
     if (allRelations.length) {
       progress('term-relations', `Creating ${allRelations.length} ontology term-relations...`)
       const relsResult = await wipPost(
-        `/api/def-store/ontology/term-relations?namespace=${NAMESPACE}`,
+        `/api/def-store/ontology/term-relations?namespace=${ns}`,
         allRelations,
       )
       assertBulkSuccess(relsResult, 'ontology term-relations create')
@@ -347,7 +361,7 @@ export async function runBootstrap(
         value: data.value,
         label: data.label,
         description: data.description || '',
-        namespace: NAMESPACE,
+        namespace: ns,
         identity_fields: data.identity_fields || [],
         fields: data.fields.map((f: AnyObj) => mapField(f, versions)),
       }
@@ -378,7 +392,7 @@ export async function runBootstrap(
 
     // Step 6: Write the bootstrap-record audit doc — last, see above.
     progress('audit', `Writing ${BOOTSTRAP_RECORD_VALUE} audit doc...`)
-    await writeBootstrapRecord({
+    await writeBootstrapRecord(ns, {
       startedAt,
       templatesCreated,
       edgeTypesCreated,
@@ -407,21 +421,21 @@ export async function runBootstrap(
  * requires `template_id` (template_value is rejected, CASE-299). Explicit
  * template_version avoids the 5s "latest" cache (PoNIF #6).
  */
-async function writeBootstrapRecord(meta: {
+async function writeBootstrapRecord(ns: string, meta: {
   startedAt: string
   templatesCreated: string[]
   edgeTypesCreated: string[]
   terminologiesCreated: string[]
 }): Promise<void> {
   const tmpl = (await wipGet(
-    `/api/template-store/templates/by-value/${BOOTSTRAP_RECORD_VALUE}?namespace=${NAMESPACE}`,
+    `/api/template-store/templates/by-value/${BOOTSTRAP_RECORD_VALUE}?namespace=${ns}`,
   )) as { template_id: string; version: number }
 
   const bootstrapId = `bootstrap-${meta.startedAt.replace(/[:.]/g, '-')}`
   const doc = {
     template_id: tmpl.template_id,
     template_version: tmpl.version,
-    namespace: NAMESPACE,
+    namespace: ns,
     data: {
       bootstrap_id: bootstrapId,
       app_version: process.env.APP_VERSION || 'unknown',

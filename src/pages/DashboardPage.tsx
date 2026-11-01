@@ -16,6 +16,7 @@ import {
   Pencil,
   Plus,
 } from 'lucide-react'
+import { bookApi } from '../lib/books'
 import { Link } from 'react-router-dom'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES, THREAD_STATUS_COLORS, CHAPTER_STATUS_COLORS } from '../lib/constants'
 import { useBookStructure } from '../lib/useBookStructure'
@@ -303,7 +304,6 @@ const CONTENT_KINDS = ['chapters', 'scenes', 'characters', 'locations', 'plot_th
 function DangerZone() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const BASE_PATH = import.meta.env.BASE_URL || '/'
   const [open, setOpen] = useState(false)
   const [contents, setContents] = useState<{ title: string | null; counts: Record<string, number>; deletable: boolean } | null>(null)
   const [typed, setTyped] = useState('')
@@ -319,7 +319,7 @@ function DangerZone() {
     setTyped('')
     setError('')
     try {
-      const res = await fetch(`${BASE_PATH}api/book/contents`)
+      const res = await fetch(bookApi('api/book/contents'))
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
       setContents(data)
@@ -332,7 +332,7 @@ function DangerZone() {
     setDeleting(true)
     setError('')
     try {
-      const res = await fetch(`${BASE_PATH}api/book`, { method: 'DELETE' })
+      const res = await fetch(bookApi('api/book'), { method: 'DELETE' })
       const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }))
       if (!res.ok || data.status !== 'ok') throw new Error(data.error || `HTTP ${res.status}`)
       setOpen(false)

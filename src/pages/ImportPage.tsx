@@ -22,6 +22,7 @@ import {
   CheckSquare,
   Square,
 } from 'lucide-react'
+import { bookApi } from '../lib/books'
 import { NAMESPACE, TEMPLATES, TERMINOLOGIES } from '../lib/constants'
 import { clearAllDrafts } from '../components/UnsavedDraftBanner'
 import BackLink from '../components/BackLink'
@@ -917,7 +918,7 @@ export default function ImportPage() {
     try {
       // The whole book, as the Dashboard's "Delete book" does: an import
       // starts from the same state as a new book.
-      const res = await fetch(`${BASE_PATH}api/book`, { method: 'DELETE' })
+      const res = await fetch(bookApi('api/book'), { method: 'DELETE' })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || data.status !== 'ok') {
         alert(t('import.reset_failed', { error: data.error || res.statusText }))
@@ -959,7 +960,7 @@ export default function ImportPage() {
       setExtractProgress(i + 1)
 
       try {
-        const res = await fetch(`${BASE_PATH}api/import/extract`, {
+        const res = await fetch(bookApi('api/import/extract'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ text: chapterText, title: ch.title }),

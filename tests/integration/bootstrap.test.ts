@@ -1,5 +1,5 @@
 import { readdirSync } from 'fs'
-import { afterAll, beforeAll, describe, expect, inject, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest'
 import { bulk, NAMESPACE_PREFIX, wipClient, wipFetch } from './support/wip'
 
 // The global setup bootstrapped the run's namespace with the app's own
@@ -36,17 +36,15 @@ describe('bootstrap', () => {
   })
 
   it('refuses to run again on a finished namespace, writing nothing', async () => {
-    process.env.WIP_NAMESPACE = ns
     const { runBootstrap } = await import('../../server/lib/bootstrap')
-    await expect(runBootstrap(() => {})).rejects.toThrow(/already complete/)
+    await expect(runBootstrap(ns, () => {})).rejects.toThrow(/already complete/)
     expect((await templates()).every((t) => t.version === 1)).toBe(true)
   })
 })
 
 // A resume is only safe on a namespace nobody uses yet. These steps need a
 // namespace of their own: the run's namespace holds the other test files'
-// documents. The bootstrap reads WIP_NAMESPACE when it is imported, hence
-// resetModules.
+// documents.
 describe('resuming an interrupted bootstrap', () => {
   const own = `${NAMESPACE_PREFIX}resume-${Date.now()}`
   let boot: typeof import('../../server/lib/bootstrap')
@@ -59,18 +57,16 @@ describe('resuming an interrupted bootstrap', () => {
 
   beforeAll(async () => {
     await wipFetch('PUT', `/api/registry/namespaces/${own}`, { description: 'AA integration test: bootstrap resume (deleted afterwards)', deletion_mode: 'full' })
-    process.env.WIP_NAMESPACE = own
-    vi.resetModules()
     boot = await import('../../server/lib/bootstrap')
-    await boot.runBootstrap(() => {})
+    await boot.runBootstrap(own, () => {})
   }, 120_000)
   afterAll(async () => { await wipFetch('DELETE', `/api/registry/namespaces/${own}?confirm=true`) })
 
   it('offers a resume on an empty namespace without a record, and the resume adds no template versions', async () => {
     await deleteRecord()
-    expect(await boot.checkStatus()).toBe('incomplete')
-    await boot.runBootstrap(() => {})
-    expect(await boot.checkStatus()).toBe('ready')
+    expect(await boot.checkStatus(own)).toBe('incomplete')
+    await boot.runBootstrap(own, () => {})
+    expect(await boot.checkStatus(own)).toBe('ready')
     const items = await templates(own)
     expect(items.length).toBe(seedTemplates.length)
     expect(items.every((t) => t.version === 1)).toBe(true)
@@ -79,10 +75,10 @@ describe('resuming an interrupted bootstrap', () => {
   it('blocks a resume once the namespace holds documents, and the run refuses it', async () => {
     await bulk('/api/document-store/documents', [{ template_id: `${own}:AA_NOTE`, namespace: own, data: { title: 'Resume guard probe', note_type: 'IDEA', content: 'x' } }])
     await deleteRecord()
-    const detail = await boot.checkStatusDetail()
+    const detail = await boot.checkStatusDetail(own)
     expect(detail.status).toBe('resume_blocked')
     expect(detail.message).toContain(`'${own}' (1 document)`)
-    await expect(boot.runBootstrap(() => {})).rejects.toThrow(/Cannot resume bootstrap/)
+    await expect(boot.runBootstrap(own, () => {})).rejects.toThrow(/Cannot resume bootstrap/)
     expect((await templates(own)).every((t) => t.version === 1)).toBe(true)
   }, 120_000)
 })

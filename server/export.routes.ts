@@ -15,11 +15,12 @@
  *
  * The story bible (characters, locations, plot threads, world rules, notes)
  * as `md` (download) or `print` (opened in the browser, for a PDF).
+ * Both take the book as `?book=<namespace>` (server/lib/books.ts).
  * Mounted at `/api` in server/index.ts.
  */
 
-import { Router } from 'express'
-import { deploymentBook } from './lib/book-space.js'
+import { Router, type Request, type Response } from 'express'
+import { bookOf, bookTarget, requireBook } from './lib/books.js'
 import { fileStem, loadBook, type ExportBook, type ExportLanguage } from './lib/export/book.js'
 import { toMarkdown, toPlainText, type TextOptions } from './lib/export/text.js'
 import { toDocx } from './lib/export/docx.js'
@@ -45,7 +46,7 @@ const FORMATS: Record<string, { type: string; inline?: boolean; render: (book: E
   print: { type: 'text/html; charset=utf-8', inline: true, render: toPrintHtml },
 }
 
-router.get('/export/:format', async (req, res) => {
+router.get('/export/:format', requireBook(), async (req: Request<{ format: string }>, res: Response) => {
   const format = FORMATS[req.params.format]
   if (!format) {
     res.status(404).json({ error: `unknown export format: ${req.params.format}` })
@@ -53,7 +54,7 @@ router.get('/export/:format', async (req, res) => {
   }
   const lang: ExportLanguage = req.query.lang === 'de' ? 'de' : 'en'
   try {
-    const book = await loadBook(deploymentBook(), lang)
+    const book = await loadBook(bookTarget(bookOf(res)), lang)
     const body = await format.render(book, {
       lang,
       sceneTitles: req.query.scene_titles === '1',
@@ -69,7 +70,7 @@ router.get('/export/:format', async (req, res) => {
   }
 })
 
-router.get('/export/bible/:format', async (req, res) => {
+router.get('/export/bible/:format', requireBook(), async (req: Request<{ format: string }>, res: Response) => {
   const format = req.params.format
   if (format !== 'md' && format !== 'print') {
     res.status(404).json({ error: `unknown story bible format: ${format}` })
@@ -77,7 +78,7 @@ router.get('/export/bible/:format', async (req, res) => {
   }
   const lang: ExportLanguage = req.query.lang === 'de' ? 'de' : 'en'
   try {
-    const bible = await loadBible(deploymentBook(), lang)
+    const bible = await loadBible(bookTarget(bookOf(res)), lang)
     if (format === 'print') {
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.send(toBiblePrintHtml(bible, lang))

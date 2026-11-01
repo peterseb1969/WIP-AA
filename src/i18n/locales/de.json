@@ -887,5 +887,23 @@
     "format_md_hint": "F\u00fcr Sicherungen und zum Bearbeiten in jedem Texteditor. L\u00e4sst sich wieder importieren.",
     "format_txt": "Reiner Text",
     "format_txt_hint": "Nur Text, ohne Formatierung. L\u00e4sst sich wieder importieren."
+    },
+  "books": {
+    "title": "B\u00fccher",
+    "intro": "Jedes Buch wird f\u00fcr sich gespeichert. \u00d6ffne eines oder richte ein neues ein.",
+    "untitled": "Buch ohne Titel",
+    "open": "\u00d6ffnen",
+    "all": "Alle B\u00fccher",
+    "current": "Buch: {{name}}",
+    "empty": "Noch keine B\u00fccher.",
+    "loading": "B\u00fccher werden geladen\u2026",
+    "load_error": "Die B\u00fccher konnten nicht geladen werden: {{message}}",
+    "retry": "Erneut versuchen",
+    "add_title": "Neues Buch einrichten",
+    "add_hint": "Ein neues Buch braucht einen Namen, den die Administration f\u00fcr diese App reserviert hat. Sie f\u00fchrt dazu aus:",
+    "name_label": "Name des Buchs",
+    "name_invalid": "Nur Kleinbuchstaben, Ziffern und Bindestriche, beginnend mit einem Buchstaben.",
+    "name_taken": "Ein Buch mit diesem Namen gibt es schon.",
+    "add": "Buch einrichten"
   }
 }

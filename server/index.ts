@@ -6,19 +6,18 @@ import { fileURLToPath } from 'url'
 import { wipProxy, appConfigHandler } from '@wip/proxy'
 import { createWipClient } from '@wip/client'
 import { startAgent, ask, isAgentReady, agentUnavailableReason } from './agent.js'
-import { backoffMs } from './lib/agent-retry.js'
 import { parseText, extractEntities } from './import.js'
 import { analyse } from './analyse.js'
 import bootstrapRoutes from './bootstrap.routes.js'
 import configRoutes from './config.routes.js'
 import demoRoutes from './demo.routes.js'
 import exportRoutes from './export.routes.js'
-import { bookContents, deleteBook, deploymentBook } from './lib/book-space.js'
+import { bookContents, deleteBook } from './lib/book-space.js'
+import { bookOf, bookTarget, defaultBook, listBooks, requireBook } from './lib/books.js'
 
 const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const WIP_API_KEY = process.env.WIP_API_KEY || 'dev_master_key_for_testing'
-const WIP_NAMESPACE = process.env.WIP_NAMESPACE || 'aa'
 
 // APP_BASE_PATH — external path prefix when behind a reverse proxy.
 // E.g. /apps/aa when Caddy routes https://host/apps/aa/* to this app.
@@ -26,8 +25,6 @@ const WIP_NAMESPACE = process.env.WIP_NAMESPACE || 'aa'
 // under APP_BASE_PATH so asset URLs and proxied paths match.
 const BASE_PATH = (process.env.APP_BASE_PATH || '').replace(/\/$/, '') || '/'
 
-// Cached term enums for AI extraction prompt
-let termEnums: { roles: string[], locationTypes: string[] } | undefined
 const app = express()
 const router = Router()
 
@@ -53,9 +50,19 @@ router.get('/api/health', (_req, res) => {
 // --- Runtime app-config ---
 // Client-visible per-deployment values, served to every browser — an
 // allowlist only, never secrets or an env spread.
+// `namespace` is the default book: the one a URL without a book opens.
 router.get('/api/app-config', appConfigHandler({
-  namespace: WIP_NAMESPACE,
+  namespace: defaultBook(),
 }))
+
+// The app's books (server/lib/books.ts), for the book list and the switcher.
+router.get('/server-api/books', async (_req, res) => {
+  try {
+    res.json({ books: await listBooks(), default: defaultBook() })
+  } catch (err) {
+    res.status(503).json({ error: 'wip_unreachable', message: (err as Error).message })
+  }
+})
 
 // Bootstrap (offer-on-empty / use-on-exists for the aa namespace)
 router.use('/server-api', bootstrapRoutes)
@@ -70,7 +77,7 @@ router.use('/server-api', demoRoutes)
 router.use('/api', exportRoutes)
 
 // --- Ask endpoint ---
-router.post('/api/ask', async (req, res) => {
+router.post('/api/ask', requireBook(), async (req, res) => {
   const { question, sessionId } = req.body
   if (!question) {
     res.status(400).json({ error: 'question is required' })
@@ -82,7 +89,7 @@ router.post('/api/ask', async (req, res) => {
     return
   }
   try {
-    const result = await ask(question, sessionId)
+    const result = await ask(question, bookOf(res), sessionId)
     res.json(result)
   } catch (err: any) {
     console.error('Ask error:', err)
@@ -107,14 +114,14 @@ router.post('/api/import/parse', (req, res) => {
 })
 
 // --- Import: extract entities from a chapter ---
-router.post('/api/import/extract', async (req, res) => {
+router.post('/api/import/extract', requireBook(), async (req, res) => {
   const { text, title } = req.body
   if (!text) {
     res.status(400).json({ error: 'text is required' })
     return
   }
   try {
-    const entities = await extractEntities(text, title || 'Untitled', termEnums)
+    const entities = await extractEntities(text, title || 'Untitled', await termEnumsFor(bookOf(res)))
     res.json(entities)
   } catch (err: any) {
     console.error('Extract error:', err)
@@ -142,17 +149,17 @@ router.post('/api/analyse', async (req, res) => {
 // --- The whole book: what is in it, delete it ---
 // One action, no partial deletes: "Delete book" leaves the book exactly as a
 // fresh bootstrap does (server/lib/book-space.ts).
-router.get('/api/book/contents', async (_req, res) => {
+router.get('/api/book/contents', requireBook(), async (_req, res) => {
   try {
-    res.json(await bookContents(deploymentBook()))
+    res.json(await bookContents(bookTarget(bookOf(res))))
   } catch (err) {
     res.status(500).json({ error: (err as Error).message })
   }
 })
 
-router.delete('/api/book', async (_req, res) => {
+router.delete('/api/book', requireBook(), async (_req, res) => {
   try {
-    const deleted = await deleteBook(deploymentBook())
+    const deleted = await deleteBook(bookTarget(bookOf(res)))
     res.json({ status: 'ok', ...deleted })
   } catch (err) {
     console.error('Delete book error:', err)
@@ -160,37 +167,34 @@ router.delete('/api/book', async (_req, res) => {
   }
 })
 
-// --- Load term enums from WIP ---
-async function loadTermEnums() {
+// --- The extraction's role and location-type lists, per book ---
+// Loaded on a book's first extraction and kept. A failed load is not kept, so
+// the next extraction tries again (WIP may still be starting); meanwhile the
+// extraction uses its built-in defaults.
+type TermEnums = { roles: string[], locationTypes: string[] }
+const termEnumsByBook = new Map<string, TermEnums>()
+
+async function termEnumsFor(book: string): Promise<TermEnums | undefined> {
+  const known = termEnumsByBook.get(book)
+  if (known) return known
   try {
     const wip = createWipClient({
       baseUrl: WIP_BASE_URL,
       auth: { type: 'api-key', key: WIP_API_KEY },
     })
     const [roles, locTypes] = await Promise.all([
-      wip.defStore.listTerms('AA_CHARACTER_ROLE', { page_size: 50, namespace: WIP_NAMESPACE }),
-      wip.defStore.listTerms('AA_LOCATION_TYPE', { page_size: 50, namespace: WIP_NAMESPACE }),
+      wip.defStore.listTerms('AA_CHARACTER_ROLE', { page_size: 50, namespace: book }),
+      wip.defStore.listTerms('AA_LOCATION_TYPE', { page_size: 50, namespace: book }),
     ])
-    termEnums = {
+    const enums = {
       roles: roles.items.map((t: any) => t.value),
       locationTypes: locTypes.items.map((t: any) => t.value),
     }
-    console.log(`Loaded term enums: ${termEnums.roles.length} roles, ${termEnums.locationTypes.length} location types`)
-    return true
+    termEnumsByBook.set(book, enums)
+    return enums
   } catch (err: any) {
-    console.warn('Failed to load term enums from WIP, using defaults for now:', err.message)
-    return false
-  }
-}
-
-/**
- * The extraction's role and location-type lists, loaded in the background:
- * WIP may still be starting when the server does, so a failed load is retried
- * with the agent's backoff instead of keeping the defaults until a restart.
- */
-async function loadTermEnumsUntilLoaded() {
-  for (let attempt = 0; !(await loadTermEnums()); attempt++) {
-    await new Promise((r) => setTimeout(r, backoffMs(attempt)))
+    console.warn(`Failed to load term enums for '${book}', using defaults for now:`, err.message)
+    return undefined
   }
 }
 
@@ -226,7 +230,8 @@ app.use(BASE_PATH, router)
 // Listen first. Nothing at startup waits for WIP: the platform may still be
 // coming up (on a redeploy the MCP server answers 503 until the Registry is
 // reachable), and an exited server is not restarted in the dev container. The
-// Ask agent and the term lists connect in the background and retry.
+// Ask agent connects in the background and retries; the term lists load on a
+// book's first extraction.
 async function main() {
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`)
@@ -235,7 +240,6 @@ async function main() {
     }
   })
   startAgent()
-  void loadTermEnumsUntilLoaded()
 }
 
 main().catch(err => {

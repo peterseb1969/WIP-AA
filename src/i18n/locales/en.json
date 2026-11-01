@@ -887,5 +887,23 @@
     "format_md_hint": "For backups and editing in any text editor. Can be imported again.",
     "format_txt": "Plain text",
     "format_txt_hint": "Text only, no formatting. Can be imported again."
+    },
+  "books": {
+    "title": "Books",
+    "intro": "Each book is kept on its own. Open one, or set up a new one.",
+    "untitled": "Untitled book",
+    "open": "Open",
+    "all": "All books",
+    "current": "Book: {{name}}",
+    "empty": "No books yet.",
+    "loading": "Loading the books…",
+    "load_error": "The books could not be loaded: {{message}}",
+    "retry": "Try again",
+    "add_title": "Set up a new book",
+    "add_hint": "A new book needs a name that the administrator has reserved for this app. The administrator runs:",
+    "name_label": "Name of the book",
+    "name_invalid": "Lowercase letters, digits and hyphens only, starting with a letter.",
+    "name_taken": "There is already a book with this name.",
+    "add": "Set up the book"
   }
 }

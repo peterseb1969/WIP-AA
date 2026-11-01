@@ -6,6 +6,7 @@ import { WipProvider } from '@wip/react'
 import { StructureUndoProvider } from './lib/structureUndo'
 import { wipClient, queryClient } from './lib/wip'
 import { BootstrapGate } from './components/BootstrapGate'
+import { bookBasename } from './lib/books'
 import Layout from './components/Layout'
 import AskBar from './components/AskBar'
 // Each page is its own chunk, loaded on first visit: one bundle held every
@@ -27,19 +28,18 @@ const ImportPage = lazy(() => import('./pages/ImportPage'))
 const ExportPage = lazy(() => import('./pages/ExportPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
-// CASE-370 surface #10: when the app is mounted under a path prefix
-// (e.g. /apps/aa behind the wip-deploy gateway), the router must know the
-// prefix or every client-side route 404s. Vite's BASE_URL mirrors
-// config.base (always ends with '/'); strip the trailing slash.
-const BASENAME = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
-
 export default function App() {
+  // The router lives under the current book: <base>/book/<ns>, so every page
+  // path and link stays as it was. The base path matters behind the
+  // wip-deploy gateway (/apps/aa), or every client-side route 404s.
+  // main.tsx sets the book before the first render.
+  const basename = bookBasename()
   return (
     <BootstrapGate>
       <QueryClientProvider client={queryClient}>
         <WipProvider client={wipClient}>
           <StructureUndoProvider>
-          <BrowserRouter basename={BASENAME}>
+          <BrowserRouter basename={basename}>
             <Routes>
               <Route element={<Layout />}>
                 <Route path="/" element={<DashboardPage />} />

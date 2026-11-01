@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test'
 
-// The app learns its WIP namespace from GET <base>/api/app-config before the
+// The app learns its default book from GET <base>/api/app-config before the
 // first render. If that fails, it must say so instead of guessing a namespace
 // and rendering a book against the wrong one (main.tsx).
 async function expectConfigError(page: Page, detail: RegExp) {
@@ -16,9 +16,14 @@ test('the config endpoint fails', async ({ page }) => {
   await expectConfigError(page, /app-config fetch failed: HTTP 500/)
 })
 
-test('the server has no namespace configured', async ({ page }) => {
+// Without a default book (and no book used before in this browser) the app
+// opens the book list rather than guessing one.
+test('the server has no default book', async ({ page }) => {
   await page.route('**/api/app-config', (route) => route.fulfill({ json: { namespace: null } }))
-  await expectConfigError(page, /no WIP namespace configured \(WIP_NAMESPACE\)/)
+  await page.goto('/')
+  await expect(page).toHaveURL(/\/books$/)
+  await expect(page.getByRole('heading', { name: 'Books', level: 1 })).toBeVisible()
+  await expect(page.getByRole('navigation')).toHaveCount(0)
 })
 
 test('the server cannot be reached', async ({ page }) => {

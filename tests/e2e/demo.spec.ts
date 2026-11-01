@@ -18,7 +18,7 @@ test('the demo book is offered in an empty book, loads every part, and is then n
   const seen = watch(page)
   const offer = page.getByRole('button', { name: 'Load the demo book' })
   page.on('response', async (r) => { if (r.url().includes('/demo/')) console.log('NET', Date.now() % 100000, r.request().method(), r.url().split('server-api')[1], r.status(), r.url().includes('status') ? await r.text() : '') })
-  const emptied = await page.request.delete('/api/book')
+  const emptied = await page.request.delete(`/api/book?book=${ns}`)
   expect(emptied.status()).toBe(200)
   await page.goto('/')
   await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible()

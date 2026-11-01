@@ -73,7 +73,7 @@ The server expects a WIP backend reachable via the proxy. The `@wip/proxy` middl
 |----------|---------|---------|
 | `PORT` | `3014` | Server port |
 | `WIP_BASE_URL` | `https://localhost:8443` | WIP backend |
-| `WIP_NAMESPACE` | `aa` | The book's namespace (also served to the browser by `/api/app-config`) |
+| `WIP_NAMESPACE` | `aa` | The default book: the namespace a URL without a book opens (served to the browser by `/api/app-config`). Every other book the app's key owns is listed under Books |
 | `WIP_API_KEY` | `dev_master_key_for_testing` | API key for WIP backend. The server reads only this variable; the fallback is refused by current installs |
 | `WIP_API_KEY_FILE` | — | Set in `.env`. Read by the test configs (`playwright.config.ts`, `vitest.integration.config.ts`), **not yet by the server** (see KNOWN_ISSUES) |
 | `APP_BASE_PATH` | `/` | Route prefix when deployed (e.g. `/apps/aa`) |

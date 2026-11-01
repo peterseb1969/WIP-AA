@@ -1,8 +1,8 @@
 /**
  * Demo book routes — "Load the demo book" for an empty book space.
  *
- *   GET  /server-api/demo/status → { available: boolean }
- *   POST /server-api/demo/load   → SSE stream of { step, detail }
+ *   GET  /server-api/demo/status?book=<ns> → { available: boolean }
+ *   POST /server-api/demo/load?book=<ns>   → SSE stream of { step, detail }
  *
  * Available only when the book is bootstrapped and has no documents and no
  * names: the demo must never mix into a writer's own novel. The load checks
@@ -11,27 +11,30 @@
 
 import { Router } from 'express'
 import { checkStatus } from './lib/bootstrap.js'
-import { bookIsEmpty, deploymentBook as target } from './lib/book-space.js'
+import { bookIsEmpty } from './lib/book-space.js'
+import { bookOf, bookTarget, requireBook } from './lib/books.js'
 import { loadDemoBook } from './lib/demo-book.js'
 import { initSSE, sendSSE, endSSE } from './lib/sse.js'
 
 const router = Router()
 
-router.get('/demo/status', async (_req, res) => {
+router.get('/demo/status', requireBook(), async (_req, res) => {
+  const book = bookOf(res)
   try {
-    const available = (await checkStatus()) === 'ready' && (await bookIsEmpty(target()))
+    const available = (await checkStatus(book)) === 'ready' && (await bookIsEmpty(bookTarget(book)))
     res.json({ available })
   } catch (err) {
     res.json({ available: false, error: (err as Error).message })
   }
 })
 
-router.post('/demo/load', (req, res) => {
+router.post('/demo/load', requireBook(), (req, res) => {
+  const target = bookTarget(bookOf(res))
   initSSE(res)
   let clientConnected = true
   req.on('close', () => { clientConnected = false })
 
-  loadDemoBook(target(), (p) => { if (clientConnected) sendSSE(res, 'progress', p) })
+  loadDemoBook(target, (p) => { if (clientConnected) sendSSE(res, 'progress', p) })
     .then((summary) => {
       if (clientConnected) {
         sendSSE(res, 'complete', { step: 'done', detail: summary })

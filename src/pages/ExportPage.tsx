@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BookOpenText, BookUser, Download, ExternalLink, FileDown, FileText, FileType, Hash, Printer, TabletSmartphone } from 'lucide-react'
+import { bookApi } from '../lib/books'
 
 // Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
-const EXPORT_API = `${import.meta.env.BASE_URL}api/export`
 
 // `id` names the strings; `format` and `query` make the download URL. The
 // print view opens in a new tab instead of downloading.
@@ -24,7 +24,7 @@ export default function ExportPage() {
   // The words the export adds ("Chapter", "by") follow the UI language.
   const lang = i18n.language?.startsWith('de') ? 'de' : 'en'
   const href = (format: string, query: string) =>
-    `${EXPORT_API}/${format}?lang=${lang}${sceneTitles ? '&scene_titles=1' : ''}${format === 'print' ? `&size=${pageSize}` : ''}${query}`
+    bookApi(`api/export/${format}?lang=${lang}${sceneTitles ? '&scene_titles=1' : ''}${format === 'print' ? `&size=${pageSize}` : ''}${query}`)
 
   return (
     <div className="p-6 max-w-2xl">
@@ -86,7 +86,7 @@ export default function ExportPage() {
         <BookUser className="w-5 h-5 text-text-muted flex-shrink-0" />
         <div className="flex-1 min-w-0 text-sm font-semibold text-text">{t('export.bible_title')}</div>
         <a
-          href={`${EXPORT_API}/bible/print?lang=${lang}`}
+          href={bookApi(`api/export/bible/print?lang=${lang}`)}
           target="_blank"
           rel="noopener"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-sm rounded-lg hover:bg-primary/90 transition-colors"
@@ -96,7 +96,7 @@ export default function ExportPage() {
           {t('export.bible_pdf')}
         </a>
         <a
-          href={`${EXPORT_API}/bible/md?lang=${lang}`}
+          href={bookApi(`api/export/bible/md?lang=${lang}`)}
           download
           className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-primary text-primary text-sm rounded-lg hover:bg-primary/5 transition-colors"
           aria-label={t('export.download_format', { format: t('export.bible_md') })}

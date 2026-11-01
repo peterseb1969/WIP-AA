@@ -1,5 +1,6 @@
 import { Suspense, lazy, useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { bookApi } from '../lib/books'
 
 // The Markdown renderer (react-markdown + GFM) is large and only needed once
 // an answer arrives, so it stays out of the bundle every page loads.
@@ -11,7 +12,6 @@ interface Message {
   toolCalls?: number
 }
 
-const BASE_PATH = import.meta.env.BASE_URL || '/'
 
 export default function AskBar() {
   const { t } = useTranslation()
@@ -42,7 +42,7 @@ export default function AskBar() {
     setLoading(true)
 
     try {
-      const res = await fetch(`${BASE_PATH}api/ask`, {
+      const res = await fetch(bookApi('api/ask'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, sessionId }),

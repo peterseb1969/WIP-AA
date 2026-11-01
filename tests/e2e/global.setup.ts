@@ -19,9 +19,9 @@ setup('namespaces and bootstrap', async () => {
   for (const { server, ns } of instances) {
     const created = await wipFetch('PUT', `/api/registry/namespaces/${ns}`, { description: 'AA end-to-end test run (deleted afterwards)', deletion_mode: 'full' })
     expect(created.status).toBe(200)
-    const run = await fetch(`${server}/server-api/bootstrap/run`, { method: 'POST' })
+    const run = await fetch(`${server}/server-api/bootstrap/run?book=${ns}`, { method: 'POST' })
     expect(await run.text()).toContain('"step":"done"')
-    const status = await (await fetch(`${server}/server-api/bootstrap/status`)).json()
+    const status = await (await fetch(`${server}/server-api/bootstrap/status?book=${ns}`)).json()
     expect(status).toEqual({ status: 'ready' })
   }
 })

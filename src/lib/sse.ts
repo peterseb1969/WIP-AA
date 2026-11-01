@@ -1,3 +1,5 @@
+import { bookApi } from './books'
+
 /**
  * Reads a server-sent event stream from a fetch response (POST requests
  * cannot use EventSource). Calls `onEvent` for every `event:` / `data:` pair
@@ -36,7 +38,7 @@ export async function readSSE(response: Response, onEvent: (event: string, data:
 export async function loadDemoBook(onProgress: (detail: string) => void): Promise<string> {
   let summary = ''
   let failure = ''
-  const response = await fetch(`${import.meta.env.BASE_URL}server-api/demo/load`, { method: 'POST' })
+  const response = await fetch(bookApi('server-api/demo/load'), { method: 'POST' })
   await readSSE(response, (event, data) => {
     const d = data as { detail?: string; message?: string }
     if (event === 'progress' && d.detail) onProgress(d.detail)

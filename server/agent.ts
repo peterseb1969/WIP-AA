@@ -33,7 +33,6 @@ const env = () => ({
   MCP_MODULE: process.env.MCP_MODULE || 'wip_mcp',
   WIP_API_KEY: process.env.WIP_API_KEY || '',
   CLAUDE_MODEL: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
-  WIP_NAMESPACE: process.env.WIP_NAMESPACE || 'aa',
   MAX_TURNS: parseInt(process.env.MAX_TURNS || '15'),
   SESSION_TTL_MS: parseInt(process.env.SESSION_TTL_MINUTES || '30') * 60_000,
 })
@@ -72,6 +71,8 @@ const ALLOWED_TOOLS = new Set([
 interface Session {
   messages: Anthropic.MessageParam[]
   lastAccess: number
+  /** The book the conversation is about; a session never moves to another. */
+  book: string
 }
 
 const sessions = new Map<string, Session>()
@@ -241,16 +242,23 @@ async function connectAgent() {
 
 export async function ask(
   question: string,
+  book: string,
   sessionId?: string,
 ): Promise<{ answer: string; toolCalls: number; sessionId: string }> {
   if (!mcpClient) {
     throw new Error(agentUnavailableReason())
   }
 
-  const id = sessionId || crypto.randomUUID()
+  // A session id from another book starts afresh: its history is about
+  // another novel, and the answer must not draw on it.
+  let id = sessionId || crypto.randomUUID()
   let session = sessions.get(id)
+  if (session && session.book !== book) {
+    id = crypto.randomUUID()
+    session = undefined
+  }
   if (!session) {
-    session = { messages: [], lastAccess: Date.now() }
+    session = { messages: [], lastAccess: Date.now(), book }
     sessions.set(id, session)
   }
   session.lastAccess = Date.now()
@@ -266,7 +274,7 @@ export async function ask(
     const response = await anthropic.messages.create({
       model: e.CLAUDE_MODEL,
       max_tokens: 4096,
-      system: systemPrompt,
+      system: `${systemPrompt}\n\nThe writer's current book is the WIP namespace '${book}'; every tool call is scoped to it.`,
       tools: mcpTools,
       messages: session.messages,
     })
@@ -291,15 +299,15 @@ export async function ask(
 
       const args = block.input as Record<string, unknown>
 
-      // Inject namespace if configured and the tool accepts it
-      if (e.WIP_NAMESPACE && 'namespace' in (args || {})) {
-        args.namespace = e.WIP_NAMESPACE
-      } else if (e.WIP_NAMESPACE && args && !('namespace' in args)) {
+      // Force the request's book into every tool that takes a namespace
+      if ('namespace' in (args || {})) {
+        args.namespace = book
+      } else if (args && !('namespace' in args)) {
         // Only inject if the tool likely accepts namespace
         const toolDef = mcpTools.find(t => t.name === block.name)
         const props = (toolDef?.input_schema as any)?.properties || {}
         if ('namespace' in props) {
-          args.namespace = e.WIP_NAMESPACE
+          args.namespace = book
         }
       }
 

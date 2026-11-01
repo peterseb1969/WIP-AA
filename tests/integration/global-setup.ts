@@ -29,11 +29,9 @@ export default async function setup(project: TestProject) {
   })
   if (created.status !== 200) throw new Error(`Creating ${namespace}: HTTP ${created.status} ${JSON.stringify(created.json)}`)
 
-  // The bootstrap reads WIP_NAMESPACE when it is first imported.
-  process.env.WIP_NAMESPACE = namespace
   const { runBootstrap, checkStatus } = await import('../../server/lib/bootstrap')
-  await runBootstrap(() => {})
-  const status = await checkStatus()
+  await runBootstrap(namespace, () => {})
+  const status = await checkStatus(namespace)
   if (status !== 'ready') throw new Error(`Bootstrap of ${namespace} ended as "${status}"`)
 
   project.provide('namespace', namespace)

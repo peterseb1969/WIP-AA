@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet } from 'react-router-dom'
 import { useDocuments } from '@wip/react'
 import { NAMESPACE, TEMPLATES } from '../lib/constants'
+import { booksPage } from '../lib/books'
 import UnsavedDraftBanner from './UnsavedDraftBanner'
 import LanguageSwitcher from './LanguageSwitcher'
 import { StructureUndoControl } from '../lib/structureUndo'
@@ -24,6 +25,7 @@ import {
   Menu,
   X,
   Images,
+  Library,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -72,6 +74,15 @@ export default function Layout() {
             <X className="w-5 h-5" />
           </button>
         </div>
+        {/* The current book; switching is a full page load (src/lib/books.ts). */}
+        <a
+          href={booksPage()}
+          className="flex items-center gap-2 px-4 py-2 text-xs text-white/70 border-b border-primary-light hover:bg-white/10 hover:text-white"
+        >
+          <Library className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">{t('books.current', { name: NAMESPACE })}</span>
+          <span className="ml-auto whitespace-nowrap underline">{t('books.all')}</span>
+        </a>
         <nav className="flex-1 overflow-y-auto py-2">
           {NAV_ITEMS.map(({ to, labelKey, icon: Icon }) => (
             <NavLink

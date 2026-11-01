@@ -55,7 +55,6 @@ async function main() {
   // The local install uses a self-signed certificate.
   process.env.NODE_TLS_REJECT_UNAUTHORIZED ??= '0'
   // The bootstrap module reads these when it loads, so set them first.
-  process.env.WIP_NAMESPACE = NS
   process.env.WIP_BASE_URL = BASE
   process.env.WIP_API_KEY = KEY
 
@@ -67,9 +66,9 @@ async function main() {
 
   const { runBootstrap, checkStatus } = await import('../server/lib/bootstrap')
   let failure = ''
-  await runBootstrap((p) => { if (p.step === 'error') failure = p.detail })
+  await runBootstrap(NS, (p) => { if (p.step === 'error') failure = p.detail })
   if (failure) throw new Error(`bootstrap: ${failure}`)
-  if ((await checkStatus()) !== 'ready') throw new Error('bootstrap did not finish')
+  if ((await checkStatus(NS)) !== 'ready') throw new Error('bootstrap did not finish')
   console.log(`bootstrapped ${NS}`)
 
   const { loadDemoBook } = await import('../server/lib/demo-book')
