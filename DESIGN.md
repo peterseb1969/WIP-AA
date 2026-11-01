@@ -8,6 +8,19 @@ AuthorAssist is a novel-writing tool that helps authors develop plots, character
 
 `aa` — deletion_mode: full, isolation_mode: open
 
+### Several books in one app (decided 2026-11-01, Peter; CASE-913, CASE-1014)
+
+One app instance, several books. **A book is one namespace**, exactly as before: the same templates and vocabularies, bootstrapped from `server/seed/`, holding one novel. There is no data-model change and no new template. Several instances for different authors (each with its own route and its own key) come later and stay in CASE-913.
+
+- **Which namespaces are books.** The server lists the namespaces its key can see and keeps those holding the `AA_BOOTSTRAP_RECORD` template (complete or not). `wip` and namespaces of other apps fall out by that test. Under the app's own key that is exactly the books it owns; under the master key used in development and tests it also shows scratch copies (`aa-e2e-*`), which is acceptable there. The list is cached briefly and re-read when a request names a book it does not know.
+- **Adding a book.** An operator reserves the name for the app: `wip-deploy app-namespace add wip-aa <book> --setting deletion_mode=full`. In the app, **Books → Add book** takes that name and runs the bootstrap on it, which creates the namespace with the reserved settings under the app's own key. A name that is not reserved is refused by WIP (403), and the app shows that refusal with the operator command. CASE-1014 asks for reservations by prefix, so that the app can create books without the operator.
+- **Book names.** Lowercase letters, digits and hyphens, starting with a letter; never `wip`. The server checks the syntax before any WIP call.
+- **Choosing a book (browser).** The book is part of the URL: `<base>/book/<ns>/scenes`. `main.tsx` reads it before the first render, sets `NAMESPACE` (the one value every WIP call already passes) and gives React Router the basename `<base>/book/<ns>`, so every page and link stays as it is. Switching books is a full page load of the other book's URL, so no cached query of one book can show in another. `<base>/books` is the book list. A URL without a book (`<base>/`, and old links such as `<base>/scenes`) goes to the last book used in this browser (kept in `localStorage`, a per-viewer convenience), else to the server's default book (`WIP_NAMESPACE`), else to the book list.
+- **Choosing a book (server).** Every book-scoped route (bootstrap status and run, demo, import, extraction, analysis, Ask, export, book contents, Delete book) takes the book from a `book` query parameter, which works the same for `fetch`, streamed responses and download links. A route refuses a missing or malformed name (400) and a name that is not one of its books (404, `unknown_book`); only the bootstrap routes accept a name that is not a book yet, because that is how a book is added. `WIP_NAMESPACE` remains the default book, nothing more. Routes that are not about a book (`/api/health`, `/api/app-config`, the Anthropic key settings, the `/wip` proxy, where the client already passes the namespace on every call) are unchanged.
+- **Ask.** The agent already forces `namespace` into every MCP tool call; it now forces the request's book instead of `WIP_NAMESPACE`.
+- **Deleting.** "Delete book" keeps meaning *empty this book*: the namespace stays, and is offered the demo or an import again. Removing a book entirely is an operator action (`app-namespace remove`, then deleting the namespace).
+- **Settings shared by all books.** The Anthropic key and the UI language are per app or per browser, not per book.
+
 ## Terminologies (12)
 
 ### Controlled Vocabularies (9)
