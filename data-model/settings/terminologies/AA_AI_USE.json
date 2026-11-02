@@ -1,0 +1,11 @@
+{
+  "value": "AA_AI_USE",
+  "label": "AI Use",
+  "description": "What the app uses an AI model for; each use is assigned a provider and a model in AA_AI_SETTINGS",
+  "extensible": false,
+  "terms": [
+    { "value": "ASK", "label": "Ask bar", "aliases": [] },
+    { "value": "ANALYSE", "label": "Scene analysis", "aliases": [] },
+    { "value": "IMPORT_EXTRACT", "label": "Import extraction", "aliases": [] }
+  ]
+}

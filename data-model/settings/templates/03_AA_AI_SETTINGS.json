@@ -1,0 +1,11 @@
+{
+  "value": "AA_AI_SETTINGS",
+  "label": "AI Settings",
+  "description": "The app's AI providers and which provider and model serve each use; one document for the whole app (scope = app)",
+  "identity_fields": ["scope"],
+  "fields": [
+    { "name": "scope", "label": "Scope", "type": "string", "mandatory": true, "validation": { "enum": ["app"] } },
+    { "name": "providers", "label": "Providers", "type": "array", "mandatory": false, "array_template_ref": "AA_AI_PROVIDER", "array_template_ref_version": 1 },
+    { "name": "assignments", "label": "Assignments", "type": "array", "mandatory": false, "array_template_ref": "AA_AI_ASSIGNMENT", "array_template_ref_version": 1 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "value": "AA_AI_ASSIGNMENT",
+  "label": "AI Assignment",
+  "description": "Embedded in AA_AI_SETTINGS: which provider and model serve one AI use",
+  "identity_fields": [],
+  "fields": [
+    { "name": "use", "label": "Use", "type": "term", "mandatory": true, "terminology_ref": "AA_AI_USE" },
+    { "name": "provider_id", "label": "Provider ID", "type": "string", "mandatory": true },
+    { "name": "model", "label": "Model", "type": "string", "mandatory": true }
+  ]
+}
