@@ -137,3 +137,29 @@ tool call), save as version 2, WIP_API_KEY as key_env refused, typed key
 for a keyless provider refused
 Discovered: the settings namespace is created in retain mode (no
 reservation setting), so deleting a scratch copy needs a flip to full first
+
+## 753c881 — feat: Settings → AI models: providers, and the model for each use
+**Time:** 2026-11-02 09:18
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 15 changed, +591/-14
+**Tests:** not recorded
+**Why:** A section under Settings: before setup it shows what runs today (Claude
+for every use) and offers to set up the settings namespace, with the
+reservation command; after setup, an editable provider list (key status
+by last 4 only, model list, a typed key for a stored provider that needs
+one), per use (Ask bar, scene analysis, import extraction) a provider, a
+model and a Test (with a tool for the Ask bar), Save as a new version.
+German and English texts.
+
+The settings namespace can never be a book: isValidBookName refuses it,
+so the book bootstrap cannot write book templates into it (DESIGN.md
+claimed this before the code did). The e2e instances get their own
+settings namespace; setup and teardown flip retain namespaces to full
+before deleting them.
+
+Tests: type-check, 194 unit, full e2e 72 passed (ai-settings.spec.ts
+new: setup stores the defaults as version 1; a local provider added and
+given the Ask bar is stored as version 2; WIP_API_KEY as key variable
+refused, nothing stored)
+Discovered: Playwright has no getByDisplayValue, and the type-check does
+not cover tests/e2e, so the mistake showed only at run time
