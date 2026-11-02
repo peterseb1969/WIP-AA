@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { anthropicKey } from './lib/anthropic-key.js'
+import { requireTarget } from './lib/ai-settings.js'
 
 // ── Types ────────────────────────────────────────────────
 
@@ -190,13 +190,10 @@ export async function extractEntities(
   chapterTitle: string,
   termEnums?: { roles?: string[], locationTypes?: string[] },
 ): Promise<ExtractedEntities> {
-  const apiKey = anthropicKey()
-  if (!apiKey) throw new Error('No Anthropic API key — set one in Settings')
+  // The model Settings assigns to the import's extraction (lib/ai-settings.ts).
+  const { client, model } = await requireTarget('IMPORT_EXTRACT')
 
-  const model = process.env.IMPORT_MODEL || process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
-  const anthropic = new Anthropic({ apiKey })
-
-  const response = await anthropic.messages.create({
+  const response = await client.messages.create({
     model,
     max_tokens: 2048,
     system: buildExtractPrompt(

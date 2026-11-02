@@ -1,12 +1,12 @@
 {
   "value": "AA_AI_PROVIDER",
   "label": "AI Provider",
-  "description": "Embedded in AA_AI_SETTINGS: a place that serves models through the Anthropic Messages API. key_env names the environment variable holding its key (empty: no key); the key itself is never stored in WIP.",
+  "description": "Embedded in AA_AI_SETTINGS: a place that serves models through the Anthropic Messages API. key_env names the environment variable holding its key (empty: no key): ANTHROPIC_API_KEY or AI_KEY_*, so no other server secret can be named; the key itself is never stored in WIP.",
   "identity_fields": [],
   "fields": [
     { "name": "provider_id", "label": "Provider ID", "type": "string", "mandatory": true, "validation": { "pattern": "^[a-z][a-z0-9-]{0,39}$" } },
     { "name": "label", "label": "Label", "type": "string", "mandatory": true },
     { "name": "base_url", "label": "Base URL", "type": "string", "mandatory": true, "validation": { "pattern": "^https?://\\S+$" } },
-    { "name": "key_env", "label": "Key variable", "type": "string", "mandatory": false, "validation": { "pattern": "^[A-Z][A-Z0-9_]{0,63}$" } }
+    { "name": "key_env", "label": "Key variable", "type": "string", "mandatory": false, "validation": { "pattern": "^(ANTHROPIC_API_KEY|AI_KEY_[A-Z0-9_]{1,56})$" } }
   ]
 }

@@ -4,7 +4,7 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import Anthropic from '@anthropic-ai/sdk'
 import { readFileSync } from 'fs'
-import { anthropicKey } from './lib/anthropic-key.js'
+import { requireTarget } from './lib/ai-settings.js'
 import { backoffMs, errorStatus, retryDecision } from './lib/agent-retry.js'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
@@ -19,8 +19,8 @@ let systemPrompt = ''
 
 // Where the background connection stands (startAgent). `mcpClient` is set only
 // once a connection fully succeeded, so it alone decides readiness.
-type AgentState = 'no-key' | 'connecting' | 'ready' | 'failed'
-let agentState: AgentState = 'no-key'
+type AgentState = 'idle' | 'connecting' | 'ready' | 'failed'
+let agentState: AgentState = 'idle'
 let agentError = ''
 let agentLoop: Promise<void> | null = null
 
@@ -32,7 +32,6 @@ const env = () => ({
   MCP_CWD: process.env.MCP_CWD || '',
   MCP_MODULE: process.env.MCP_MODULE || 'wip_mcp',
   WIP_API_KEY: process.env.WIP_API_KEY || '',
-  CLAUDE_MODEL: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
   MAX_TURNS: parseInt(process.env.MAX_TURNS || '15'),
   SESSION_TTL_MS: parseInt(process.env.SESSION_TTL_MINUTES || '30') * 60_000,
 })
@@ -131,7 +130,6 @@ export function isAgentReady(): boolean {
 export function agentUnavailableReason(): string {
   if (mcpClient) return ''
   switch (agentState) {
-    case 'no-key': return 'No Anthropic API key — set one in Settings.'
     case 'connecting': return `The assistant is still connecting to WIP${agentError ? ` (last attempt: ${agentError})` : ''}.`
     case 'failed': return `The assistant could not connect to WIP: ${agentError}. Check the WIP API key.`
     default: return 'The assistant is not ready.'
@@ -145,11 +143,8 @@ export function agentUnavailableReason(): string {
  * a connection is underway or done is a no-op.
  */
 export function startAgent(): void {
-  if (!anthropicKey()) {
-    agentState = 'no-key'
-    console.warn('⚠ No Anthropic key (override/file/env) — /api/ask unavailable until one is set via Settings')
-    return
-  }
+  // The model and its key are chosen per question (lib/ai-settings.ts), so
+  // the WIP connection does not wait for a key.
   if (agentLoop || mcpClient) return
   agentState = 'connecting'
   agentLoop = (async () => {
@@ -267,12 +262,13 @@ export async function ask(
   session.messages.push({ role: 'user', content: question })
 
   const e = env()
-  const anthropic = new Anthropic({ apiKey: anthropicKey() })
+  // The provider and model Settings assign to the Ask bar.
+  const { client: anthropic, model } = await requireTarget('ASK')
   let totalToolCalls = 0
 
   for (let turn = 0; turn < e.MAX_TURNS; turn++) {
     const response = await anthropic.messages.create({
-      model: e.CLAUDE_MODEL,
+      model,
       max_tokens: 4096,
       system: `${systemPrompt}\n\nThe writer's current book is the WIP namespace '${book}'; every tool call is scoped to it.`,
       tools: mcpTools,

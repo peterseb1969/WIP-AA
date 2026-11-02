@@ -14,6 +14,7 @@ import demoRoutes from './demo.routes.js'
 import exportRoutes from './export.routes.js'
 import { bookContents, deleteBook } from './lib/book-space.js'
 import { bookOf, bookTarget, defaultBook, listBooks, requireBook } from './lib/books.js'
+import { targetFor } from './lib/ai-settings.js'
 
 const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -83,9 +84,14 @@ router.post('/api/ask', requireBook(), async (req, res) => {
     res.status(400).json({ error: 'question is required' })
     return
   }
-  // Still connecting, no key, or a rejected key: say which, as a 503.
+  // Still connecting, a rejected WIP key, or no usable model: say which, as a 503.
   if (!isAgentReady()) {
     res.status(503).json({ error: agentUnavailableReason() })
+    return
+  }
+  const target = await targetFor('ASK')
+  if ('unavailable' in target) {
+    res.status(503).json({ error: target.unavailable })
     return
   }
   try {
