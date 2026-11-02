@@ -48,8 +48,8 @@ describe('book names', () => {
     for (const ok of ['aa', 'book-2', 'my-novel', 'a']) expect(isValidBookName(ok)).toBe(true)
   })
 
-  it('refuses everything else, and the platform namespace', () => {
-    for (const bad of ['', 'wip', 'Book', '2nd', '-x', 'a_b', 'a/b', 'a b', 'x'.repeat(64), undefined, ['aa'], 7]) {
+  it('refuses everything else, the platform namespace and the settings namespace', () => {
+    for (const bad of ['', 'wip', 'aa-settings', 'Book', '2nd', '-x', 'a_b', 'a/b', 'a b', 'x'.repeat(64), undefined, ['aa'], 7]) {
       expect(isValidBookName(bad)).toBe(false)
     }
   })

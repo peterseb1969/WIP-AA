@@ -77,8 +77,12 @@ The server expects a WIP backend reachable via the proxy. The `@wip/proxy` middl
 | `WIP_API_KEY` | `dev_master_key_for_testing` | API key for WIP backend. The server reads only this variable; the fallback is refused by current installs |
 | `WIP_API_KEY_FILE` | — | Set in `.env`. Read by the test configs (`playwright.config.ts`, `vitest.integration.config.ts`), **not yet by the server** (see KNOWN_ISSUES) |
 | `APP_BASE_PATH` | `/` | Route prefix when deployed (e.g. `/apps/aa`) |
-| `ANTHROPIC_API_KEY` | — | For import entity extraction and ask bar |
+| `ANTHROPIC_API_KEY` | — | Key of the built-in Claude provider (sent to api.anthropic.com only) |
 | `ANTHROPIC_API_KEY_FILE` | — | Key file; a key set on the Settings page is written here and survives restarts |
+| `CLAUDE_MODEL`, `ANALYSE_MODEL`, `IMPORT_MODEL` | `claude-haiku-4-5-20251001` | Models in effect while the AI settings are not set up |
+| `SETTINGS_NAMESPACE` | `aa-settings` | Namespace holding the AI model choice (Settings → AI models); reserved by the operator like a book |
+| `AI_KEY_<NAME>` | — | Keys of further AI providers; a provider names its variable in Settings (only `ANTHROPIC_API_KEY` and `AI_KEY_*` are accepted) |
+| `AI_KEYS_DIR` | — | Writable directory: keys typed into Settings → AI models are kept there and survive restarts |
 | `SESSION_TTL_MINUTES` | `30` | Ask bar session timeout |
 | `MAX_TURNS` | `15` | Max tool-call turns per ask bar question |
 
@@ -87,5 +91,5 @@ The server expects a WIP backend reachable via the proxy. The `@wip/proxy` middl
 - **Frontend**: React 19, TypeScript, Vite, TailwindCSS 3.4, TanStack Query
 - **Editor**: TipTap (ProseMirror) with StarterKit
 - **Backend**: Express 5.1, `@wip/proxy` for API forwarding
-- **AI**: Anthropic SDK, MCP client (stdio/SSE/HTTP)
+- **AI**: Anthropic SDK against any provider that speaks the Anthropic Messages API (Claude, oMLX, LM Studio), chosen per use in Settings; MCP client (stdio/SSE/HTTP)
 - **Data**: WIP document store via `@wip/client` and `@wip/react` hooks

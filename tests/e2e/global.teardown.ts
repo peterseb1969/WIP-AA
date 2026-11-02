@@ -11,4 +11,11 @@ teardown('delete the namespaces', async () => {
   for (const ns of [run, process.env.AA_E2E_IMPORT_NAMESPACE, ...books]) {
     await wipFetch('DELETE', `/api/registry/namespaces/${ns}?confirm=true`)
   }
+  // The settings namespace is created in retain mode, as on a real install:
+  // WIP deletes only a namespace in full mode.
+  const settings = process.env.AA_E2E_SETTINGS_NAMESPACE!
+  if (list.some((n) => n.prefix === settings)) {
+    await wipFetch('PUT', `/api/registry/namespaces/${settings}`, { deletion_mode: 'full', confirm_enable_deletion: true })
+    await wipFetch('DELETE', `/api/registry/namespaces/${settings}?confirm=true`)
+  }
 })

@@ -22,6 +22,8 @@ process.env.AA_E2E_NAMESPACE ??= `aa-e2e-${Date.now()}`
 // book, which would wipe the other specs' fixtures, and the demo book is only
 // offered in an empty book.
 process.env.AA_E2E_IMPORT_NAMESPACE ??= `${process.env.AA_E2E_NAMESPACE}-import`
+// The app's AI settings (ai-settings.spec.ts) get their own namespace too.
+process.env.AA_E2E_SETTINGS_NAMESPACE ??= `${process.env.AA_E2E_NAMESPACE}-settings`
 // The local install uses a self-signed certificate (fixture calls from the tests).
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
@@ -37,6 +39,7 @@ const appInstance = (namespace: string, port: number, vitePort: number) => ({
   timeout: 60_000,
   env: {
     WIP_NAMESPACE: namespace,
+    SETTINGS_NAMESPACE: process.env.AA_E2E_SETTINGS_NAMESPACE!,
     PORT: String(port),
     VITE_PORT: String(vitePort),
     WIP_BASE_URL: process.env.WIP_BASE_URL!,

@@ -14,7 +14,10 @@ setup('namespaces and bootstrap', async () => {
   const mine = new Set(instances.map((i) => i.ns))
   const list = await wipFetch('GET', '/api/registry/namespaces')
   for (const n of list.json as Array<{ prefix: string }>) {
-    if (n.prefix.startsWith('aa-e2e-') && !mine.has(n.prefix)) await wipFetch('DELETE', `/api/registry/namespaces/${n.prefix}?confirm=true`)
+    if (!n.prefix.startsWith('aa-e2e-') || mine.has(n.prefix)) continue
+    // A settings namespace is in retain mode, which WIP does not delete.
+    await wipFetch('PUT', `/api/registry/namespaces/${n.prefix}`, { deletion_mode: 'full', confirm_enable_deletion: true })
+    await wipFetch('DELETE', `/api/registry/namespaces/${n.prefix}?confirm=true`)
   }
   for (const { server, ns } of instances) {
     const created = await wipFetch('PUT', `/api/registry/namespaces/${ns}`, { description: 'AA end-to-end test run (deleted afterwards)', deletion_mode: 'full' })

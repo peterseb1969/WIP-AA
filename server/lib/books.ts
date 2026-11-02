@@ -14,12 +14,18 @@
 import type { Request, Response, NextFunction } from 'express'
 import { wipGet } from './wip-api.js'
 import type { BookTarget } from './book-space.js'
+import { settingsNamespace } from './ai-settings.js'
 
 /** A namespace name AA accepts as a book: lowercase, digits, hyphens. */
 const BOOK_NAME = /^[a-z][a-z0-9-]{0,62}$/
 
+/**
+ * Whether `name` may be a book: well formed, and neither the platform's
+ * namespace nor the app's settings namespace (a bootstrap there would write
+ * the book templates into the settings).
+ */
 export function isValidBookName(name: unknown): name is string {
-  return typeof name === 'string' && BOOK_NAME.test(name) && name !== 'wip'
+  return typeof name === 'string' && BOOK_NAME.test(name) && name !== 'wip' && name !== settingsNamespace()
 }
 
 /** The book a request names when it names none: the deployment's default. */

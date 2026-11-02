@@ -74,14 +74,14 @@ server/
 ├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /server-api/books, /api/ask, /api/import/*, /api/book (contents, delete), /wip proxy;
 │                             book-scoped routes take ?book= (lib/books.ts requireBook: 400 malformed, 404 unknown_book);
 │                             in production serves dist/ with an SPA fallback (unknown API paths → 404 JSON)
-├── agent.ts                  MCP client + agentic Claude loop for the Ask bar (read-only tools)
+├── agent.ts                  MCP client + agentic loop for the Ask bar (read-only tools), on the model assigned to ASK
 ├── analyse.ts                Analyse endpoint (prompts built in the browser)
 ├── import.ts                 Chapter/scene parser + Claude entity extraction
 ├── bootstrap.routes.ts       GET /server-api/bootstrap/status, POST /server-api/bootstrap/run (SSE)
-├── config.routes.ts          Runtime Anthropic key endpoints
+├── config.routes.ts          Runtime Anthropic key; AI models (/server-api/config/ai: state, setup, save, model list, Test, typed keys)
 ├── demo.routes.ts            GET /server-api/demo/status, POST /server-api/demo/load (SSE)
 ├── demo/book.ts              The demo novel as data (loaded by lib/demo-book.ts)
-├── lib/                      books.ts (which namespaces are books, the ?book= check), bootstrap.ts (seed-driven bootstrap, per book), book-space.ts (what a book is: empty? contents, delete all), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
+├── lib/                      ai-settings.ts (providers and the model per use, from SETTINGS_NAMESPACE, env fallback, key rules), books.ts (which namespaces are books, the ?book= check), bootstrap.ts (seed-driven bootstrap, per book), book-space.ts (what a book is: empty? contents, delete all), demo-book.ts (loads the demo into an empty book), anthropic-key.ts, wip-api.ts, sse.ts
 ├── seed/                     Terminologies and templates the bootstrap creates
 └── prompts/assistant.md      Optional system prompt supplement for the Ask bar
 

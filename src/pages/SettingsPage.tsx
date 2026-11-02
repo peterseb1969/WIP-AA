@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { KeyRound, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
+import AiModelsSection from '../components/AiModelsSection'
 
 // Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
 const SERVER_API = `${import.meta.env.BASE_URL}server-api`
@@ -161,6 +162,8 @@ export default function SettingsPage() {
           {busy ? t('settings.anthropic.validating') : t('settings.anthropic.set_button')}
         </button>
       </form>
+
+      <AiModelsSection />
     </div>
   )
 }
