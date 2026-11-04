@@ -47,4 +47,9 @@ EXPOSE 3014
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
   CMD wget -qO- http://localhost:3014${APP_BASE_PATH:-}/api/health || exit 1
 
-CMD ["npx", "tsx", "server/index.ts"]
+# Start tsx from the image by path, never through npx: npx downloads a
+# missing package from the npm registry at every start, so an install without
+# registry access could not start and would run whatever version the registry
+# serves. By path, a missing tsx fails at once (exit 127). tsx stays under
+# dependencies, so the runtime stage's npm ci installs it.
+CMD ["./node_modules/.bin/tsx", "server/index.ts"]
