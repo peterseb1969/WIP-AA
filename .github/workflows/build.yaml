@@ -20,6 +20,10 @@ name: Build & Push Image
 # VITE_BASE_PATH must match the platform manifest's APP_BASE_PATH
 # (apps/wip-aa/wip-app.yaml in World-in-a-Pie).
 #
+# Actions are pinned to majors that run on Node 24 (checkout v6, setup-buildx
+# v4): GitHub deprecated Node 20 for actions and forces older majors onto 24
+# with a warning on every run.
+#
 # Tag convention: version tags (e.g. 20260703a) are write-once — never
 # re-point an existing version, bump instead. Adding a NEW tag to a manifest
 # is fine. Empty tag input falls back to sha-<short>. The per-arch tags
@@ -42,7 +46,7 @@ jobs:
       stamp: ${{ steps.meta.outputs.stamp }}
       sha: ${{ steps.meta.outputs.sha }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Resolve tag + build metadata (once, shared by both arches)
         id: meta
         run: |
@@ -72,10 +76,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Build and push (${{ matrix.arch }}, native)
         run: |

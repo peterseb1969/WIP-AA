@@ -178,3 +178,37 @@ npm ci --omit=dev installs it.
 Tests: production image built and started with --network none: the
 server listened and /apps/aa/api/health answered ok; no registry lookup
 in the logs. check-app-deployability not run.
+
+## 477e168 — fix: a refused book name says why; reservation hints name both key models (CASE-1069)
+**Time:** 2026-11-05 22:45
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 15 changed, +247/-49
+**Tests:** not recorded
+**Why:** The gate treated every error answer as "WIP is unreachable". A 400 or
+404 from the book's status now shows a "can't be opened as a book" panel
+with the server's reason and a way back to the book list; only a 503 or
+no answer reads as unreachable. The server gives one reason per refusal
+(malformed, the platform's namespace, the settings namespace), and
+/api/app-config reports settings_namespace so the Books form refuses
+both names before navigating.
+
+Every place that told the operator how to reserve a name named only
+wip-deploy. They now say the name must be reserved for the app's API
+key and list both ways: wip-deploy app-namespace add, or widening a key
+made in the console (RC) with a reservation. This includes the
+bootstrap's own error after WIP refuses a create.
+
+The set-up panel no longer runs out of its box (Peter's screenshot): the
+text column may shrink, commands wrap only between arguments
+(CommandLine), the copy is shorter, and the gate page has a gutter at
+phone width.
+
+Tests: type-check, 197 unit (server reasons, client rule with the
+settings namespace); e2e books.spec 3 new (form refuses wip and the
+settings namespace and names both ways; a refused name shows its
+reason; a 503 or aborted request shows unreachable), mutation check: the
+old gate fails the refused-name test; books + ai-settings 14 passed after
+the layout changes, full suite 75 passed before them; screenshots at
+1280 and 390 px checked
+Discovered: React StrictMode runs the gate's status check twice in dev,
+so an expected error answer appears twice in the e2e watch

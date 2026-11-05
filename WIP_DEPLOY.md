@@ -9,7 +9,7 @@ describes what AuthorAssist commits to so the manifest is creatable.
 
 | File | Role |
 |---|---|
-| `Dockerfile` | Prod image (`node:24-alpine`, like `Dockerfile.dev`; moved off Node 20, end of life since 2026-04-30). Multi-stage build → `dist/` + server, runs `npx tsx server/index.ts` on port 3014. Used by `compose` and `k8s` targets. |
+| `Dockerfile` | Prod image (`node:24-alpine`, like `Dockerfile.dev`). Multi-stage build → `dist/` + server, runs `npx tsx server/index.ts` on port 3014. Used by `compose` and `k8s` targets. |
 | `Dockerfile.dev` | Bind-mount-friendly dev image for `wip-deploy add-app wip-aa --app-source ~/Development/WIP-AA`. Canonical CASE-58 entrypoint pattern (same as WIP-KB / react-console). |
 | `docker-entrypoint-dev.sh` | Populates the named `/app/node_modules` volume on first start; re-runs `npm ci` when the hash of package-lock.json plus `node -v` changes (so a new Node base image re-installs too). |
 | `.dockerignore` | Excludes node_modules, dist, .git, .claude, .env, *.md, tests, docs, data-model, yac-discussions, tools, .DS_Store. |
