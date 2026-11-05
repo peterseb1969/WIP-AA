@@ -163,3 +163,18 @@ given the Ask bar is stored as version 2; WIP_API_KEY as key variable
 refused, nothing stored)
 Discovered: Playwright has no getByDisplayValue, and the type-check does
 not cover tests/e2e, so the mistake showed only at run time
+
+## 65b3785 — fix(docker): start tsx by path, never through npx (CASE-1048)
+**Time:** 2026-11-04 01:55
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 1 changed, +6/-1
+**Tests:** not recorded
+**Why:** npx downloads a missing package from the npm registry at every start,
+so an install without registry access could not start the app and would
+run whatever tsx version the registry serves. By path a missing tsx
+fails at once. tsx stays under dependencies; the runtime stage's
+npm ci --omit=dev installs it.
+
+Tests: production image built and started with --network none: the
+server listened and /apps/aa/api/health answered ok; no registry lookup
+in the logs. check-app-deployability not run.

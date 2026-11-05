@@ -83,3 +83,51 @@ test('the server refuses a book it does not have', async ({ request }) => {
   // Not one of this app's books, though the key can see it.
   expect((await request.get('/api/book/contents?book=wip')).status()).toBe(400)
 })
+
+// A name the server refuses is not an outage: the form says why before
+// asking, the gate shows the server's reason, and only a real failure to
+// reach the server reads as "WIP is unreachable".
+const settingsNs = process.env.AA_E2E_SETTINGS_NAMESPACE!
+
+test('the book form refuses the platform and settings namespaces, and names both ways to reserve', async ({ page }) => {
+  const seen = watch(page)
+  await page.goto('/books')
+  const name = page.getByLabel('Name of the book')
+  await name.fill('wip')
+  await expect(page.getByText("'wip' can't be a book: it is the platform's own namespace.")).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Set up the book' })).toBeDisabled()
+  await name.fill(settingsNs)
+  await expect(page.getByText(`'${settingsNs}' can't be a book: it is the app's settings namespace.`)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Set up the book' })).toBeDisabled()
+
+  await name.fill('next-novel')
+  await expect(page.getByText('wip-deploy app-namespace add wip-aa next-novel --setting deletion_mode=full')).toBeVisible()
+  await expect(page.getByText('Key made in the console (RC): widen the key to next-novel with a reservation.')).toBeVisible()
+  expect(seen.problems).toEqual([])
+})
+
+test('opening a refused name shows the reason, not "WIP is unreachable"', async ({ page }) => {
+  const seen = watch(page)
+  await page.goto(`/book/${settingsNs}/`)
+  await expect(page.getByRole('alert')).toContainText("This can't be opened as a book")
+  await expect(page.getByRole('alert')).toContainText(`'${settingsNs}' can't be a book: it is the app's settings namespace.`)
+  await expect(page.getByText('WIP is unreachable')).toHaveCount(0)
+  await expect(page.getByRole('link', { name: 'Choose another book' })).toBeVisible()
+  // The refusal is the expected 400 and the browser's console line for it,
+  // possibly twice (React's StrictMode runs the status check twice in dev);
+  // nothing else may fail.
+  const expected = [/^http 400: GET .*\/server-api\/bootstrap\/status\?book=/, /^console: Failed to load resource: the server responded with a status of 400/]
+  expect(seen.problems.length).toBeGreaterThan(0)
+  expect(seen.problems.filter((p) => !expected.some((re) => re.test(p)))).toEqual([])
+})
+
+test('only a failure to reach the server reads as "WIP is unreachable"', async ({ page }) => {
+  await page.route(/\/server-api\/bootstrap\/status/, (route) => route.fulfill({ status: 503, json: { error: 'wip_unreachable' } }))
+  await page.goto(`/book/${main}/`)
+  await expect(page.getByText('WIP is unreachable')).toBeVisible()
+
+  await page.unroute(/\/server-api\/bootstrap\/status/)
+  await page.route(/\/server-api\/bootstrap\/status/, (route) => route.abort('connectionrefused'))
+  await page.reload()
+  await expect(page.getByText('WIP is unreachable')).toBeVisible()
+})

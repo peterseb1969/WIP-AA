@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bookApi, bookHome, chooseBook, parseBookLocation } from './books'
+import { bookApi, bookHome, bookNameProblem, chooseBook, parseBookLocation, setSettingsNamespace } from './books'
 import { setNamespace } from './constants'
 
 describe('reading the book from the URL', () => {
@@ -23,6 +23,19 @@ describe('reading the book from the URL', () => {
 
   it('round-trips a book home', () => {
     expect(parseBookLocation(bookHome('second-book', '/apps/aa/') + 'export', '/apps/aa/')).toEqual({ kind: 'book', book: 'second-book', rest: '/export' })
+  })
+})
+
+describe('names that cannot be books, before asking the server', () => {
+  it('refuses the platform namespace and the settings namespace the server names', () => {
+    setSettingsNamespace('aa-settings')
+    expect(bookNameProblem('wip')).toBe('wip')
+    expect(bookNameProblem('aa-settings')).toBe('settings')
+    expect(bookNameProblem('Not A Name')).toBe('pattern')
+    expect(bookNameProblem('my-novel')).toBeNull()
+    setSettingsNamespace('other-settings')
+    expect(bookNameProblem('aa-settings')).toBeNull()
+    expect(bookNameProblem('other-settings')).toBe('settings')
   })
 })
 

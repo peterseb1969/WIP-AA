@@ -89,8 +89,9 @@ export const BOOK: BootstrapKind = {
   description: 'AuthorAssist app data (bootstrap created)',
   deletionMode: 'full',
   reserveHint: (ns) =>
-    `this app may only create books whose names the operator has reserved for it, with deletion mode full. ` +
-    `Reserve it with: wip-deploy app-namespace add wip-aa ${ns} --setting deletion_mode=full`,
+    `this app may only create a book whose name is reserved for the app's API key, with deletion mode full. ` +
+    `If wip-deploy installed the app: wip-deploy app-namespace add wip-aa ${ns} --setting deletion_mode=full. ` +
+    `If the key was made in the console: widen the app's key to '${ns}' with a reservation (deletion_mode full).`,
 }
 
 // The app's AI settings (server/lib/ai-settings.ts): never a book, so its own
@@ -101,8 +102,9 @@ export const SETTINGS: BootstrapKind = {
   legacyRecordValues: [],
   description: 'AuthorAssist app settings (bootstrap created)',
   reserveHint: (ns) =>
-    `this app may only create its settings namespace once the operator has reserved it. ` +
-    `Reserve it with: wip-deploy app-namespace add wip-aa ${ns}`,
+    `this app may only create its settings namespace once it is reserved for the app's API key. ` +
+    `If wip-deploy installed the app: wip-deploy app-namespace add wip-aa ${ns}. ` +
+    `If the key was made in the console: widen the app's key to '${ns}' with a reservation.`,
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

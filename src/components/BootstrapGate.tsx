@@ -22,11 +22,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { Database, AlertTriangle, RefreshCw, Loader2, ServerCrash, BookOpen } from 'lucide-react'
 import { NAMESPACE } from '../lib/constants'
 import { loadDemoBook } from '../lib/sse'
+import CommandLine from './CommandLine'
 import { bookApi, booksPage } from '../lib/books'
 
 const APP_TITLE = 'AuthorAssist'
 
-type AppStatus = 'checking' | 'wip_unreachable' | 'needs_bootstrap' | 'incomplete' | 'resume_blocked' | 'bootstrapping' | 'ready' | 'error'
+type AppStatus = 'checking' | 'wip_unreachable' | 'refused' | 'needs_bootstrap' | 'incomplete' | 'resume_blocked' | 'bootstrapping' | 'ready' | 'error'
 
 interface BootstrapProgress {
   step: string
@@ -39,7 +40,8 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AppStatus>('checking')
   const [progress, setProgress] = useState<BootstrapProgress | null>(null)
   const [error, setError] = useState<string | null>(null)
-  // For 'resume_blocked': the server's sentence naming the namespace and its documents.
+  // The server's sentence for 'resume_blocked' (the namespace and its documents)
+  // and for 'refused' (why this name can't be a book).
   const [blockedMessage, setBlockedMessage] = useState<string | null>(null)
 
   const checkStatus = useCallback(async () => {
@@ -47,6 +49,15 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
     setError(null)
     try {
       const res = await fetch(bookApi('server-api/bootstrap/status'))
+      // A name the server refuses (400) or does not know (404) is not an
+      // outage: show its reason. Anything else that is not ok, and a request
+      // that never got an answer, is WIP being unreachable.
+      if (res.status === 400 || res.status === 404) {
+        const body = await res.json().catch(() => null) as { message?: string } | null
+        setBlockedMessage(body?.message || `This book can't be opened (HTTP ${res.status}).`)
+        setStatus('refused')
+        return
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setBlockedMessage(data.message ?? null)
@@ -117,7 +128,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
   if (status === 'ready') return <>{children}</>
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md rounded-lg border bg-white p-8 shadow-sm">
         <div className="mb-6 flex items-center gap-3">
           <Database className="h-8 w-8 text-blue-600" />
@@ -136,7 +147,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4">
               <ServerCrash className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-red-800">WIP is unreachable</p>
                 <p className="mt-1 text-sm text-red-600">
                   Cannot connect to the WIP backend. Make sure WIP is running and accessible.
@@ -152,35 +163,59 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {status === 'refused' && (
+          <div className="space-y-4">
+            <div role="alert" className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium text-amber-800">This can't be opened as a book</p>
+                <p className="mt-1 text-sm text-amber-700">{blockedMessage}</p>
+              </div>
+            </div>
+            <a
+              href={booksPage()}
+              className="flex w-full items-center justify-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium hover:bg-gray-200"
+            >
+              Choose another book
+            </a>
+          </div>
+        )}
+
         {status === 'needs_bootstrap' && (
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-amber-800">Book not set up yet</p>
-                <p className="mt-1 text-sm text-amber-600">
-                  The book <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> does
-                  not exist yet. You can bootstrap it now, or restore from a backup first
-                  (via the WIP console / <code className="rounded bg-amber-100 px-1">wip-deploy</code>).
+                <p className="mt-1 text-sm text-amber-700">
+                  The book <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> doesn&apos;t
+                  exist yet. Set it up now, or restore it from a backup first and check again.
                 </p>
-                <p className="mt-2 text-sm text-amber-600">
-                  The app can only set up a book whose name the administrator has reserved for it:
+                <p className="mt-3 text-sm text-amber-700">
+                  Its name must first be reserved for this app&apos;s API key, with deletion mode full:
                 </p>
-                <pre className="mt-1 overflow-x-auto rounded bg-amber-100 px-2 py-1 text-xs text-amber-900">
-                  wip-deploy app-namespace add wip-aa {NAMESPACE} --setting deletion_mode=full
-                </pre>
+                <ul className="mt-1 space-y-2 text-sm text-amber-700">
+                  <li>
+                    <span className="font-medium">Installed with wip-deploy:</span>
+                    <CommandLine className="mt-1 bg-amber-100 text-amber-900" command={`wip-deploy app-namespace add wip-aa ${NAMESPACE} --setting deletion_mode=full`} />
+                  </li>
+                  <li>
+                    <span className="font-medium">Key made in the console (RC):</span> widen the key
+                    to <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> with a reservation.
+                  </li>
+                </ul>
               </div>
             </div>
             <div className="flex gap-3">
               <button
                 onClick={() => startBootstrap()}
-                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <Database className="h-4 w-4" /> Bootstrap
               </button>
               <button
                 onClick={checkStatus}
-                className="flex flex-1 items-center justify-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium hover:bg-gray-200"
+                className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-md bg-gray-100 px-3 py-2 text-sm font-medium hover:bg-gray-200"
               >
                 <RefreshCw className="h-4 w-4" /> Check Again
               </button>
@@ -192,7 +227,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
               <BookOpen className="h-4 w-4" /> Bootstrap with the demo book
             </button>
             <p className="text-xs text-gray-400 text-center">
-              The demo book is a short mystery that shows every feature. If restoring from backup, do so now and then click "Check Again".
+              The demo book is a short mystery that shows every feature.
             </p>
           </div>
         )}
@@ -201,7 +236,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-amber-800">Bootstrap incomplete</p>
                 <p className="mt-1 text-sm text-amber-600">
                   The <code className="rounded bg-amber-100 px-1">{NAMESPACE}</code> namespace
@@ -232,7 +267,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-red-800">Bootstrap record missing</p>
                 <p className="mt-1 text-sm text-red-700">{blockedMessage}</p>
               </div>
@@ -265,7 +300,7 @@ export function BootstrapGate({ children }: { children: React.ReactNode }) {
           <div className="space-y-4">
             <div className="flex items-start gap-3 rounded-md border border-red-200 bg-red-50 p-4">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="font-medium text-red-800">Bootstrap failed</p>
                 <p className="mt-1 text-sm text-red-600">{error}</p>
               </div>

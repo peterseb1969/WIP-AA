@@ -20,12 +20,21 @@ import { settingsNamespace } from './ai-settings.js'
 const BOOK_NAME = /^[a-z][a-z0-9-]{0,62}$/
 
 /**
- * Whether `name` may be a book: well formed, and neither the platform's
- * namespace nor the app's settings namespace (a bootstrap there would write
- * the book templates into the settings).
+ * Why `name` cannot be a book, or null when it can: it must be well formed,
+ * and neither the platform's namespace nor the app's settings namespace (a
+ * bootstrap there would write the book templates into the settings). The
+ * browser applies the same rule (src/lib/books.ts) with these words.
  */
+export function bookNameProblem(name: unknown): string | null {
+  if (typeof name !== 'string' || name === '') return 'A book name is required (?book=).'
+  if (!BOOK_NAME.test(name)) return `'${name}' can't be a book: use lowercase letters, digits and hyphens, starting with a letter.`
+  if (name === 'wip') return "'wip' can't be a book: it is the platform's own namespace."
+  if (name === settingsNamespace()) return `'${name}' can't be a book: it is the app's settings namespace.`
+  return null
+}
+
 export function isValidBookName(name: unknown): name is string {
-  return typeof name === 'string' && BOOK_NAME.test(name) && name !== 'wip' && name !== settingsNamespace()
+  return bookNameProblem(name) === null
 }
 
 /** The book a request names when it names none: the deployment's default. */
@@ -125,11 +134,9 @@ export function bookOf(res: Response): string {
 export function requireBook(opts: { allowNew?: boolean } = {}) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const name = req.query.book
-    if (!isValidBookName(name)) {
-      res.status(400).json({
-        error: 'invalid_book',
-        message: 'A book name is required (?book=): lowercase letters, digits and hyphens, starting with a letter.',
-      })
+    const problem = bookNameProblem(name)
+    if (problem !== null || !isValidBookName(name)) {
+      res.status(400).json({ error: 'invalid_book', message: problem })
       return
     }
     if (!opts.allowNew) {

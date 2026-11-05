@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, CheckCircle2, Cpu, ListRestart, Loader2, Plus, Trash2, XCircle } from 'lucide-react'
+import CommandLine from './CommandLine'
 
 const API = `${import.meta.env.BASE_URL}server-api/config/ai`
 
@@ -168,7 +169,13 @@ export default function AiModelsSection() {
             ))}
           </ul>
           <p className="text-sm text-text-muted">{t('settings.ai.reserve_hint')}</p>
-          <pre className="overflow-x-auto rounded bg-gray-100 px-3 py-2 text-xs text-text">wip-deploy app-namespace add wip-aa {state.namespace}</pre>
+          <ul className="space-y-2 text-sm text-text-muted">
+            <li>
+              {t('settings.ai.via_deploy')}
+              <CommandLine className="mt-1 bg-gray-100 px-3 py-2 text-text" command={`wip-deploy app-namespace add wip-aa ${state.namespace}`} />
+            </li>
+            <li>{t('settings.ai.via_console', { name: state.namespace })}</li>
+          </ul>
           <button
             onClick={() => run(async () => adopt(await call<AiState>('/setup', 'POST')))}
             disabled={busy}

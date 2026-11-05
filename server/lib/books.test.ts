@@ -20,7 +20,7 @@ vi.mock('./wip-api.js', () => ({
   },
 }))
 
-const { isValidBookName, listBookNames, requireBook, forgetBooks } = await import('./books')
+const { bookNameProblem, isValidBookName, listBookNames, requireBook, forgetBooks } = await import('./books')
 
 beforeEach(() => {
   wip.namespaces = [
@@ -55,6 +55,16 @@ describe('book names', () => {
   })
 })
 
+describe('why a name is refused', () => {
+  it('names the reason, not just the pattern', () => {
+    expect(bookNameProblem(undefined)).toBe('A book name is required (?book=).')
+    expect(bookNameProblem('Book')).toMatch(/use lowercase letters, digits and hyphens/)
+    expect(bookNameProblem('wip')).toBe("'wip' can't be a book: it is the platform's own namespace.")
+    expect(bookNameProblem('aa-settings')).toBe("'aa-settings' can't be a book: it is the app's settings namespace.")
+    expect(bookNameProblem('my-novel')).toBeNull()
+  })
+})
+
 describe('which namespaces are books', () => {
   it('keeps the namespaces holding an AA template, sorted', async () => {
     // kb has only the shared legacy record, not an AA template; wip and an
@@ -81,6 +91,12 @@ describe('requireBook', () => {
     const { res, passed } = await call('second-book')
     expect(passed).toBe(true)
     expect(res.locals.book).toBe('second-book')
+  })
+
+  it('answers 400 with the reason', async () => {
+    const { res } = await call('aa-settings')
+    expect(res.statusCode).toBe(400)
+    expect(res.body).toEqual({ error: 'invalid_book', message: "'aa-settings' can't be a book: it is the app's settings namespace." })
   })
 
   it('answers 400 for a missing or malformed name', async () => {

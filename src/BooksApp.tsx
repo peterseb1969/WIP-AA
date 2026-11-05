@@ -13,7 +13,8 @@ import { useTranslation } from 'react-i18next'
 import { BookOpen, Library, Loader2, Plus, RefreshCw } from 'lucide-react'
 import './i18n'
 import LanguageSwitcher from './components/LanguageSwitcher'
-import { bookHome, fetchBooks, isValidBookName, type BookInfo } from './lib/books'
+import CommandLine from './components/CommandLine'
+import { bookHome, bookNameProblem, fetchBooks, type BookInfo } from './lib/books'
 
 export default function BooksApp() {
   const { t } = useTranslation()
@@ -32,7 +33,9 @@ export default function BooksApp() {
   useEffect(load, [load])
 
   const trimmed = name.trim()
-  const invalid = trimmed !== '' && !isValidBookName(trimmed)
+  const problem = trimmed ? bookNameProblem(trimmed) : null
+  const invalid = problem !== null
+  const shownName = trimmed && !invalid ? trimmed : '<name>'
   const taken = !!books?.some((b) => b.name === trimmed)
 
   return (
@@ -95,9 +98,13 @@ export default function BooksApp() {
         <section className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
           <h2 className="font-semibold text-text">{t('books.add_title')}</h2>
           <p className="text-sm text-text-muted">{t('books.add_hint')}</p>
-          <pre className="overflow-x-auto rounded bg-gray-100 px-3 py-2 text-xs text-text">
-            wip-deploy app-namespace add wip-aa {trimmed && !invalid ? trimmed : '<name>'} --setting deletion_mode=full
-          </pre>
+          <ul className="space-y-2 text-sm text-text-muted">
+            <li>
+              {t('books.via_deploy')}
+              <CommandLine className="mt-1 bg-gray-100 px-3 py-2 text-text" command={`wip-deploy app-namespace add wip-aa ${shownName} --setting deletion_mode=full`} />
+            </li>
+            <li>{t('books.via_console', { name: shownName })}</li>
+          </ul>
           <form
             className="flex flex-col gap-2 sm:flex-row sm:items-end"
             onSubmit={(e) => {
@@ -122,7 +129,7 @@ export default function BooksApp() {
               <Plus className="w-4 h-4" /> {t('books.add')}
             </button>
           </form>
-          {invalid && <p className="text-xs text-red-600">{t('books.name_invalid')}</p>}
+          {problem && <p className="text-xs text-red-600">{t(problem === 'pattern' ? 'books.name_invalid' : `books.name_${problem}`, { name: trimmed })}</p>}
           {taken && <p className="text-xs text-red-600">{t('books.name_taken')}</p>}
         </section>
       </main>

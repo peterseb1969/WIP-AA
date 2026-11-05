@@ -14,7 +14,7 @@ import demoRoutes from './demo.routes.js'
 import exportRoutes from './export.routes.js'
 import { bookContents, deleteBook } from './lib/book-space.js'
 import { bookOf, bookTarget, defaultBook, listBooks, requireBook } from './lib/books.js'
-import { targetFor } from './lib/ai-settings.js'
+import { settingsNamespace, targetFor } from './lib/ai-settings.js'
 
 const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
@@ -52,8 +52,10 @@ router.get('/api/health', (_req, res) => {
 // Client-visible per-deployment values, served to every browser — an
 // allowlist only, never secrets or an env spread.
 // `namespace` is the default book: the one a URL without a book opens.
+// `settings_namespace` lets the book form refuse that name before asking.
 router.get('/api/app-config', appConfigHandler({
   namespace: defaultBook(),
+  settings_namespace: settingsNamespace(),
 }))
 
 // The app's books (server/lib/books.ts), for the book list and the switcher.

@@ -4,7 +4,7 @@ import App from './App'
 import BooksApp from './BooksApp'
 import { fetchAppConfig } from './lib/app-config'
 import { setNamespace } from './lib/constants'
-import { bookHome, booksPage, chooseBook, fetchBooks, lastBook, parseBookLocation, rememberBook } from './lib/books'
+import { bookHome, booksPage, chooseBook, fetchBooks, lastBook, parseBookLocation, rememberBook, setSettingsNamespace } from './lib/books'
 import './index.css'
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
@@ -24,6 +24,7 @@ function renderBooks() {
 // the config can't be loaded.
 fetchAppConfig()
   .then(async (config) => {
+    setSettingsNamespace(config.settings_namespace as string | undefined)
     const where = parseBookLocation(window.location.pathname)
     if (where.kind === 'books') return renderBooks()
 

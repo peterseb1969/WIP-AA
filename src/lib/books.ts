@@ -16,8 +16,22 @@ const BASE = import.meta.env.BASE_URL
 /** Same rule as the server (server/lib/books.ts). */
 const BOOK_NAME = /^[a-z][a-z0-9-]{0,62}$/
 
+// The app's settings namespace, from /api/app-config (main.tsx): never a book.
+let settingsNs: string | null = null
+export function setSettingsNamespace(ns: string | null | undefined): void {
+  settingsNs = ns || null
+}
+
+/** Why `name` cannot be a book (the server's reasons), or null when it can. */
+export function bookNameProblem(name: string): 'pattern' | 'wip' | 'settings' | null {
+  if (!BOOK_NAME.test(name)) return 'pattern'
+  if (name === 'wip') return 'wip'
+  if (settingsNs && name === settingsNs) return 'settings'
+  return null
+}
+
 export function isValidBookName(name: string): boolean {
-  return BOOK_NAME.test(name) && name !== 'wip'
+  return bookNameProblem(name) === null
 }
 
 /** What the browser's path asks for. `rest` is the page path without the book. */
