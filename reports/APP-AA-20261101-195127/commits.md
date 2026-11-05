@@ -212,3 +212,17 @@ the layout changes, full suite 75 passed before them; screenshots at
 1280 and 390 px checked
 Discovered: React StrictMode runs the gate's status check twice in dev,
 so an expected error answer appears twice in the e2e watch
+
+## 09d350c — ci: move the image build's actions to Node 24 majors
+**Time:** 2026-11-05 23:09
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 3 changed, +42/-4
+**Tests:** not recorded
+**Why:** GitHub deprecated Node 20 for actions and warns on every run that
+actions/checkout@v4 is forced onto Node 24. checkout v6 and
+setup-buildx-action v4 declare node24 in their action.yml (v4 and v3
+declare node20; checked on raw.githubusercontent.com). The workflow
+passes neither action any inputs. WIP_DEPLOY.md no longer mentions
+Node 20.
+
+Tests: not run (the workflow runs only on GitHub, manually triggered)
