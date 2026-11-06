@@ -226,3 +226,26 @@ passes neither action any inputs. WIP_DEPLOY.md no longer mentions
 Node 20.
 
 Tests: not run (the workflow runs only on GitHub, manually triggered)
+
+## e2289a5 — docs(roadmap): plan the move to an origin of its own (CASE-1061, CASE-1104)
+**Time:** 2026-11-06 20:44
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 2 changed, +9/-0
+**Tests:** not recorded
+**Why:** Tests: not run (docs only)
+
+## a2f94ca — chore: scaffold refresh — @wip/react 0.26.0, @wip/client 0.83.0, @wip/proxy 0.7.0
+**Time:** 2026-11-06 20:48
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 21 changed, +494/-70
+**Tests:** not recorded
+**Why:** From create-app-project.sh at WIP 6249507a, for the move to an origin of
+its own (CASE-1061, tracker CASE-1104): @wip/react 0.26.0's WipProvider
+renews the app session on an app origin. Also new: @wip/client 0.83.0
+(requalifyIdentitySynonyms gone, which AA never used), @wip/proxy 0.7.0,
+wip-toolkit 0.25.7 and wip-archive 0.25.0 wheels, refreshed reference
+docs and cards. Tarballs and wheels force-added (*.tgz is ignored).
+CLAUDE.md.refresh carried only the generic dev-namespace text and was
+not merged.
+
+Tests: type-check, 197 unit, 24 integration passed against the new libraries

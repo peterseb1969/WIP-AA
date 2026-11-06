@@ -106,6 +106,8 @@ $ curl -sk https://localhost:8443/apps/aa/wip/api/registry/namespaces/aa
   # Server-side WIP proxy works through the gateway
 ```
 
+**On an install with app origins** (`network.app_origins: subdomain`, the default for new installs since CASE-1061), AA has an origin of its own and keeps its base path: `https://aa.localhost:8443/apps/aa/` (on other installs `https://aa.<hostname>/apps/aa/`). The old `https://localhost:8443/apps/aa/…` answers 301 there. A browser follows it; `curl` needs `-L`, and a `POST` is not repeated after it, so scripts use the app origin. The gateway gives that origin a session of its own (15 minutes), which `WipProvider` (`@wip/react` ≥ 0.26.0) and the Books page renew in the background. After a logout elsewhere the page reloads, and the scene editor keeps any unsaved typing as a local draft.
+
 ## Local dev outside `wip-deploy`
 
 The standalone dev flow remains unchanged for AuthorAssist developers who

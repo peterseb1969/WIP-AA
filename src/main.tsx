@@ -9,6 +9,11 @@ import './index.css'
 
 const root = ReactDOM.createRoot(document.getElementById('root')!)
 
+// The session renewal loads /auth/renew in a hidden iframe. Behind the gateway
+// the gateway answers it; without one (a bare dev server, the e2e instances)
+// Vite's SPA fallback would serve this app there instead. Start nothing then.
+const isRenewalFrame = window.location.pathname.startsWith('/auth/')
+
 function renderBooks() {
   root.render(
     <React.StrictMode>
@@ -22,7 +27,7 @@ function renderBooks() {
 // opens the last book used here or the server's default book (runtime
 // config), and falls back to the book list. Fail loud rather than guess if
 // the config can't be loaded.
-fetchAppConfig()
+if (!isRenewalFrame) fetchAppConfig()
   .then(async (config) => {
     setSettingsNamespace(config.settings_namespace as string | undefined)
     const where = parseBookLocation(window.location.pathname)

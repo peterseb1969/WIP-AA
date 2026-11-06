@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAppSessionRenewal } from '@wip/react'
 import { BookOpen, Library, Loader2, Plus, RefreshCw } from 'lucide-react'
 import './i18n'
 import LanguageSwitcher from './components/LanguageSwitcher'
@@ -18,6 +19,10 @@ import { bookHome, bookNameProblem, fetchBooks, type BookInfo } from './lib/book
 
 export default function BooksApp() {
   const { t } = useTranslation()
+  // The book list renders outside WipProvider, which renews the app's
+  // session on its own origin; without this a long-open list would lose its
+  // session after the gateway's app session expires.
+  useAppSessionRenewal()
   const [books, setBooks] = useState<BookInfo[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [name, setName] = useState('')

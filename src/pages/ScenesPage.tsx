@@ -1296,6 +1296,14 @@ function SceneEditor({
     }
   }, [editor, writeDraft])
 
+  // A page that goes away (reload, closed tab, or the reload the session
+  // renewal does after a logout elsewhere) runs no React cleanup, and the
+  // backup is otherwise written 3 s after the last keystroke: write it now.
+  useEffect(() => {
+    window.addEventListener('pagehide', flushDraft)
+    return () => window.removeEventListener('pagehide', flushDraft)
+  }, [flushDraft])
+
   // ── Saving: autosave + explicit Save ─────────────────────
   // Prose is saved as a merge PATCH of `prose` only, so a save never touches
   // the scene's other fields. Autosave runs after AUTOSAVE_IDLE_MS without
