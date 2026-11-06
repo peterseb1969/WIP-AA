@@ -24,7 +24,7 @@
     "@tiptap/starter-kit": "^3.32.0",
     "@wip/client": "file:libs/wip-client-0.83.0.tgz",
     "@wip/proxy": "file:libs/wip-proxy-0.7.0.tgz",
-    "@wip/react": "file:libs/wip-react-0.26.0.tgz",
+    "@wip/react": "file:libs/wip-react-0.26.1.tgz",
     "cors": "^2.8.5",
     "docx": "9.9.0",
     "dotenv": "^17.3.1",
