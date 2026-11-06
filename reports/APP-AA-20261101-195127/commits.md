@@ -249,3 +249,36 @@ CLAUDE.md.refresh carried only the generic dev-namespace text and was
 not merged.
 
 Tests: type-check, 197 unit, 24 integration passed against the new libraries
+
+## f84de20 — feat: ready for an origin of its own (CASE-1061, tracker CASE-1104)
+**Time:** 2026-11-06 20:52
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 7 changed, +88/-3
+**Tests:** not recorded
+**Why:** On an install with app origins AA is served at
+https://aa.<hostname>/apps/aa/ with a short-lived session that
+@wip/react 0.26.0 renews in a hidden iframe, reloading the page when the
+WIP login has ended.
+
+- The Books page renders outside WipProvider, so it now calls
+  useAppSessionRenewal() itself.
+- The scene editor writes its local draft on pagehide. A reload runs no
+  React cleanup and the backup was written only 3 s after the last
+  keystroke, so the renewal's reload (or a closed tab) could drop the
+  last words typed.
+- main.tsx starts nothing at /auth/*: without a gateway (bare dev, the
+  e2e instances) Vite's SPA fallback would boot a whole copy of the app
+  in every renewal iframe.
+- WIP_DEPLOY.md and CLAUDE.md give the app-origin URL; CLAUDE.md no
+  longer says dev-authorassist was never created.
+
+Tests: type-check, 197 unit, full e2e 77 passed (app-session.spec.ts
+new: /auth/renew boots nothing; typing reloaded within 3 s is in the
+local draft; both fail with their fix removed). Live on the localhost
+install after Peter switched it to subdomain, logged in as the Dex user
+e2e: 301s keep book and page, handshake login, host-only HttpOnly
+cookies, Books page, Settings, export md and print, Ask answered.
+Discovered: silent renewal fails on the localhost install (the frame's
+request to localhost carries no wip_session; aa.localhost and localhost
+are different sites), so pages reload about every 5 minutes; filed for
+BE-YAC
