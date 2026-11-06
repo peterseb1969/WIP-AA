@@ -282,3 +282,21 @@ Discovered: silent renewal fails on the localhost install (the frame's
 request to localhost carries no wip_session; aa.localhost and localhost
 are different sites), so pages reload about every 5 minutes; filed for
 BE-YAC
+
+## 8768527 — chore: scaffold refresh — @wip/react 0.26.1; app origins need a dotted hostname
+**Time:** 2026-11-06 21:07
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 9 changed, +16/-11
+**Tests:** not recorded
+**Why:** From create-app-project.sh at WIP 7c49a8e8, BE-YAC's answer to
+CASE-1105: @wip/react 0.26.1's default session-lost handler no longer
+reloads in a loop when even the first renewal after a reload fails; the
+deployer refuses app origins for a hostname without a dot, because
+localhost and <label>.localhost are different sites and the renewal
+frame cannot send WIP's login cookie. Locally: --hostname wip.localhost,
+so AA is https://aa.wip.localhost:8443/apps/aa/. WIP_DEPLOY.md and
+CLAUDE.md said aa.localhost; corrected. The contract and guide carry
+the new rule. Other tarballs and wheels rebuilt byte-identical.
+CLAUDE.md.refresh again only the generic text, not merged.
+
+Tests: type-check, 197 unit; e2e app-session, smoke, books 26 passed
