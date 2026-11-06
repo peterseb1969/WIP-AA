@@ -300,3 +300,10 @@ the new rule. Other tarballs and wheels rebuilt byte-identical.
 CLAUDE.md.refresh again only the generic text, not merged.
 
 Tests: type-check, 197 unit; e2e app-session, smoke, books 26 passed
+
+## 3f9f45c — docs(roadmap): app-origin migration verified on wip.localhost and dev-test
+**Time:** 2026-11-06 21:33
+**Author:** Peter S <189785956+peterseb1969@users.noreply.github.com>
+**Files:** 1 changed, +1/-0
+**Tests:** not recorded
+**Why:** Tests: not run (docs only)
