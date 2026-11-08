@@ -6,19 +6,29 @@ const wip = vi.hoisted(() => ({
   namespaces: [] as Array<{ prefix: string; status?: string }>,
   templates: {} as Record<string, string[]>,
   down: false,
+  // The Registry answers the namespace list but not template lookups: WIP
+  // answers 503 registry_unavailable to a lookup it cannot resolve.
+  registryDown: false,
   calls: 0,
 }))
 
-vi.mock('./wip-api.js', () => ({
-  wipGet: async (path: string) => {
-    wip.calls++
-    if (wip.down) throw new Error('WIP GET: connect ECONNREFUSED')
-    if (path === '/api/registry/namespaces') return wip.namespaces
-    const m = path.match(/^\/api\/template-store\/templates\/by-value\/(\w+)\?namespace=([\w-]+)$/)
-    if (m && wip.templates[m[2]!]?.includes(m[1]!)) return { template_id: `${m[2]}-${m[1]}` }
-    throw new Error(`WIP GET ${path}: 404 Not Found`)
-  },
-}))
+vi.mock('./wip-api.js', () => {
+  class WipHttpError extends Error {
+    constructor(readonly status: number, path: string) { super(`WIP GET ${path}: ${status}`) }
+  }
+  return {
+    WipHttpError,
+    wipGet: async (path: string) => {
+      wip.calls++
+      if (wip.down) throw new Error('WIP GET: connect ECONNREFUSED')
+      if (path === '/api/registry/namespaces') return wip.namespaces
+      if (wip.registryDown) throw new WipHttpError(503, path)
+      const m = path.match(/^\/api\/template-store\/templates\/by-value\/(\w+)\?namespace=([\w-]+)$/)
+      if (m && wip.templates[m[2]!]?.includes(m[1]!)) return { template_id: `${m[2]}-${m[1]}` }
+      throw new WipHttpError(404, path)
+    },
+  }
+})
 
 const { bookNameProblem, isValidBookName, listBookNames, requireBook, forgetBooks } = await import('./books')
 
@@ -39,6 +49,7 @@ beforeEach(() => {
     retired: ['AA_BOOTSTRAP_RECORD'],
   }
   wip.down = false
+  wip.registryDown = false
   wip.calls = 0
   forgetBooks()
 })
@@ -70,6 +81,13 @@ describe('which namespaces are books', () => {
     // kb has only the shared legacy record, not an AA template; wip and an
     // inactive namespace are never books.
     expect(await listBookNames()).toEqual(['aa', 'old-copy', 'second-book'])
+  })
+
+  it('fails, rather than dropping every book, when the Registry cannot answer', async () => {
+    // Only a 404 says a namespace has no AA template. A 503 is no answer
+    // about the namespace, and must not shrink the list to nothing.
+    wip.registryDown = true
+    await expect(listBookNames()).rejects.toThrow(/503/)
   })
 })
 
@@ -135,6 +153,13 @@ describe('requireBook', () => {
     const before = wip.calls
     await call('second-book')
     expect(wip.calls).toBe(before)
+  })
+
+  it('answers 503, not unknown_book, while the Registry is down', async () => {
+    wip.registryDown = true
+    const { res, passed } = await call('aa')
+    expect(passed).toBe(false)
+    expect(res.statusCode).toBe(503)
   })
 
   it('answers 503 when WIP cannot be asked', async () => {

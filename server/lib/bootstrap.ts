@@ -187,8 +187,12 @@ export async function checkStatusDetail(ns: string, kind: BootstrapKind = BOOK):
   }
 
   if (!namespaces.some((n) => n.prefix === ns)) return { status: 'needs_bootstrap' }
-  for (const value of [kind.recordValue, ...kind.legacyRecordValues]) {
-    if (await hasBootstrapRecord(ns, value)) return { status: 'ready' }
+  try {
+    for (const value of [kind.recordValue, ...kind.legacyRecordValues]) {
+      if (await hasBootstrapRecord(ns, value)) return { status: 'ready' }
+    }
+  } catch {
+    return { status: 'wip_unreachable' }
   }
 
   const n = await countDocuments(ns)
@@ -223,8 +227,10 @@ async function countDocuments(ns: string): Promise<number | null> {
 
 /**
  * True when the namespace holds at least one document of the given
- * bootstrap-record template. A missing template (404) or any other error
- * counts as "no record".
+ * bootstrap-record template; false when the template does not exist (404).
+ * Any other failure is thrown: while the Registry is down WIP answers 503
+ * registry_unavailable, which says nothing about the record, and reading it
+ * as "no record" would show a book in use as half-built.
  */
 async function hasBootstrapRecord(ns: string, templateValue: string): Promise<boolean> {
   try {
@@ -235,8 +241,9 @@ async function hasBootstrapRecord(ns: string, templateValue: string): Promise<bo
       `/api/document-store/documents?namespace=${ns}&template_id=${tmpl.template_id}&page_size=1`,
     )) as { total?: number; items?: unknown[] }
     return (docs.total ?? docs.items?.length ?? 0) > 0
-  } catch {
-    return false
+  } catch (err) {
+    if (err instanceof WipHttpError && err.status === 404) return false
+    throw err
   }
 }
 

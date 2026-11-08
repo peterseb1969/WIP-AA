@@ -12,7 +12,7 @@
  * which works the same for fetch, streamed responses and download links.
  */
 import type { Request, Response, NextFunction } from 'express'
-import { wipGet } from './wip-api.js'
+import { wipGet, WipHttpError } from './wip-api.js'
 import type { BookTarget } from './book-space.js'
 import { settingsNamespace } from './ai-settings.js'
 
@@ -49,12 +49,20 @@ export const bookTarget = (namespace: string): BookTarget => ({
 
 const MARKER_TEMPLATES = ['AA_BOOTSTRAP_RECORD', 'AA_PROJECT']
 
+/**
+ * Only a 404 says the namespace lacks the template. Any other failure is no
+ * answer about the namespace (WIP answers 503 registry_unavailable while the
+ * Registry is down, 409 for an identifier naming several entities), so it is
+ * thrown: a live book must not drop off the list, or be refused as
+ * unknown_book, because WIP could not be asked.
+ */
 async function hasTemplate(namespace: string, value: string): Promise<boolean> {
   try {
     await wipGet(`/api/template-store/templates/by-value/${value}?namespace=${encodeURIComponent(namespace)}`)
     return true
-  } catch {
-    return false
+  } catch (err) {
+    if (err instanceof WipHttpError && err.status === 404) return false
+    throw err
   }
 }
 
