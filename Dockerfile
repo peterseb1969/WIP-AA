@@ -8,9 +8,6 @@ COPY libs/ libs/
 RUN npm ci --ignore-scripts
 
 # Copy source and build
-# VITE_BASE_PATH sets the public base path for assets (e.g. /apps/aa/)
-ARG VITE_BASE_PATH=/
-ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 # Build stamp (CASE-472) — baked from CI --build-arg; 'dev' default hides it.
 ARG VITE_BUILD_STAMP=dev
 ARG VITE_BUILD_SHA=dev
@@ -45,7 +42,7 @@ ENV PORT=3014
 EXPOSE 3014
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s \
-  CMD wget -qO- http://localhost:3014${APP_BASE_PATH:-}/api/health || exit 1
+  CMD wget -qO- http://localhost:3014/api/health || exit 1
 
 # Start tsx from the image by path, never through npx: npx downloads a
 # missing package from the npm registry at every start, so an install without

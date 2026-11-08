@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { KeyRound, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react'
 import AiModelsSection from '../components/AiModelsSection'
 
-// Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
+// Vite BASE_URL always ends in '/': the root of the app's origin.
 const SERVER_API = `${import.meta.env.BASE_URL}server-api`
 
 interface KeyStatus {

@@ -20,11 +20,8 @@ const PORT = parseInt(process.env.PORT || '3014')
 const WIP_BASE_URL = process.env.WIP_BASE_URL || 'https://localhost:8443'
 const WIP_API_KEY = process.env.WIP_API_KEY || 'dev_master_key_for_testing'
 
-// APP_BASE_PATH — external path prefix when behind a reverse proxy.
-// E.g. /apps/aa when Caddy routes https://host/apps/aa/* to this app.
-// The reverse proxy does NOT strip the prefix; the app mounts every route
-// under APP_BASE_PATH so asset URLs and proxied paths match.
-const BASE_PATH = (process.env.APP_BASE_PATH || '').replace(/\/$/, '') || '/'
+// Every route is served at the root: the gateway serves the app at the root
+// of its own origin (https://aa.<host>/), with no path prefix to strip.
 
 const app = express()
 const router = Router()
@@ -208,14 +205,13 @@ async function termEnumsFor(book: string): Promise<TermEnums | undefined> {
 
 // In production (compose / k8s targets), serve the built frontend from dist/.
 // Dev-with-app-source forces NODE_ENV=development, so this block is skipped
-// and the dev_simple renderer routes /apps/aa/* to the Vite dev port instead.
+// and the dev_simple renderer routes the app's origin to the Vite dev port instead.
 if (process.env.NODE_ENV === 'production') {
   const __dirname = path.dirname(fileURLToPath(import.meta.url))
   const distPath = path.resolve(__dirname, '..', 'dist')
   router.use(express.static(distPath))
   // API prefixes never fall through to the SPA: a JSON client asking for a
   // route this server does not serve gets a 404 it can parse. Any method.
-  // req.path is relative to the router's mount, so BASE_PATH needs no handling.
   // The (\/|$) anchor catches a bare /api but lets a page route like /apiary
   // fall through. Registered after every real route, so it shadows none.
   const API_PREFIXES = /^\/(api|auth|wip|server-api|mcp)(\/|$)/
@@ -231,8 +227,7 @@ if (process.env.NODE_ENV === 'production') {
   router.get('{*path}', (_req, res) => { res.sendFile(indexHtml) })
 }
 
-// Mount router at BASE_PATH
-app.use(BASE_PATH, router)
+app.use(router)
 
 // --- Start ---
 // Listen first. Nothing at startup waits for WIP: the platform may still be
@@ -243,9 +238,6 @@ app.use(BASE_PATH, router)
 async function main() {
   app.listen(PORT, () => {
     console.log(`Server listening on http://localhost:${PORT}`)
-    if (BASE_PATH !== '/') {
-      console.log(`  base path: ${BASE_PATH}`)
-    }
   })
   startAgent()
 }

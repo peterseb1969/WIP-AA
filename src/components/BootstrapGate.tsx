@@ -3,8 +3,7 @@
  *
  * Adapted from templates/bootstrap/BootstrapGate.tsx.template (APP_TITLE
  * set; serverApiUrl() helper inlined — paths prefixed with Vite's BASE_URL
- * so they resolve both at '/' in local dev and under /apps/aa behind the
- * gateway). The namespace label is the runtime NAMESPACE, read at render:
+ * — '/', since the app is served at the root of its own origin). The namespace label is the runtime NAMESPACE, read at render:
  * a module-level copy would capture it before main.tsx has set it.
  *
  * States: checking / wip_unreachable / needs_bootstrap / incomplete /

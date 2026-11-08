@@ -17,8 +17,8 @@ name: Build & Push Image
 # resolved ONCE in resolve-tag and passed to both arch jobs, so both halves
 # of the index are byte-identical.
 #
-# VITE_BASE_PATH must match the platform manifest's APP_BASE_PATH
-# (apps/wip-aa/wip-app.yaml in World-in-a-Pie).
+# The image is built for the root of AA's own origin (no base path), as
+# the platform manifest (apps/wip-aa/wip-app.yaml in World-in-a-Pie) serves it.
 #
 # Actions are pinned to majors that run on Node 24 (checkout v6, setup-buildx
 # v4): GitHub deprecated Node 20 for actions and forces older majors onto 24
@@ -86,7 +86,6 @@ jobs:
           echo "${{ secrets.GITHUB_TOKEN }}" | \
             docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           docker buildx build \
-            --build-arg VITE_BASE_PATH=/apps/aa/ \
             --build-arg VITE_BUILD_STAMP="${{ needs.resolve-tag.outputs.stamp }}" \
             --build-arg VITE_BUILD_SHA="${{ needs.resolve-tag.outputs.sha }}" \
             -t "ghcr.io/${{ github.repository_owner }}/wip-aa:${{ needs.resolve-tag.outputs.tag }}-${{ matrix.arch }}" \

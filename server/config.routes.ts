@@ -15,7 +15,7 @@
  *
  * No app-level auth gate: AuthorAssist has no auth layer, and behind the
  * wip-deploy gateway the whole app is already auth-gated (wip-app.yaml
- * `/apps/aa auth_required: true`), so this endpoint is no more exposed than
+ * `/ auth_required: true`), so this endpoint is no more exposed than
  * /api/ask. If finer control is ever needed, gate on X-WIP-Groups here.
  */
 

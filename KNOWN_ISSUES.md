@@ -37,6 +37,9 @@ Three WIP issues AA reported are fixed in WIP and verified in AA on a scratch na
 - **Names of deleted or deprecated terms still resolving** (CASE-904): def-store is now the only resolver (no cache), deprecated terms are refused on write, and a term hard delete removes its Registry entry. Merge now uses WIP's term merge: the absorbed term stays behind as **deprecated**, pointing at the survivor, and every term list in AA asks for active terms only. Stored references are still rewritten by the app (WIP never re-resolves stored documents).
 These fixes need a WIP built from `5920a66c` or later. On 2026-10-19 wip-local ran `5920a66c`, and dev-test's `20261018c` images answered the term-merge endpoint; on an older WIP the merge's last step fails.
 
+### Settings → AI models: a typed value can be lost before Save (flaky e2e, found 2026-11-08)
+`tests/e2e/ai-settings.spec.ts` "a key variable that could name a server secret is refused" failed once in a full e2e run (76 of 77 passed): the page snapshot shows the local provider's key variable field empty after the test filled it, so Save stored nothing to refuse and no alert appeared. It passed on its own right after. Likely a race: the settings form takes its values again from the server data after the fill (a refetch), overwriting what was typed. A writer typing quickly right after the page opens could lose the same edit. Not investigated yet. The spec also cannot be repeated with `--repeat-each` (the settings namespace is set up once per run, so a second pass's "not set up yet" step fails).
+
 ## Unverified / technical debt
 
 ### Renamed chapters, scenes, notes and world rules start a new version history (2026-10-19)

@@ -71,7 +71,7 @@ src/
     └── SettingsPage.tsx       Anthropic key (set/rotate at runtime)
 
 server/
-├── index.ts                  Express app under APP_BASE_PATH: health, app-config, /server-api/books, /api/ask, /api/import/*, /api/book (contents, delete), /wip proxy;
+├── index.ts                  Express app at the root of AA's origin: health, app-config, /server-api/books, /api/ask, /api/import/*, /api/book (contents, delete), /wip proxy;
 │                             book-scoped routes take ?book= (lib/books.ts requireBook: 400 malformed, 404 unknown_book);
 │                             in production serves dist/ with an SPA fallback (unknown API paths → 404 JSON)
 ├── agent.ts                  MCP client + agentic loop for the Ask bar (read-only tools), on the model assigned to ASK

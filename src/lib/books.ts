@@ -10,7 +10,7 @@
  */
 import { NAMESPACE } from './constants'
 
-// Vite's BASE_URL always ends in '/': '/' in local dev, '/apps/aa/' deployed.
+// Vite's BASE_URL always ends in '/'; it is '/' (the root of the app's origin).
 const BASE = import.meta.env.BASE_URL
 
 /** Same rule as the server (server/lib/books.ts). */
@@ -48,7 +48,7 @@ export function parseBookLocation(pathname: string, base = BASE): BookLocation {
   return { kind: 'none', rest: `/${rel}` }
 }
 
-/** The browser path of a book's pages, e.g. /apps/aa/book/aa/ */
+/** The browser path of a book's pages, e.g. /book/aa/ */
 export function bookHome(book: string, base = BASE): string {
   return `${base}book/${encodeURIComponent(book)}/`
 }

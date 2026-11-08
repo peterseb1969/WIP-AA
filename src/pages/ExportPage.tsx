@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { BookOpenText, BookUser, Download, ExternalLink, FileDown, FileText, FileType, Hash, Printer, TabletSmartphone } from 'lucide-react'
 import { bookApi } from '../lib/books'
 
-// Vite BASE_URL always ends in '/'. '/' in dev, '/apps/aa/' behind the gateway.
+// Vite BASE_URL always ends in '/': the root of the app's origin.
 
 // `id` names the strings; `format` and `query` make the download URL. The
 // print view opens in a new tab instead of downloading.

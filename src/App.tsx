@@ -30,8 +30,8 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 
 export default function App() {
   // The router lives under the current book: <base>/book/<ns>, so every page
-  // path and link stays as it was. The base path matters behind the
-  // wip-deploy gateway (/apps/aa), or every client-side route 404s.
+  // path and link stays as it was. The base is Vite's BASE_URL ('/': the
+  // app is served at the root of its own origin).
   // main.tsx sets the book before the first render.
   const basename = bookBasename()
   return (

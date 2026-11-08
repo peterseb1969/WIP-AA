@@ -9,14 +9,14 @@ describes what AuthorAssist commits to so the manifest is creatable.
 
 | File | Role |
 |---|---|
-| `Dockerfile` | Prod image (`node:24-alpine`, like `Dockerfile.dev`). Multi-stage build → `dist/` + server, runs `npx tsx server/index.ts` on port 3014. Used by `compose` and `k8s` targets. |
+| `Dockerfile` | Prod image (`node:24-alpine`, like `Dockerfile.dev`). Multi-stage build → `dist/` + server, runs `./node_modules/.bin/tsx server/index.ts` on port 3014 (by path, never through `npx`, CASE-1048). Built for the root of AA's origin: no base-path build argument. Used by `compose` and `k8s` targets. |
 | `Dockerfile.dev` | Bind-mount-friendly dev image for `wip-deploy add-app wip-aa --app-source ~/Development/WIP-AA`. Canonical CASE-58 entrypoint pattern (same as WIP-KB / react-console). |
 | `docker-entrypoint-dev.sh` | Populates the named `/app/node_modules` volume on first start; re-runs `npm ci` when the hash of package-lock.json plus `node -v` changes (so a new Node base image re-installs too). |
 | `.dockerignore` | Excludes node_modules, dist, .git, .claude, .env, *.md, tests, docs, data-model, yac-discussions, tools, .DS_Store. |
-| `vite.config.ts` | Threads `VITE_BASE_PATH` / `APP_BASE_PATH` into Vite's `base` so emitted asset URLs match the gateway path. Binds 0.0.0.0 so the container dev server accepts external connections. |
-| `server/index.ts` | Mounts all routes (including `/wip` proxy) under `APP_BASE_PATH`. In production, serves `dist/` statically from inside Express; in dev-with-app-source the renderer forces `NODE_ENV=development` and Caddy routes to the Vite port instead. |
-| `src/App.tsx` | `BrowserRouter basename` derived from Vite's `BASE_URL` (CASE-370 surface #10) so client-side routes work under `/apps/aa`. |
-| `src/lib/wip.ts` | Browser WIP client `baseUrl` = `${BASE_URL}wip` so proxy calls stay on the app's own path prefix. |
+| `vite.config.ts` | Keeps Vite's default base `/`: the app is served at the root of its own origin. Proxies `/api`, `/server-api` and `/wip` to the Express port. Binds 0.0.0.0 so the container dev server accepts external connections. |
+| `server/index.ts` | Mounts all routes (including `/wip` proxy) at the root. In production, serves `dist/` statically from inside Express; in dev-with-app-source the renderer forces `NODE_ENV=development` and Caddy routes to the Vite port instead. |
+| `src/App.tsx` | `BrowserRouter basename` derived from Vite's `BASE_URL` (CASE-370 surface #10) plus the current book (`/book/<ns>`). |
+| `src/lib/wip.ts` | Browser WIP client `baseUrl` = `${BASE_URL}wip` so proxy calls stay relative to the app (`BASE_URL` is `/`). |
 | `server/lib/bootstrap.ts` + `server/bootstrap.routes.ts` + `src/components/BootstrapGate.tsx` | Offer-on-empty / use-on-exists runtime bootstrap (gene-pool pattern). On a fresh install the app offers to seed the `aa` namespace itself and writes an `AA_BOOTSTRAP_RECORD` audit doc. An existing namespace without a record (an interrupted bootstrap) shows as incomplete with a resume offer; the legacy unprefixed `BOOTSTRAP_RECORD` written by older bootstraps still counts as complete. |
 | `server/seed/` | Runtime seed files read by `runBootstrap()` — mirrors `data-model/` (the `/export-model` target) plus `00_AA_BOOTSTRAP_RECORD.json`. Keep in sync when the data model evolves. |
 
@@ -29,84 +29,28 @@ describes what AuthorAssist commits to so the manifest is creatable.
 
 The numbering avoids `wip-kb` (3012) and `clintrial` (3013).
 
-## What the WIP repo's `apps/wip-aa/wip-app.yaml` needs
+## What the WIP repo's `apps/wip-aa/wip-app.yaml` declares
 
-Mirroring `apps/wip-kb/wip-app.yaml` (the working reference — same Express +
-Vite + MCP-agent shape as AuthorAssist):
+The manifest is BE-YAC territory; read it in the WIP repo rather than a copy here. The parts AuthorAssist depends on (checked 2026-11-08, WIP `develop` at `283d70b7`):
 
-```yaml
-api_version: wip.dev/v1
-kind: App
-metadata:
-  name: wip-aa
-  category: optional
-  description: |
-    AuthorAssist — novel-writing workspace over the aa namespace.
-    Vite SPA + Express server (tsx).
-
-spec:
-  image:
-    name: wip-aa
-    tag: <date-suffixed, bump on rebuild — pull_policy caches by tag>
-
-  ports:
-    - {name: http, container_port: 3014}
-    # CASE-375: Vite dev-server. Used only when --app-source is active.
-    # 5180 avoids wip-kb (5173) and react-console (5174) on multi-app
-    # dev installs.
-    - {name: dev, container_port: 5180}
-
-  env:
-    required:
-      - {name: WIP_BASE_URL, source: {from_component: router}}
-      - {name: WIP_API_KEY, source: {from_secret: api-key}}
-      - {name: PORT, source: {literal: "3014"}}
-      - {name: APP_BASE_PATH, source: {literal: /apps/aa}}
-      - {name: NODE_ENV, source: {literal: production}}
-      - {name: WIP_NAMESPACE, source: {literal: "aa"}}
-    optional:
-      # AskBar + import extraction use Anthropic; degrade gracefully unset.
-      - {name: ANTHROPIC_API_KEY, source: {from_secret: anthropic-api-key}}
-      # CASE-375: the query agent uses MCP over HTTP; without MCP_URL it
-      # falls back to spawning `python -m wip_mcp` via stdio, which fails
-      # inside a Node container (no Python).
-      - {name: MCP_URL, source: {literal: "http://wip-mcp-server:8007/mcp"}}
-      - {name: MCP_TRANSPORT, source: {literal: "http"}}
-
-  depends_on: [document-store]
-
-  healthcheck:
-    endpoint: /apps/aa/api/health
-    probe: auto
-    start_period_seconds: 15
-
-app_metadata:
-  display_name: AuthorAssist
-  route_prefix: /apps/aa
-  ui_only: false
-```
-
-The `APP_BASE_PATH` / `VITE_BASE_PATH` envs feed Vite's `base`, the Express
-router mount, the SPA router basename, and the browser client's `/wip`
-prefix — all four read the same value.
+- `app_metadata.label: aa`: the app's origin is `https://aa.<hostname>/`, served at its root. There is no `APP_BASE_PATH` or `VITE_BASE_PATH` any more, and no `/apps/aa` prefix (CASE-1103; an image built for the prefix cannot be served by an install after the cut).
+- `routes: [{path: /, auth_required: true}]` and `healthcheck.endpoint: /api/health`, which answers without WIP.
+- `spec.namespaces`: `aa` (role `main`, env `WIP_NAMESPACE`, `deletion_mode: full`) and `aa-settings` (role `settings`, env `SETTINGS_NAMESPACE`). Further books are reserved per install with `wip-deploy app-namespace add wip-aa <book> --setting deletion_mode=full`.
+- Ports `http` 3014 and `dev` 5180; `WIP_BASE_URL` from the router; `MCP_URL` / `MCP_TRANSPORT` for the Ask agent; `ANTHROPIC_API_KEY` supplied by the operator. The deployer derives the app's own key (`app-wip-aa`) and sets `WIP_API_KEY`.
+- `image.tag`: bump it to the tag CI built whenever AA's image changes (`pull_policy` caches by tag).
 
 ## Local verification
 
-After the manifest lands and a `wip-deploy add-app authorassist` succeeds:
+With the app enabled on the local install (`--hostname wip.localhost`) and `--app-source ~/Development/WIP-AA`:
 
 ```bash
-$ wip-deploy add-app authorassist \
-    --name wip-dev-local \
-    --app-source ~/Development/WIP-AA
-$ open https://localhost:8443/apps/aa/
-  # SPA loads via Vite (HMR works, edits to src/ reflect immediately)
-$ curl -sk https://localhost:8443/apps/aa/api/health
-  {"status":"ok","service":"authorassist"}
-$ curl -sk https://localhost:8443/apps/aa/wip/api/registry/namespaces/aa
-  # Server-side WIP proxy works through the gateway
+$ open https://aa.wip.localhost:8443/
+  # one login, then the SPA loads via Vite (HMR works)
+$ curl -sk -o /dev/null -w '%{http_code}\n' https://aa.wip.localhost:8443/api/health
+  # 302: the gateway sends a request without a session to the login
 ```
 
-**On an install with app origins** (`network.app_origins: subdomain`, the default for new installs with a dotted hostname since CASE-1061), AA has an origin of its own and keeps its base path: `https://aa.<hostname>/apps/aa/`. App origins need a hostname with a dot: on plain `localhost` the session renewal cannot reach WIP's login cookie (CASE-1105), so the deployer refuses it there; a local install made with `--hostname wip.localhost` serves AA at `https://aa.wip.localhost:8443/apps/aa/`. The old `https://<hostname>/apps/aa/…` answers 301 there. A browser follows it; `curl` needs `-L`, and a `POST` is not repeated after it, so scripts use the app origin. The gateway gives that origin a session of its own (15 minutes), which `WipProvider` (`@wip/react` ≥ 0.26.0) and the Books page renew in the background. After a logout elsewhere the page reloads, and the scene editor keeps any unsaved typing as a local draft.
+AA is served at the root of its own origin. App origins need a hostname with a dot: on plain `localhost` the session renewal cannot reach WIP's login cookie (CASE-1105), so the deployer refuses it there. Old links under `/apps/aa/` have no redirect. The gateway gives the origin a session of its own (15 minutes), which `WipProvider` (`@wip/react` ≥ 0.26.0) and the Books page renew in the background. After a logout elsewhere the page reloads, and the scene editor keeps any unsaved typing as a local draft. Scripts reach the app on its origin, logged in through the gateway (Playwright as the Dex user `e2e`); the server's routes are not reachable without a session.
 
 ## Local dev outside `wip-deploy`
 
