@@ -22,7 +22,7 @@
     "@tiptap/pm": "^3.32.0",
     "@tiptap/react": "^3.32.0",
     "@tiptap/starter-kit": "^3.32.0",
-    "@wip/client": "file:libs/wip-client-0.83.0.tgz",
+    "@wip/client": "file:libs/wip-client-0.88.0.tgz",
     "@wip/proxy": "file:libs/wip-proxy-0.7.0.tgz",
     "@wip/react": "file:libs/wip-react-0.26.1.tgz",
     "cors": "^2.8.5",
